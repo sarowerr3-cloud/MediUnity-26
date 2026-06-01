@@ -306,8 +306,11 @@ export default function ServiceAppointmentsPage() {
     setLoading(true);
     setError(null);
     try {
-      const url = `${API_BASE}/api/service-appointments?limit=500`;
-      const res = await fetch(url);
+      const res = await fetch(url, {
+        headers: {
+          Authorization: "Bearer " + localStorage.getItem("adminToken_v1"),
+        },
+      });
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
         throw new Error(
@@ -410,7 +413,10 @@ export default function ServiceAppointmentsPage() {
     try {
       const res = await fetch(`${API_BASE}/api/service-appointments/${id}`, {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: "Bearer " + localStorage.getItem("adminToken_v1"),
+        },
         body: JSON.stringify({ status: newStatus }),
       });
       if (!res.ok) {
@@ -495,7 +501,10 @@ export default function ServiceAppointmentsPage() {
     try {
       const res = await fetch(`${API_BASE}/api/service-appointments/${id}`, {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: "Bearer " + localStorage.getItem("adminToken_v1"),
+        },
         // send rescheduledTo (backend expects this) and set status
         body: JSON.stringify({
           rescheduledTo: { date: dateStr, time: timeStr },
@@ -575,7 +584,10 @@ export default function ServiceAppointmentsPage() {
         `${API_BASE}/api/service-appointments/${id}/cancel`,
         {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: "Bearer " + localStorage.getItem("adminToken_v1"),
+          },
         }
       );
       if (!res.ok) {

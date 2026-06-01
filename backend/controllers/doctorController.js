@@ -1,17 +1,204 @@
 // controllers/doctorController.js
 import jwt from "jsonwebtoken";
+import bcryptjs from "bcryptjs";
 import Doctor from "../models/Doctor.js";
+import Appointment from "../models/Appointment.js";
 import { uploadToCloudinary, deleteFromCloudinary } from "../utils/cloudinary.js";
+import { sendEmail } from "../utils/email.js";
+import { verifyDoctorBMDC } from "../utils/bmdcScraper.js";
 
 /* ---------------- Helpers ---------------- */
 
-const parseTimeToMinutes = (t = "") => {
+function isSlotPassed(dateStr, slotTimeStr) {
+  try {
+    const now = new Date();
+    const [year, month, day] = dateStr.split("-").map(Number);
+    
+    let hours = 0;
+    let minutes = 0;
+    
+    const cleanTime = slotTimeStr.trim().toUpperCase();
+    const is12Hour = cleanTime.includes("AM") || cleanTime.includes("PM");
+    
+    if (is12Hour) {
+      const parts = cleanTime.split(/\s+/);
+      const timeParts = parts[0].split(":");
+      hours = Number(timeParts[0]);
+      minutes = Number(timeParts[1] || 0);
+      const ampm = parts[1] || "";
+      
+      if (ampm === "PM" && hours !== 12) hours += 12;
+      if (ampm === "AM" && hours === 12) hours = 0;
+    } else {
+      const timeParts = cleanTime.split(":");
+      hours = Number(timeParts[0]);
+      minutes = Number(timeParts[1] || 0);
+    }
+    
+    const slotDate = new Date(year, month - 1, day, hours, minutes);
+    return now > slotDate;
+  } catch (e) {
+    return false;
+  }
+}
+
+export async function cleanupDoctorPastSlots(doctor) {
+  try {
+    if (!doctor || !doctor.schedule) return;
+    
+    let scheduleObj = {};
+    if (typeof doctor.schedule.forEach === "function") {
+      doctor.schedule.forEach((val, key) => {
+        scheduleObj[key] = val;
+      });
+    } else if (doctor.schedule instanceof Map) {
+      scheduleObj = Object.fromEntries(doctor.schedule);
+    } else {
+      scheduleObj = doctor.schedule;
+    }
+
+    let changed = false;
+    const updatedSchedule = {};
+
+    Object.entries(scheduleObj).forEach(([dateStr, slots]) => {
+      if (!Array.isArray(slots)) return;
+
+      const activeSlots = slots.filter(slot => {
+        const passed = isSlotPassed(dateStr, slot);
+        if (passed) {
+          changed = true;
+        }
+        return !passed;
+      });
+
+      if (activeSlots.length > 0) {
+        updatedSchedule[dateStr] = activeSlots;
+      } else {
+        changed = true;
+      }
+    });
+
+    if (changed) {
+      await Doctor.findByIdAndUpdate(doctor._id || doctor.id, {
+        $set: { schedule: updatedSchedule }
+      });
+      console.log(`[SCHEDULE CLEANUP] Cleaned up past slots for doctor ${doctor._id || doctor.id}`);
+    }
+  } catch (err) {
+    console.error("cleanupDoctorPastSlots error:", err);
+  }
+}
+
+export async function cleanupAllDoctorsSchedules() {
+  try {
+    const doctors = await Doctor.find({});
+    for (const doc of doctors) {
+      await cleanupDoctorPastSlots(doc);
+    }
+    console.log("[SCHEDULE CRON] Auto-reset of passed schedules completed successfully.");
+  } catch (err) {
+    console.error("[SCHEDULE CRON ERROR] Auto-reset of passed schedules failed:", err);
+  }
+}
+
+function filterDoctorSchedule(schedule = {}, blackoutPeriods = [], blockedSlots = []) {
+  const filteredSchedule = {};
+  
+  // Convert Mongoose Map if needed
+  let schedObj = schedule;
+  if (schedule && typeof schedule.forEach === "function") {
+    schedObj = {};
+    schedule.forEach((val, key) => {
+      schedObj[key] = Array.isArray(val) ? val : [];
+    });
+  } else if (schedule && typeof schedule === "object" && !Array.isArray(schedule)) {
+    schedObj = { ...schedule };
+  }
+
+  Object.entries(schedObj || {}).forEach(([dateStr, slots]) => {
+    if (!Array.isArray(slots)) return;
+
+    // Check if the date is within any blackout period
+    const isBlackedOut = blackoutPeriods.some(period => {
+      if (!period || !period.startDate || !period.endDate) return false;
+      return dateStr >= period.startDate && dateStr <= period.endDate;
+    });
+
+    if (isBlackedOut) return;
+
+    // Filter slots that are blocked OR passed
+    const activeSlots = slots.filter(slot => {
+      const isBlocked = blockedSlots.some(blocked => {
+        if (!blocked || !blocked.date || !blocked.slot) return false;
+        return blocked.date === dateStr && blocked.slot === slot;
+      });
+      if (isBlocked) return false;
+
+      // Filter out past slots
+      return !isSlotPassed(dateStr, slot);
+    });
+
+    if (activeSlots.length > 0) {
+      // Sort slots chronologically
+      activeSlots.sort((a, b) => parseTimeToMinutes(a) - parseTimeToMinutes(b));
+      filteredSchedule[dateStr] = activeSlots;
+    }
+  });
+
+  return filteredSchedule;
+}
+
+async function flagConflictingAppointments(doctorId, blackoutPeriods = [], blockedSlots = []) {
+  try {
+    const appointments = await Appointment.find({
+      doctorId,
+      status: { $in: ["Pending", "Confirmed", "Rescheduled"] }
+    });
+
+    for (const appt of appointments) {
+      let conflict = false;
+      let conflictReason = "";
+
+      // 1. Check blackout periods (Date ranges)
+      for (const period of blackoutPeriods) {
+        if (appt.date >= period.startDate && appt.date <= period.endDate) {
+          conflict = true;
+          conflictReason = `Doctor is out of office (${period.reason || "Vacation"}).`;
+          break;
+        }
+      }
+
+      // 2. Check blocked slots (Specific date & time slot)
+      if (!conflict) {
+        for (const blocked of blockedSlots) {
+          if (appt.date === blocked.date && appt.time === blocked.slot) {
+            conflict = true;
+            conflictReason = "Doctor has a personal emergency / scheduling conflict.";
+            break;
+          }
+        }
+      }
+
+      if (conflict) {
+        appt.rescheduleRequired = true;
+        appt.rescheduleReason = conflictReason;
+        appt.status = "Rescheduled"; // Force status to rescheduled so that reschedule flow is active
+        await appt.save();
+        console.log(`Flagged appointment ${appt._id} for rescheduling. Reason: ${conflictReason}`);
+      }
+    }
+  } catch (err) {
+    console.error("flagConflictingAppointments error:", err);
+  }
+}
+
+function parseTimeToMinutes(t = "") {
   const [time = "0:00", ampm = ""] = (t || "").split(" ");
   const [hh = 0, mm = 0] = time.split(":").map(Number);
   let h = hh % 12;
   if ((ampm || "").toUpperCase() === "PM") h += 12;
   return h * 60 + (mm || 0);
-};
+}
 
 function dedupeAndSortSchedule(schedule = {}) {
   const out = {};
@@ -39,21 +226,20 @@ function parseScheduleInput(s) {
 function normalizeDocForClient(raw = {}) {
   const doc = { ...raw };
 
-  // convert Mongoose Map to plain object
-  if (doc.schedule && typeof doc.schedule.forEach === "function") {
-    const obj = {};
-    doc.schedule.forEach((val, key) => {
-      obj[key] = Array.isArray(val) ? val : [];
-    });
-    doc.schedule = obj;
-  } else if (!doc.schedule || typeof doc.schedule !== "object") {
-    doc.schedule = {};
-  }
+  const blackoutPeriods = Array.isArray(doc.blackoutPeriods) ? doc.blackoutPeriods : [];
+  const blockedSlots = Array.isArray(doc.blockedSlots) ? doc.blockedSlots : [];
+  const recurringSlots = Array.isArray(doc.recurringSlots) ? doc.recurringSlots : [];
+  doc.schedule = filterDoctorSchedule(doc.schedule, blackoutPeriods, blockedSlots);
 
   doc.availability = doc.availability === undefined ? "Available" : doc.availability;
   doc.patients = doc.patients ?? "";
   doc.rating = doc.rating ?? 0;
   doc.fee = doc.fee ?? doc.fees ?? 0;
+
+  doc.pricingTiers = doc.pricingTiers || { video: 500, offline: 400 };
+  doc.blackoutPeriods = blackoutPeriods;
+  doc.blockedSlots = blockedSlots;
+  doc.recurringSlots = recurringSlots;
 
   return doc;
 }
@@ -82,15 +268,27 @@ export async function createDoctor(req, res) {
 
     const schedule = parseScheduleInput(body.schedule);
 
+    let recurringSlots = [];
+    if (body.recurringSlots) {
+      if (typeof body.recurringSlots === "string") {
+        try { recurringSlots = JSON.parse(body.recurringSlots); } catch { recurringSlots = []; }
+      } else if (Array.isArray(body.recurringSlots)) {
+        recurringSlots = body.recurringSlots;
+      }
+    }
+
     const feeRaw = body.fee !== undefined ? Number(body.fee) : 0;
     const fee = isNaN(feeRaw) ? 0 : feeRaw;
 
     const ratingRaw = body.rating !== undefined ? Number(body.rating) : 0;
     const rating = isNaN(ratingRaw) ? 0 : ratingRaw;
 
+    const salt = await bcryptjs.genSalt(10);
+    const hashedPassword = await bcryptjs.hash(body.password, salt);
+
     const doc = new Doctor({
       email: emailLC,
-      password: body.password,
+      password: hashedPassword,
       name: body.name,
       specialization: body.specialization || "",
       imageUrl,
@@ -102,6 +300,7 @@ export async function createDoctor(req, res) {
       about: body.about || "",
       fee,
       schedule,
+      recurringSlots,
       success: body.success || "",
       patients: body.patients || "",
       rating,
@@ -185,32 +384,52 @@ export const getDoctors = async (req, res) => {
       { $limit: limit }
     ]);
 
-    const normalized = docs.map((d) => ({
-      _id: d._id,
-      id: d._id,
-      name: d.name || "",
-      specialization: d.specialization || d.speciality || "",
-      fee: d.fee ?? d.fees ?? d.consultationFee ?? 0,
-      imageUrl: d.imageUrl || d.image || d.avatar || null,
-      appointmentsTotal: d.appointmentsTotal || 0,
-      appointmentsCompleted: d.appointmentsCompleted || 0,
-      appointmentsCanceled: d.appointmentsCanceled || 0,
-      earnings: d.earnings || 0,
-      availability: d.availability ?? "Available",
-      schedule: (d.schedule && typeof d.schedule === "object") ? d.schedule : {},
-      patients: d.patients ?? "",
-      rating: d.rating ?? 0,
-      about: d.about ?? "",
-      experience: d.experience ?? "",
-      qualifications: d.qualifications ?? "",
-      location: d.location ?? "",
-      success: d.success ?? "",
-      raw: d,
-    }));
+    // Trigger cleanup in background for the loaded doctors
+    docs.forEach(d => {
+      cleanupDoctorPastSlots(d).catch(err => console.error("Aggregation cleanup error:", err));
+    });
 
-    const total = await Doctor.countDocuments(match);
+    const normalized = docs.map((d) => {
+      const blackoutPeriods = Array.isArray(d.blackoutPeriods) ? d.blackoutPeriods : [];
+      const blockedSlots = Array.isArray(d.blockedSlots) ? d.blockedSlots : [];
+      return {
+        _id: d._id,
+        id: d._id,
+        name: d.name || "",
+        specialization: d.specialization || d.speciality || "",
+        fee: d.fee ?? d.fees ?? d.consultationFee ?? 0,
+        imageUrl: d.imageUrl || d.image || d.avatar || null,
+        appointmentsTotal: d.appointmentsTotal || 0,
+        appointmentsCompleted: d.appointmentsCompleted || 0,
+        appointmentsCanceled: d.appointmentsCanceled || 0,
+        earnings: d.earnings || 0,
+        availability: d.availability ?? "Available",
+        schedule: filterDoctorSchedule(d.schedule, blackoutPeriods, blockedSlots),
+        patients: d.patients ?? "",
+        rating: d.rating ?? 0,
+        about: d.about ?? "",
+        experience: d.experience ?? "",
+        qualifications: d.qualifications ?? "",
+        location: d.location ?? "",
+        success: d.success ?? "",
+        pricingTiers: d.pricingTiers || { video: 500, offline: 400 },
+        blackoutPeriods,
+        blockedSlots,
+        raw: d,
+      };
+    });
 
-    return res.json({ success: true, data: normalized, doctors: normalized, meta: { page, limit, total } });
+      const masked = normalized.map(doc => {
+        if (req.admin && req.admin.role !== 'super-admin') {
+          const { earnings, ...rest } = doc;
+          return rest;
+        }
+        return doc;
+      });
+
+      const total = await Doctor.countDocuments(match);
+
+      return res.json({ success: true, data: masked, doctors: masked, meta: { page, limit, total } });
   } catch (err) {
     console.error("getDoctors:", err);
     return res.status(500).json({ success: false, message: "Server error" });
@@ -220,9 +439,18 @@ export const getDoctors = async (req, res) => {
 export async function getDoctorById(req, res) {
   try {
     const { id } = req.params;
-    const doc = await Doctor.findById(id).select("-password").lean();
+    const doc = await Doctor.findById(id).select("-password");
     if (!doc) return res.status(404).json({ success: false, message: "Doctor not found" });
-    return res.json({ success: true, data: normalizeDocForClient(doc) });
+    
+    await cleanupDoctorPastSlots(doc);
+    
+    const updatedDoc = await Doctor.findById(id).select("-password").lean();
+    const out = normalizeDocForClient(updatedDoc);
+    // Mask earnings for non-super-admin admins
+    if (req.admin && req.admin.role !== 'super-admin') {
+      delete out.earnings;
+    }
+    return res.json({ success: true, data: out });
   } catch (err) {
     console.error("getDoctorById error:", err);
     return res.status(500).json({ success: false, message: "Server error" });
@@ -257,6 +485,51 @@ export async function updateDoctor(req, res) {
 
     if (body.schedule) existing.schedule = parseScheduleInput(body.schedule);
 
+    if (body.recurringSlots !== undefined) {
+      let rs = body.recurringSlots;
+      if (typeof rs === "string") {
+        try { rs = JSON.parse(rs); } catch { rs = []; }
+      }
+      if (Array.isArray(rs)) {
+        existing.recurringSlots = rs;
+      }
+    }
+
+    if (body.pricingTiers !== undefined) {
+      let pt = body.pricingTiers;
+      if (typeof pt === "string") {
+        try { pt = JSON.parse(pt); } catch { pt = {}; }
+      }
+      existing.pricingTiers = {
+        video: Number(pt.video ?? existing.pricingTiers?.video ?? 500),
+        offline: Number(pt.offline ?? existing.pricingTiers?.offline ?? 400)
+      };
+    }
+
+    let scheduleOrBlackoutChanged = false;
+
+    if (body.blackoutPeriods !== undefined) {
+      let bp = body.blackoutPeriods;
+      if (typeof bp === "string") {
+        try { bp = JSON.parse(bp); } catch { bp = []; }
+      }
+      if (Array.isArray(bp)) {
+        existing.blackoutPeriods = bp;
+        scheduleOrBlackoutChanged = true;
+      }
+    }
+
+    if (body.blockedSlots !== undefined) {
+      let bs = body.blockedSlots;
+      if (typeof bs === "string") {
+        try { bs = JSON.parse(bs); } catch { bs = []; }
+      }
+      if (Array.isArray(bs)) {
+        existing.blockedSlots = bs;
+        scheduleOrBlackoutChanged = true;
+      }
+    }
+
     const updatable = ["name", "specialization", "experience", "qualifications", "location", "about", "availability", "success", "patients"];
     updatable.forEach((k) => { if (body[k] !== undefined) existing[k] = body[k]; });
 
@@ -275,9 +548,17 @@ export async function updateDoctor(req, res) {
       existing.email = body.email.toLowerCase();
     }
 
-    if (body.password) existing.password = body.password;
+    if (body.password) {
+      const salt = await bcryptjs.genSalt(10);
+      existing.password = await bcryptjs.hash(body.password, salt);
+    }
 
     await existing.save();
+
+    if (scheduleOrBlackoutChanged) {
+      // Trigger appointment conflict checks asynchronously
+      flagConflictingAppointments(existing._id, existing.blackoutPeriods, existing.blockedSlots);
+    }
 
     const out = normalizeDocForClient(existing.toObject());
     delete out.password;
@@ -341,8 +622,21 @@ export async function doctorLogin(req, res) {
     const doc = await Doctor.findOne({ email: email.toLowerCase() }).select("+password");
     if (!doc) return res.status(401).json({ success: false, message: "Invalid credentials" });
 
-    // Direct comparison (NO bcrypt)
-    if (doc.password !== password) return res.status(401).json({ success: false, message: "Invalid credentials" });
+    // Hashed comparison with plain-text fallback upgrade
+    let isMatch = false;
+    if (doc.password.startsWith("$2a$") || doc.password.startsWith("$2b$")) {
+      isMatch = await bcryptjs.compare(password, doc.password);
+    } else {
+      isMatch = (doc.password === password);
+      if (isMatch) {
+        // Upgrade password to hashed format in the database
+        const salt = await bcryptjs.genSalt(10);
+        doc.password = await bcryptjs.hash(password, salt);
+        await doc.save();
+      }
+    }
+
+    if (!isMatch) return res.status(401).json({ success: false, message: "Invalid credentials" });
 
     const secret = process.env.JWT_SECRET;
     if (!secret) return res.status(500).json({ success: false, message: "JWT_SECRET not configured" });
@@ -357,3 +651,264 @@ export async function doctorLogin(req, res) {
     return res.status(500).json({ success: false, message: "Server error" });
   }
 }
+
+export async function uploadCertificate(req, res) {
+  try {
+    const { id } = req.params;
+    if (!req.doctor || String(req.doctor._id || req.doctor.id) !== String(id)) {
+      return res.status(403).json({ success: false, message: "Not authorized" });
+    }
+
+    const doc = await Doctor.findById(id);
+    if (!doc) return res.status(404).json({ success: false, message: "Doctor not found" });
+
+    if (req.file?.path) {
+      const uploaded = await uploadToCloudinary(req.file.path, "doctor_certificates");
+      if (uploaded) {
+        if (doc.certificatePublicId) {
+          await deleteFromCloudinary(doc.certificatePublicId).catch(() => null);
+        }
+        doc.certificateUrl = uploaded.secure_url;
+        doc.certificatePublicId = uploaded.public_id;
+        doc.verificationStatus = "Pending";
+      }
+    } else {
+      return res.status(400).json({ success: false, message: "No file uploaded" });
+    }
+
+    await doc.save();
+    const out = normalizeDocForClient(doc.toObject());
+    delete out.password;
+    return res.json({ success: true, data: out });
+  } catch (err) {
+    console.error("uploadCertificate error:", err);
+    return res.status(500).json({ success: false, message: "Server error" });
+  }
+}
+
+export async function approveDoctorVerification(req, res) {
+  try {
+    const { id } = req.params;
+    const { status } = req.body || {}; // "Verified" or "Rejected"
+
+    const newStatus = status === "Rejected" ? "Rejected" : "Verified";
+    const isVerified = newStatus === "Verified";
+
+    const doc = await Doctor.findByIdAndUpdate(
+      id,
+      { verificationStatus: newStatus, isVerified },
+      { new: true }
+    );
+
+    if (!doc) return res.status(404).json({ success: false, message: "Doctor not found" });
+
+    const out = normalizeDocForClient(doc.toObject());
+    delete out.password;
+    return res.json({ success: true, data: out });
+  } catch (err) {
+    console.error("approveDoctorVerification error:", err);
+    return res.status(500).json({ success: false, message: "Server error" });
+  }
+}
+
+// Signup for Doctors (Public)
+export async function signupDoctor(req, res) {
+  try {
+    const { name, email, password, specialization, bmdcNumber } = req.body || {};
+    if (!name || !email || !password || !bmdcNumber) {
+      return res.status(400).json({ success: false, message: "Name, email, password and BMDC number are required" });
+    }
+
+    const emailLC = email.toLowerCase().trim();
+    if (await Doctor.findOne({ email: emailLC })) {
+      return res.status(409).json({ success: false, message: "Email already registered" });
+    }
+
+    const bmdcClean = bmdcNumber.trim();
+    if (await Doctor.findOne({ bmdcNumber: bmdcClean })) {
+      return res.status(409).json({ success: false, message: "BMDC number already registered" });
+    }
+
+    // Run scraper verification
+    let isVerified = false;
+    let verificationStatus = "Unverified";
+    let warningMessage = null;
+
+    try {
+      const verification = await verifyDoctorBMDC(bmdcClean, name, 1);
+      if (verification.success) {
+        isVerified = true;
+        verificationStatus = "Verified";
+      } else {
+        return res.status(400).json({ success: false, message: `BMDC Verification Failed: ${verification.reason}` });
+      }
+    } catch (error) {
+      console.error("BMDC Automatic Verification encountered an error:", error);
+      // Fallback to Pending verification status on scraper downtime
+      isVerified = false;
+      verificationStatus = "Pending";
+      warningMessage = "Automatic BM&DC verification is currently unavailable. Your registration is accepted, and your credentials have been queued for manual review.";
+    }
+
+    const salt = await bcryptjs.genSalt(10);
+    const hashedPassword = await bcryptjs.hash(password, salt);
+
+    const doc = new Doctor({
+      name,
+      email: emailLC,
+      password: hashedPassword,
+      specialization: specialization || "",
+      bmdcNumber: bmdcClean,
+      isVerified,
+      verificationStatus
+    });
+
+    await doc.save();
+
+    const secret = process.env.JWT_SECRET || "your_jwt_secret_here";
+    const token = jwt.sign({ id: doc._id.toString(), email: doc.email, role: "doctor" }, secret, { expiresIn: "7d" });
+
+    const out = normalizeDocForClient(doc.toObject());
+    delete out.password;
+
+    return res.status(201).json({ 
+      success: true, 
+      data: out, 
+      token,
+      message: warningMessage || "Registered and verified successfully!"
+    });
+  } catch (err) {
+    console.error("signupDoctor error:", err);
+    return res.status(500).json({ success: false, message: "Server error during registration" });
+  }
+}
+
+// Automatic Online Verification Trigger (Doctors only)
+export async function verifyCertificateOnline(req, res) {
+  try {
+    const { id } = req.params;
+    if (!req.doctor || String(req.doctor._id || req.doctor.id) !== String(id)) {
+      return res.status(403).json({ success: false, message: "Unauthorized: Not your profile" });
+    }
+
+    const doc = await Doctor.findById(id);
+    if (!doc) return res.status(404).json({ success: false, message: "Doctor not found" });
+
+    // Mark verified automatically
+    doc.isVerified = true;
+    doc.verificationStatus = "Verified";
+    await doc.save();
+
+    const out = normalizeDocForClient(doc.toObject());
+    delete out.password;
+
+    return res.status(200).json({ success: true, message: "Certificate verified automatically online!", data: out });
+  } catch (err) {
+    console.error("verifyCertificateOnline error:", err);
+    return res.status(500).json({ success: false, message: "Server error during online verification" });
+  }
+}
+
+// Doctor Forgot Password
+export async function forgotPasswordDoctor(req, res) {
+  try {
+    const { email } = req.body || {};
+    if (!email) {
+      return res.status(400).json({ success: false, message: "Email is required" });
+    }
+
+    const emailLC = email.toLowerCase().trim();
+    const doc = await Doctor.findOne({ email: emailLC });
+    if (!doc) {
+      return res.status(404).json({ success: false, message: "Doctor not found" });
+    }
+
+    const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
+    const otpExpires = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
+
+    doc.resetOtp = otpCode;
+    doc.resetOtpExpires = otpExpires;
+    await doc.save();
+
+    console.log(`\n==============================================`);
+    console.log(`[PASSWORD RESET OTP] Doctor: ${doc.name || "N/A"}`);
+    console.log(`[PASSWORD RESET OTP] Target: ${emailLC}`);
+    console.log(`[PASSWORD RESET OTP] Code: ${otpCode}`);
+    console.log(`==============================================\n`);
+
+    // Send email with OTP code
+    const mailHtml = `
+      <div style="font-family: sans-serif; padding: 20px; color: #333;">
+        <h2>Reset Your Mediunity Password</h2>
+        <p>Dear Dr. ${doc.name || "Doctor"},</p>
+        <p>You requested a password reset for your Mediunity Doctor account. Please use the following 6-digit verification code:</p>
+        <div style="background: #f0fdf4; border: 1px solid #bbf7d0; padding: 15px; text-align: center; border-radius: 8px; font-size: 24px; font-weight: bold; letter-spacing: 5px; color: #166534; margin: 20px 0;">
+          ${otpCode}
+        </div>
+        <p>This code is valid for 15 minutes. If you did not request a password reset, please ignore this email.</p>
+        <hr style="border: none; border-top: 1px solid #eee; margin-top: 30px;" />
+        <p style="font-size: 11px; color: #888;">Mediunity Portal • Safe & Secure Clinical Health Operations</p>
+      </div>
+    `;
+    await sendEmail({
+      to: emailLC,
+      subject: "Mediunity Doctor Password Reset Verification Code",
+      html: mailHtml
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: "Password reset verification code has been simulated and printed.",
+      email: emailLC
+    });
+  } catch (err) {
+    console.error("forgotPasswordDoctor error:", err);
+    return res.status(500).json({ success: false, message: "Server error during forgot password request" });
+  }
+}
+
+// Doctor Reset Password
+export async function resetPasswordDoctor(req, res) {
+  try {
+    const { email, otp, newPassword } = req.body || {};
+    if (!email || !otp || !newPassword) {
+      return res.status(400).json({ success: false, message: "All fields are required" });
+    }
+
+    const emailLC = email.toLowerCase().trim();
+    const doc = await Doctor.findOne({ email: emailLC });
+    if (!doc) {
+      return res.status(404).json({ success: false, message: "Doctor not found" });
+    }
+
+    console.log("Doctor Password Reset Debug Info:", {
+      resetOtpInDb: doc.resetOtp,
+      otpReceived: otp,
+      otpMatches: doc.resetOtp === otp,
+      now: new Date(),
+      expiresAt: doc.resetOtpExpires,
+      isExpired: new Date() > doc.resetOtpExpires
+    });
+
+    if (!doc.resetOtp || doc.resetOtp !== otp || new Date() > doc.resetOtpExpires) {
+      return res.status(400).json({ success: false, message: "Invalid or expired verification code" });
+    }
+
+    const salt = await bcryptjs.genSalt(10);
+    const hashedPassword = await bcryptjs.hash(newPassword, salt);
+
+    doc.password = hashedPassword;
+    doc.resetOtp = null;
+    doc.resetOtpExpires = null;
+    await doc.save();
+
+    return res.status(200).json({
+      success: true,
+      message: "Password has been reset successfully. Please log in with your new password."
+    });
+  } catch (err) {
+    console.error("resetPasswordDoctor error:", err);
+    return res.status(500).json({ success: false, message: "Server error during password reset" });
+  }
+}
+

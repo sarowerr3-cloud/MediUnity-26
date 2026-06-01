@@ -2,8 +2,9 @@ import axios from "axios";
 import Appointment from "../models/Appointment.js";
 import Doctor from "../models/Doctor.js";
 import dotenv from "dotenv";
-import { getAuth } from "@clerk/express";
-import { clerkClient } from "@clerk/clerk-sdk-node";
+import PatientProfile from "../models/PatientProfile.js";
+import HealthLog from "../models/HealthLog.js";
+import Journal from "../models/Journal.js";
 dotenv.config();
 
 const FRONTEND_URL = process.env.FRONTEND_URL;
@@ -24,19 +25,7 @@ const buildFrontendBase = (req) => {
 };
 
 function resolveClerkUserId(req) {
-  try {
-    const auth = req.auth || {};
-    const fromReq = auth?.userId || auth?.user_id || auth?.user?.id || req.user?.id || null;
-    if (fromReq) return fromReq;
-    try {
-      const serverAuth = getAuth ? getAuth(req) : null;
-      return serverAuth?.userId || null;
-    } catch (e) {
-      return null;
-    }
-  } catch (e) {
-    return null;
-  }
+  return req.auth?.userId || null;
 }
 
 /* ---------------- list / single / by-patient ---------------- */
@@ -66,9 +55,21 @@ export const getAppointments = async (req, res) => {
       .populate("doctorId", "name specialization owner imageUrl image")
       .lean();
 
+    const createdByIds = items.map(item => item.createdBy).filter(Boolean);
+    const profiles = await PatientProfile.find({ clerkUserId: { $in: createdByIds } }, "clerkUserId imageUrl").lean();
+    const profileMap = {};
+    profiles.forEach(p => {
+      profileMap[p.clerkUserId] = p.imageUrl;
+    });
+
+    const enrichedItems = items.map(item => ({
+      ...item,
+      patientImage: profileMap[item.createdBy] || null
+    }));
+
     const total = await Appointment.countDocuments(filter);
 
-    return res.json({ success: true, appointments: items, meta: { page, limit, total, count: items.length } });
+    return res.json({ success: true, appointments: enrichedItems, meta: { page, limit, total, count: items.length } });
   } catch (err) {
     console.error("getAppointments:", err);
     return res.status(500).json({ success: false, message: "Server error" });
@@ -132,6 +133,7 @@ export const createAppointment = async (req, res) => {
       notes = "",
       email,
       paymentMethod,
+      consultType = "video",
       owner: ownerFromBody = null,
       doctorName: doctorNameFromBody,
       speciality: specialityFromBody,
@@ -146,7 +148,7 @@ export const createAppointment = async (req, res) => {
       return res.status(400).json({ success: false, message: "doctorId, patientName, mobile, date and time are required" });
     }
 
-    const numericFee = safeNumber(fee ?? fees ?? 0);
+    let numericFee = safeNumber(fee ?? fees ?? 0);
     if (numericFee === null || numericFee < 0) {
       return res.status(400).json({ success: false, message: "fee must be a valid number" });
     }
@@ -175,6 +177,14 @@ export const createAppointment = async (req, res) => {
       console.warn("Doctor lookup failed:", e?.message || e);
     }
     if (!doctor) return res.status(404).json({ success: false, message: "Doctor not found" });
+
+    // Resolve fee from pricing tiers if no explicit fee was provided
+    const validConsultTypes = ["video", "phone", "chat", "offline"];
+    const resolvedConsultType = validConsultTypes.includes(consultType) ? consultType : "video";
+    if (numericFee === 0 && doctor.pricingTiers) {
+      const tierFee = safeNumber(doctor.pricingTiers[resolvedConsultType]);
+      if (tierFee !== null && tierFee > 0) numericFee = tierFee;
+    }
 
     // Resolve owner, names, images, etc.
     let resolvedOwner = ownerFromBody || doctor.owner || null;
@@ -215,6 +225,7 @@ export const createAppointment = async (req, res) => {
       date: String(date),
       time: String(time),
       fees: numericFee,
+      consultType: resolvedConsultType,
       status: "Pending",
       payment: { method: paymentMethod === "Cash" ? "Cash" : "Online", status: "Pending", amount: numericFee },
       notes: notes || "",
@@ -399,6 +410,9 @@ export const updateAppointment = async (req, res) => {
       update.time = body.time;
       update.status = "Rescheduled";
       update.rescheduledTo = { date: body.date, time: body.time };
+      // Clear the rescheduleRequired flag if it was set
+      update.rescheduleRequired = false;
+      update.rescheduleReason = "";
     }
 
     const updated = await Appointment.findByIdAndUpdate(id, update, { new: true, runValidators: true })
@@ -469,8 +483,20 @@ export const getAppointmentsByDoctor = async (req, res) => {
       .populate("doctorId", "name specialization owner imageUrl image")
       .lean();
 
+    const createdByIds = items.map(item => item.createdBy).filter(Boolean);
+    const profiles = await PatientProfile.find({ clerkUserId: { $in: createdByIds } }, "clerkUserId imageUrl").lean();
+    const profileMap = {};
+    profiles.forEach(p => {
+      profileMap[p.clerkUserId] = p.imageUrl;
+    });
+
+    const enrichedItems = items.map(item => ({
+      ...item,
+      patientImage: profileMap[item.createdBy] || null
+    }));
+
     const total = await Appointment.countDocuments(filter);
-    return res.json({ success: true, appointments: items, meta: { page, limit, total, count: items.length } });
+    return res.json({ success: true, appointments: enrichedItems, meta: { page, limit, total, count: items.length } });
   } catch (err) {
     console.error("getAppointmentsByDoctor:", err);
     return res.status(500).json({ success: false, message: "Server error" });
@@ -479,13 +505,193 @@ export const getAppointmentsByDoctor = async (req, res) => {
 
 export async function getRegisteredUserCount(req, res) {
   try {
-    const totalUsers = await clerkClient.users.getCount();
+    const totalUsers = await PatientProfile.countDocuments();
     return res.json({ success: true, totalUsers });
   } catch (err) {
     console.error("getRegisteredUserCount error:", err);
     return res.status(500).json({ success: false, message: "Server error" });
   }
 }
+
+export const getIntakeSummary = async (req, res) => {
+  try {
+    const { appointmentId } = req.params;
+    const appointment = await Appointment.findById(appointmentId);
+    if (!appointment) {
+      return res.status(404).json({ success: false, message: "Appointment not found" });
+    }
+
+    const patientId = appointment.createdBy;
+
+    // Security Check: Patient (Clerk UserId) or Doctor (req.doctor._id)
+    const requesterPatientId = req.auth?.userId || null;
+    const doctor = req.doctor || null;
+
+    const isAuthorized = 
+      (requesterPatientId && requesterPatientId === patientId) ||
+      (doctor && doctor._id.toString() === appointment.doctorId.toString());
+
+    if (!isAuthorized) {
+      return res.status(403).json({ success: false, message: "Forbidden: You are not authorized to view this consult summary." });
+    }
+
+    // 1. Get Symptom Check from Patient Profile
+    const profile = await PatientProfile.findOne({ clerkUserId: patientId }).lean();
+    const latestSymptomCheck = profile?.latestSymptomCheck || null;
+
+    // 2. Get Recent Health Logs (Vitals) - last 7
+    const healthLogDoc = await HealthLog.findOne({ patientId }).lean();
+    let vitals = [];
+    if (healthLogDoc && healthLogDoc.logs) {
+      vitals = healthLogDoc.logs
+        .slice(-7) // last 7
+        .map(l => ({
+          systolic: l.bloodPressure?.systolic || null,
+          diastolic: l.bloodPressure?.diastolic || null,
+          bloodSugar: l.bloodSugar || null,
+          mood: l.mood || "",
+          sleep: l.sleep || null,
+          date: l.createdAt
+        }));
+    }
+
+    // 3. Get Latest Recovery Journal Logs - last 5
+    const journalDoc = await Journal.findOne({ patientId }).lean();
+    let journalEntries = [];
+    if (journalDoc && journalDoc.entries) {
+      journalEntries = journalDoc.entries.slice(0, 5).map(e => ({
+        content: e.content,
+        milestone: e.milestone || "",
+        cheersCount: e.cheers?.length || 0,
+        date: e.createdAt
+      }));
+    }
+
+    return res.status(200).json({
+      success: true,
+      intakeSummary: {
+        patientName: appointment.patientName,
+        age: appointment.age || profile?.age || null,
+        gender: appointment.gender || profile?.gender || null,
+        latestSymptomCheck,
+        vitals,
+        recoveryJournal: journalEntries
+      }
+    });
+
+  } catch (err) {
+    console.error("getIntakeSummary error:", err);
+    return res.status(500).json({ success: false, message: "Server error" });
+  }
+};
+
+/* ---------------- Patient Self Check-In ---------------- */
+export const checkIn = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const clerkUserId = req.auth?.userId || null;
+
+    const appt = await Appointment.findById(id);
+    if (!appt) return res.status(404).json({ success: false, message: "Appointment not found" });
+
+    // Only the appointment owner can check in
+    if (!clerkUserId || appt.createdBy !== clerkUserId) {
+      return res.status(403).json({ success: false, message: "Forbidden: Only the patient can check in." });
+    }
+
+    // Validate appointment is today
+    const today = new Date().toISOString().split("T")[0];
+    if (appt.date !== today) {
+      return res.status(400).json({ success: false, message: "Check-in is only allowed on the appointment date." });
+    }
+
+    // Validate appointment status
+    if (![ "Confirmed", "Rescheduled"].includes(appt.status)) {
+      return res.status(400).json({ success: false, message: "Only Confirmed or Rescheduled appointments can check in." });
+    }
+
+    if (appt.queueState !== "Scheduled") {
+      return res.status(400).json({ success: false, message: `Already checked in (queue state: ${appt.queueState}).` });
+    }
+
+    appt.queueState = "CheckedIn";
+    appt.checkedInAt = new Date();
+    await appt.save();
+
+    return res.json({ success: true, appointment: appt, message: "Successfully checked in! The doctor will call you shortly." });
+  } catch (err) {
+    console.error("checkIn error:", err);
+    return res.status(500).json({ success: false, message: "Server error" });
+  }
+};
+
+/* ---------------- Doctor: Update Queue State ---------------- */
+export const updateQueueState = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { queueState } = req.body || {};
+    const doctor = req.doctor || null;
+
+    if (!doctor) return res.status(401).json({ success: false, message: "Doctor authentication required." });
+
+    const validTransitions = ["CheckedIn", "InConsultation", "Completed"];
+    if (!validTransitions.includes(queueState)) {
+      return res.status(400).json({ success: false, message: `Invalid queueState. Must be one of: ${validTransitions.join(", ")}` });
+    }
+
+    const appt = await Appointment.findById(id);
+    if (!appt) return res.status(404).json({ success: false, message: "Appointment not found" });
+
+    // Only the appointment's doctor can change queue state
+    if (appt.doctorId.toString() !== doctor._id.toString()) {
+      return res.status(403).json({ success: false, message: "Forbidden: Not your patient's appointment." });
+    }
+
+    appt.queueState = queueState;
+    if (queueState === "Completed") {
+      appt.status = "Completed";
+    }
+    await appt.save();
+
+    return res.json({ success: true, appointment: appt });
+  } catch (err) {
+    console.error("updateQueueState error:", err);
+    return res.status(500).json({ success: false, message: "Server error" });
+  }
+};
+
+/* ---------------- Doctor: Get Today's Queue Board ---------------- */
+export const getQueueBoard = async (req, res) => {
+  try {
+    const { doctorId } = req.params;
+    const today = new Date().toISOString().split("T")[0];
+
+    const appts = await Appointment.find({
+      doctorId,
+      date: today,
+      status: { $in: ["Confirmed", "Rescheduled", "Completed"] }
+    }).sort({ checkedInAt: 1, time: 1 }).lean();
+
+    const scheduled = appts.filter(a => a.queueState === "Scheduled");
+    const checkedIn = appts.filter(a => a.queueState === "CheckedIn").sort((a, b) => new Date(a.checkedInAt || 0) - new Date(b.checkedInAt || 0));
+    const inConsultation = appts.filter(a => a.queueState === "InConsultation");
+    const completed = appts.filter(a => a.queueState === "Completed");
+
+    return res.json({
+      success: true,
+      queueBoard: { scheduled, checkedIn, inConsultation, completed },
+      counts: {
+        scheduled: scheduled.length,
+        checkedIn: checkedIn.length,
+        inConsultation: inConsultation.length,
+        completed: completed.length
+      }
+    });
+  } catch (err) {
+    console.error("getQueueBoard error:", err);
+    return res.status(500).json({ success: false, message: "Server error" });
+  }
+};
 
 export default {
   getAppointments,
@@ -499,4 +705,8 @@ export default {
   getStats,
   getAppointmentsByDoctor,
   getRegisteredUserCount,
+  getIntakeSummary,
+  checkIn,
+  updateQueueState,
+  getQueueBoard,
 };

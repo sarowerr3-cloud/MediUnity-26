@@ -252,6 +252,9 @@ export default function DoctorDetailPage() {
 
       const res = await fetch(`${API_BASE}/doctors`, {
         method: "POST",
+        headers: {
+          Authorization: "Bearer " + localStorage.getItem("adminToken_v1"),
+        },
         body: fd,
       });
 

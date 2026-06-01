@@ -1,23 +1,24 @@
-import React from 'react'
-import Navbar from '../../components/Navbar/Navbar'
-import Banner from '../../components/Banner/Banner'
-import Certification from '../../components/Certification/Certification'
-import HomeDoctors from '../../components/HomeDoctors/HomeDoctors'
-import Testimonial from '../../components/Testimonial/Testimonial'
-import Footer from '../../components/Footer/Footer'
-
+import React from "react";
+import Navbar from "../../components/Navbar/Navbar";
+import Footer from "../../components/Footer/Footer";
+import SocialDashboard from "./SocialDashboard";
+import SocialLanding from "./SocialLanding";
+import { useAuth } from "../../context/AuthContext";
 
 const Home = () => {
-  return (
-    <div>
-        <Navbar/>
-        <Banner/>
-        <Certification/>
-        <HomeDoctors/>
-        <Testimonial/>
-        <Footer/>
-    </div>
-  )
-}
+  const { isSignedIn } = useAuth();
+  const hasDoctorToken = localStorage.getItem("doctorToken_v1");
+  const showDashboard = isSignedIn || hasDoctorToken;
 
-export default Home
+  return (
+    <div className="min-h-screen bg-slate-50 flex flex-col justify-between font-sans">
+      <Navbar />
+      <div className="flex-grow">
+        {showDashboard ? <SocialDashboard /> : <SocialLanding />}
+      </div>
+      <Footer />
+    </div>
+  );
+};
+
+export default Home;

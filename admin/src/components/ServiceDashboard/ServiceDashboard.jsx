@@ -93,7 +93,7 @@ export default function ServiceDashboard({ services: servicesProp = null }) {
         "Content-Type": "application/json",
       },
     };
-    const token = localStorage.getItem("authToken");
+    const token = localStorage.getItem("adminToken_v1");
     if (token) opts.headers["Authorization"] = `Bearer ${token}`;
     return opts;
   }

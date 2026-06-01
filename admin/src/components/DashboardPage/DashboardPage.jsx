@@ -1,4 +1,5 @@
 import React, { useMemo, useState, useEffect } from "react";
+import { useAuth } from "../../context/AuthContext";
 import {
   Search,
   Users,
@@ -92,6 +93,9 @@ function normalizeDoctor(doc) {
   Component
 ------------------------ */
 export default function DashboardPage() {
+  const { user } = useAuth();
+  const isSuperAdmin = user?.role === "super-admin";
+
   const [doctors, setDoctors] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -110,7 +114,11 @@ export default function DashboardPage() {
       setError(null);
       try {
         const url = `${API_BASE}/api/doctors?limit=200`;
-        const res = await fetch(url);
+        const res = await fetch(url, {
+          headers: {
+            Authorization: "Bearer " + localStorage.getItem("adminToken_v1"),
+          },
+        });
         if (!res.ok) {
           const body = await res.json().catch(() => ({}));
           throw new Error(
@@ -151,7 +159,11 @@ export default function DashboardPage() {
     async function loadPatientCount() {
       setPatientCountLoading(true);
       try {
-        const res = await fetch(PATIENT_COUNT_API);
+        const res = await fetch(PATIENT_COUNT_API, {
+          headers: {
+            Authorization: "Bearer " + localStorage.getItem("adminToken_v1"),
+          },
+        });
         if (!res.ok) {
           console.warn("Patient count fetch failed:", res.status);
           if (mounted) setPatientCount(0);
@@ -265,11 +277,13 @@ export default function DashboardPage() {
             value={totals.totalAppointments}
           />
 
-          <StatCard
-            icon={<Banknote className="w-6 h-6" />}
-            label="Total Earnings"
-            value={`Tk ${totals.totalEarnings.toLocaleString()}`}
-          />
+          {isSuperAdmin && (
+            <StatCard
+              icon={<Banknote className="w-6 h-6" />}
+              label="Total Earnings"
+              value={`Tk ${totals.totalEarnings.toLocaleString()}`}
+            />
+          )}
 
           <StatCard
             icon={<CheckCircle className="w-6 h-6" />}
@@ -340,7 +354,7 @@ export default function DashboardPage() {
                   <th className={s.tableHeaderCell}>Appointments</th>
                   <th className={s.tableHeaderCell}>Completed</th>
                   <th className={s.tableHeaderCell}>Canceled</th>
-                  <th className={s.tableHeaderCell}>Total Earnings</th>
+                  {isSuperAdmin && <th className={s.tableHeaderCell}>Total Earnings</th>}
                 </tr>
               </thead>
 
@@ -388,9 +402,11 @@ export default function DashboardPage() {
                       {d.appointments.canceled}
                     </td>
 
-                    <td className={s.tableCell + " " + s.earningsText}>
-                      Tk {d.earnings.toLocaleString()}
-                    </td>
+                    {isSuperAdmin && (
+                      <td className={s.tableCell + " " + s.earningsText}>
+                        Tk {d.earnings.toLocaleString()}
+                      </td>
+                    )}
                   </tr>
                 ))}
               </tbody>
@@ -400,7 +416,7 @@ export default function DashboardPage() {
           <div className={s.mobileDoctorContainer}>
             <div className={s.mobileDoctorGrid}>
               {visibleDoctors.map((d) => (
-                <MobileDoctorCard key={d.id} d={d} />
+                <MobileDoctorCard key={d.id} d={d} showEarnings={isSuperAdmin} />
               ))}
             </div>
           </div>
@@ -440,7 +456,7 @@ function StatCard({ icon, label, value }) {
   );
 }
 
-function MobileDoctorCard({ d }) {
+function MobileDoctorCard({ d, showEarnings }) {
   return (
     <div className={s.mobileDoctorCard}>
       <div className={s.mobileDoctorHeader}>
@@ -481,10 +497,12 @@ function MobileDoctorCard({ d }) {
         </div>
       </div>
 
-      <div className={s.mobileEarningsContainer}>
-        <div>Earned</div>
-        <div className="font-semibold">Tk {d.earnings.toLocaleString()}</div>
-      </div>
+      {showEarnings && (
+        <div className={s.mobileEarningsContainer}>
+          <div>Earned</div>
+          <div className="font-semibold">Tk {d.earnings.toLocaleString()}</div>
+        </div>
+      )}
     </div>
   );
 }

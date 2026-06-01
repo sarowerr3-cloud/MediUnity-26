@@ -281,7 +281,11 @@ const DoctorsPage = ({ apiBase }) => {
 
                   <div className={doctorsPageStyles.experienceBadge}>
                     <Medal className={doctorsPageStyles.experienceIcon} />
-                    <span>{doctor.experience || "—"} years Experience</span>
+                    <span>
+                      {String(doctor.experience || "—").toLowerCase().includes("year")
+                        ? `${doctor.experience} Experience`
+                        : `${doctor.experience || "—"} years Experience`}
+                    </span>
                   </div>
 
                   {doctor.available ? (

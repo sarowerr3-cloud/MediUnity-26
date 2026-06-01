@@ -16,24 +16,29 @@ import {
   Grid,
   PlusSquare,
   List,
+  ShieldCheck,
+  FileSearch,
+  MessageSquare,
 } from "lucide-react";
 import logoImg from "../../assets/logo.png";
 
-// Clerk hooks
-import { useClerk, useAuth, useUser } from "@clerk/clerk-react";
+import { useAuth, useUser } from "../../context/AuthContext";
+import AuthModal from "../AuthModal/AuthModal";
 import { navbarStyles as ns } from "../../assets/dummyStyles";
 
 export default function AnimatedNavbar() {
   const [open, setOpen] = useState(false);
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const navInnerRef = useRef(null);
   const indicatorRef = useRef(null);
   const location = useLocation();
   const navigate = useNavigate();
 
-  // Clerk
-  const clerk = useClerk?.();
-  const { getToken, isLoaded: authLoaded } = useAuth();
+  const { getToken, isLoaded: authLoaded, logout } = useAuth();
   const { isSignedIn, user, isLoaded: userLoaded } = useUser();
+
+  // Role for conditional nav rendering
+  const role = user?.role || "support";
 
   /* ---------------- Sliding Active Indicator ---------------- */
   const moveIndicator = useCallback(() => {
@@ -146,23 +151,12 @@ export default function AnimatedNavbar() {
   }, [isSignedIn, userLoaded, location.pathname, navigate]);
 
   const handleOpenSignIn = () => {
-    if (!clerk || !clerk.openSignIn) {
-      console.warn("Clerk is not available to open sign-in.");
-      return;
-    }
-    clerk.openSignIn({
-      forceRedirectUrl: "/h",
-      signInForceRedirectUrl: "/h",
-    });
+    navigate("/admin-login");
   };
 
   const handleSignOut = async () => {
-    if (!clerk || !clerk.signOut) {
-      console.warn("Clerk signOut not available.");
-      return;
-    }
     try {
-      await clerk.signOut();
+      await logout();
     } catch (err) {
       console.error("Sign out failed:", err);
     } finally {
@@ -171,7 +165,6 @@ export default function AnimatedNavbar() {
       } catch (e) {
         /* ignore */
       }
-      // redirect to home after sign out
       navigate("/");
     }
   };
@@ -184,15 +177,15 @@ export default function AnimatedNavbar() {
           <div className={ns.logoContainer}>
             <img
               src={logoImg}
-              alt="Medtek"
+              alt="Mediunity"
               className={ns.logoImage}
             />
             <Link to="/">
               <div className={ns.logoLink}>
-                MediCare
+                Mediunity
               </div>
               <div className={ns.logoSubtext}>
-                Healthcare Solutions
+                Your Healthcare Solution
               </div>
             </Link>
           </div>
@@ -212,41 +205,46 @@ export default function AnimatedNavbar() {
                     label="Dashboard"
                     icon={<Home size={16} />}
                   />
+                  {role === "super-admin" && (
+                    <CenterNavItem
+                      to="/add"
+                      label="Add Doctor"
+                      icon={<UserPlus size={16} />}
+                    />
+                  )}
+                  {(role === "super-admin" || role === "moderator") && (
+                    <CenterNavItem
+                      to="/list"
+                      label="List Doctors"
+                      icon={<Users size={16} />}
+                    />
+                  )}
+                  {(role === "super-admin" || role === "moderator") && (
+                    <CenterNavItem
+                      to="/appointments"
+                      label="Appointments"
+                      icon={<Calendar size={16} />}
+                    />
+                  )}
+                  {(role === "super-admin" || role === "moderator") && (
+                    <CenterNavItem
+                      to="/community-posts"
+                      label="Community"
+                      icon={<MessageSquare size={16} />}
+                    />
+                  )}
                   <CenterNavItem
-                    to="/add"
-                    label="Add Doctor"
-                    icon={<UserPlus size={16} />}
+                    to="/verify-identities"
+                    label="Verification"
+                    icon={<ShieldCheck size={16} />}
                   />
-                  <CenterNavItem
-                    to="/list"
-                    label="List Doctors"
-                    icon={<Users size={16} />}
-                  />
-                  <CenterNavItem
-                    to="/appointments"
-                    label="Appointments"
-                    icon={<Calendar size={16} />}
-                  />
-                  <CenterNavItem
-                    to="/service-dashboard"
-                    label="Service Dashboard"
-                    icon={<Grid size={16} />}
-                  />
-                  <CenterNavItem
-                    to="/add-service"
-                    label="Add Service"
-                    icon={<PlusSquare size={16} />}
-                  />
-                  <CenterNavItem
-                    to="/list-service"
-                    label="List Services"
-                    icon={<List size={16} />}
-                  />
-                  <CenterNavItem
-                    to="/service-appointments"
-                    label="Service Appointments"
-                    icon={<Calendar size={16} />}
-                  />
+                  {role === "super-admin" && (
+                    <CenterNavItem
+                      to="/audit-logs"
+                      label="Audit Logs"
+                      icon={<FileSearch size={16} />}
+                    />
+                  )}
                 </div>
               </div>
             </div>
@@ -304,49 +302,52 @@ export default function AnimatedNavbar() {
                 onClick={() => setOpen(false)}
               />
 
+              {role === "super-admin" && (
+                <MobileItem
+                  to="/add"
+                  label="Add Doctor"
+                  icon={<UserPlus size={16} />}
+                  onClick={() => setOpen(false)}
+                />
+              )}
+              {(role === "super-admin" || role === "moderator") && (
+                <MobileItem
+                  to="/list"
+                  label="List Doctors"
+                  icon={<Users size={16} />}
+                  onClick={() => setOpen(false)}
+                />
+              )}
+              {(role === "super-admin" || role === "moderator") && (
+                <MobileItem
+                  to="/appointments"
+                  label="Appointments"
+                  icon={<Calendar size={16} />}
+                  onClick={() => setOpen(false)}
+                />
+              )}
+              {(role === "super-admin" || role === "moderator") && (
+                <MobileItem
+                  to="/community-posts"
+                  label="Community"
+                  icon={<MessageSquare size={16} />}
+                  onClick={() => setOpen(false)}
+                />
+              )}
               <MobileItem
-                to="/add"
-                label="Add Doctor"
-                icon={<UserPlus size={16} />}
+                to="/verify-identities"
+                label="Verification"
+                icon={<ShieldCheck size={16} />}
                 onClick={() => setOpen(false)}
               />
-              <MobileItem
-                to="/list"
-                label="List Doctors"
-                icon={<Users size={16} />}
-                onClick={() => setOpen(false)}
-              />
-              <MobileItem
-                to="/appointments"
-                label="Appointments"
-                icon={<Calendar size={16} />}
-                onClick={() => setOpen(false)}
-              />
-
-              <MobileItem
-                to="/service-dashboard"
-                label="Service Dashboard"
-                icon={<Grid size={16} />}
-                onClick={() => setOpen(false)}
-              />
-              <MobileItem
-                to="/add-service"
-                label="Add Service"
-                icon={<PlusSquare size={16} />}
-                onClick={() => setOpen(false)}
-              />
-              <MobileItem
-                to="/list-service"
-                label="List Services"
-                icon={<List size={16} />}
-                onClick={() => setOpen(false)}
-              />
-              <MobileItem
-                to="/service-appointments"
-                label="Service Appointments"
-                icon={<Calendar size={16} />}
-                onClick={() => setOpen(false)}
-              />
+              {role === "super-admin" && (
+                <MobileItem
+                  to="/audit-logs"
+                  label="Audit Logs"
+                  icon={<FileSearch size={16} />}
+                  onClick={() => setOpen(false)}
+                />
+              )}
 
               <div className={ns.mobileAuthContainer}>
                 {isSignedIn ? (
@@ -377,6 +378,7 @@ export default function AnimatedNavbar() {
           </div>
         )}
       </nav>
+      <AuthModal isOpen={isAuthModalOpen} onClose={() => setIsAuthModalOpen(false)} />
     </header>
   );
 }

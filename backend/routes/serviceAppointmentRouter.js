@@ -1,6 +1,6 @@
 // routes/serviceAppointmentRouter.js
 import express from "express";
-import { clerkMiddleware, requireAuth } from "@clerk/express";
+import { requireFirebaseAuth } from "../middlewares/firebaseAuth.js";
 
 import {
   getServiceAppointments,
@@ -22,13 +22,12 @@ router.get("/confirm", confirmServicePayment);
 router.post("/aamarpay/callback", handleAamarpayServiceCallback);
 router.get("/stats/summary", getServiceAppointmentStats);
 
-router.post("/", clerkMiddleware(), requireAuth(), createServiceAppointment);
+router.post("/", requireFirebaseAuth, createServiceAppointment);
 
 // 🔥 MUST BE BEFORE :id
 router.get(
   "/me",
-  clerkMiddleware(),
-  requireAuth(),
+  requireFirebaseAuth,
   getServiceAppointmentsByPatient
 );
 

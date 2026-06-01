@@ -124,7 +124,11 @@ export default function AnimatedDoctorListResponsive({ apiBase }) {
   async function fetchDoctors() {
     setLoading(true);
     try {
-      const res = await fetch(`${API_BASE}/api/doctors`);
+      const res = await fetch(`${API_BASE}/api/doctors`, {
+        headers: {
+          Authorization: "Bearer " + localStorage.getItem("adminToken_v1"),
+        },
+      });
       const body = await res.json().catch(() => null);
 
       if (res.ok && body && body.success) {
@@ -201,6 +205,9 @@ export default function AnimatedDoctorListResponsive({ apiBase }) {
     try {
       const res = await fetch(`${API_BASE}/api/doctors/${id}`, {
         method: "DELETE",
+        headers: {
+          Authorization: "Bearer " + localStorage.getItem("adminToken_v1"),
+        },
       });
       const body = await res.json().catch(() => null);
       if (!res.ok) {
@@ -415,26 +422,44 @@ export default function AnimatedDoctorListResponsive({ apiBase }) {
                           Schedule
                         </div>
                         <div className="mt-2 flex flex-wrap gap-2">
-                          {sortedDates.map((date) => {
-                            const slots = scheduleMap[date] || [];
-                            return (
-                              <div key={date} className="min-w-full md:min-w-0">
-                                <div className={doctorListStyles.scheduleDate}>
-                                  {formatDateISO(date)}
-                                </div>
-                                <div className="mt-1 flex flex-wrap gap-2">
-                                  {slots.map((s, i) => (
-                                    <span
-                                      key={i}
-                                      className={doctorListStyles.scheduleSlot}
-                                    >
-                                      {s}
-                                    </span>
-                                  ))}
-                                </div>
-                              </div>
-                            );
-                          })}
+                           {sortedDates.map((date) => {
+                             const rawSlots = scheduleMap[date] || [];
+                             const recurring = Array.isArray(doc.recurringSlots) ? doc.recurringSlots : [];
+                             const combined = Array.from(new Set([...rawSlots, ...recurring]));
+                             const blocked = Array.isArray(doc.blockedSlots) ? doc.blockedSlots : [];
+                             const slots = combined.filter(slot => {
+                               return !blocked.some(b => b && b.date === date && b.slot === slot);
+                             });
+                             const parseTime = (t) => {
+                               if (!t) return 0;
+                               const parts = t.trim().split(/\s+/);
+                               const timeParts = parts[0].split(":");
+                               let h = Number(timeParts[0]) % 12;
+                               const min = Number(timeParts[1] || 0);
+                               const ampm = (parts[1] || "").toUpperCase();
+                               if (ampm === "PM") h += 12;
+                               return h * 60 + min;
+                             };
+                             slots.sort((a, b) => parseTime(a) - parseTime(b));
+
+                             return (
+                               <div key={date} className="min-w-full md:min-w-0">
+                                 <div className={doctorListStyles.scheduleDate}>
+                                   {formatDateISO(date)}
+                                 </div>
+                                 <div className="mt-1 flex flex-wrap gap-2">
+                                   {slots.map((s, i) => (
+                                     <span
+                                       key={i}
+                                       className={doctorListStyles.scheduleSlot}
+                                     >
+                                       {s}
+                                     </span>
+                                   ))}
+                                 </div>
+                               </div>
+                             );
+                           })}
                         </div>
                       </div>
                     </div>

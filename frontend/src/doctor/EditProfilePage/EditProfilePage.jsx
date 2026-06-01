@@ -19,6 +19,8 @@ import {
   CheckCircle,
   AlertCircle,
   Banknote,
+  RefreshCw,
+  Copy,
 } from "lucide-react";
 import { editProfilePageStyles, iconSize } from "../../assets/dummyStyles";
 
@@ -68,6 +70,7 @@ export default function EditProfilePage({ apiBase }) {
   const [saveMessage, setSaveMessage] = useState(null);
   const [toasts, setToasts] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [repeatAllMap, setRepeatAllMap] = useState({});
 
   const styles = editProfilePageStyles;
 
@@ -126,30 +129,124 @@ export default function EditProfilePage({ apiBase }) {
     addToast("Date added successfully", "success");
   };
 
-  const addSlot = (dateStr, time) => {
-    if (!dateStr || !time) return;
+  const addRecurringSlot = (time) => {
+    if (!time) return;
     const formatted = formatTimeFromInput(time);
     setDoc((d) => {
-      const existing = d.schedule[dateStr] || [];
-      if (existing.includes(formatted)) {
+      const recurring = Array.isArray(d.recurringSlots) ? d.recurringSlots : [];
+      if (recurring.includes(formatted)) {
+        addToast(`Daily slot ${formatted} already exists`, "error");
+        return d;
+      }
+      const updated = [...recurring, formatted];
+      updated.sort((a, b) => parse12HourTimeToMinutes(a) - parse12HourTimeToMinutes(b));
+      return { ...d, recurringSlots: updated };
+    });
+    addToast(`Daily slot ${formatted} added`, "success");
+  };
+
+  const removeRecurringSlot = (slot) => {
+    setDoc((d) => {
+      const recurring = Array.isArray(d.recurringSlots) ? d.recurringSlots : [];
+      const updated = recurring.filter((s) => s !== slot);
+      return { ...d, recurringSlots: updated };
+    });
+    addToast(`Daily slot ${slot} removed globally`, "info");
+  };
+
+  const addSlot = (dateStr, time, repeatDaily = false, repeatToAll = false) => {
+    if (!dateStr || !time) return;
+    const formatted = formatTimeFromInput(time);
+
+    if (repeatDaily) {
+      addRecurringSlot(time);
+      return;
+    }
+
+    setDoc((d) => {
+      const updatedSchedule = { ...d.schedule };
+      const datesToUpdate = repeatToAll ? Object.keys(updatedSchedule) : [dateStr];
+      
+      let addedAny = false;
+      datesToUpdate.forEach((dt) => {
+        const existing = updatedSchedule[dt] || [];
+        if (!existing.includes(formatted)) {
+          addedAny = true;
+          const nextArr = [...existing, formatted];
+          nextArr.sort(
+            (a, b) => parse12HourTimeToMinutes(a) - parse12HourTimeToMinutes(b),
+          );
+          updatedSchedule[dt] = nextArr;
+        }
+      });
+
+      if (!addedAny && !repeatToAll) {
         addToast(`${formatted} already exists for ${dateStr}`, "error");
         return d;
       }
-      const nextArr = [...existing, formatted];
-      nextArr.sort(
-        (a, b) => parse12HourTimeToMinutes(a) - parse12HourTimeToMinutes(b),
-      );
-      return { ...d, schedule: { ...d.schedule, [dateStr]: nextArr } };
+
+      return { ...d, schedule: updatedSchedule };
     });
-    addToast(`Time slot ${formatted} added`, "success");
+
+    if (repeatToAll) {
+      addToast(`Time slot ${formatted} added to all dates`, "success");
+    } else {
+      addToast(`Time slot ${formatted} added`, "success");
+    }
+  };
+
+  const applyTimesToAllDates = (sourceDate) => {
+    const sourceSlots = doc.schedule[sourceDate] || [];
+    if (sourceSlots.length === 0) {
+      addToast("No time slots to copy", "error");
+      return;
+    }
+    setDoc((d) => {
+      const updatedSchedule = { ...d.schedule };
+      Object.keys(updatedSchedule).forEach((dateKey) => {
+        const nextArr = [...sourceSlots];
+        updatedSchedule[dateKey] = nextArr;
+      });
+      return { ...d, schedule: updatedSchedule };
+    });
+    addToast(`Applied times from ${sourceDate} to all dates`, "success");
   };
 
   const removeSlot = (dateStr, slot) => {
     setDoc((d) => {
-      const next = (d.schedule[dateStr] || []).filter((s) => s !== slot);
-      return { ...d, schedule: { ...d.schedule, [dateStr]: next } };
+      // 1. If it exists in date-specific schedule, remove it from there
+      const dateSlots = d.schedule[dateStr] || [];
+      if (dateSlots.includes(slot)) {
+        const next = dateSlots.filter((s) => s !== slot);
+        addToast(`Removed ${slot} from ${dateStr}`, "info");
+        return { ...d, schedule: { ...d.schedule, [dateStr]: next } };
+      }
+      
+      // 2. If it is a daily slot, block it for this specific date
+      const recurring = Array.isArray(d.recurringSlots) ? d.recurringSlots : [];
+      if (recurring.includes(slot)) {
+        const blocked = Array.isArray(d.blockedSlots) ? d.blockedSlots : [];
+        const alreadyBlocked = blocked.some((b) => b && b.date === dateStr && b.slot === slot);
+        if (!alreadyBlocked) {
+          addToast(`Blocked daily slot ${slot} for ${dateStr}`, "info");
+          return {
+            ...d,
+            blockedSlots: [...blocked, { date: dateStr, slot }],
+          };
+        }
+      }
+      
+      return d;
     });
-    addToast(`Removed ${slot} from ${dateStr}`, "info");
+  };
+
+  const restoreBlockedSlot = (dateStr, slot) => {
+    setDoc((d) => {
+      const blocked = Array.isArray(d.blockedSlots) ? d.blockedSlots : [];
+      const updatedBlocked = blocked.filter((b) => !(b && b.date === dateStr && b.slot === slot));
+      addToast(`Restored daily slot ${slot} for ${dateStr}`, "success");
+      return { ...d, blockedSlots: updatedBlocked };
+    });
   };
 
   const removeDate = (dateStr) => {
@@ -236,6 +333,20 @@ export default function EditProfilePage({ apiBase }) {
       });
 
       form.append("schedule", JSON.stringify(doc.schedule || {}));
+
+      // NEW: Pricing tiers and blackout periods
+      if (doc.pricingTiers) {
+        form.append("pricingTiers", JSON.stringify(doc.pricingTiers));
+      }
+      if (doc.blackoutPeriods) {
+        form.append("blackoutPeriods", JSON.stringify(doc.blackoutPeriods));
+      }
+      if (doc.recurringSlots) {
+        form.append("recurringSlots", JSON.stringify(doc.recurringSlots));
+      }
+      if (doc.blockedSlots) {
+        form.append("blockedSlots", JSON.stringify(doc.blockedSlots));
+      }
 
       if (localImageFile) {
         form.append("image", localImageFile);
@@ -641,6 +752,86 @@ export default function EditProfilePage({ apiBase }) {
               </div>
             </div>
 
+            {/* Medical Certificate */}
+            <div className={styles.formSection}>
+              <h2 className={styles.sectionTitle}>
+                <div className={styles.sectionIconContainer}>
+                  <CheckCircle className={styles.sectionIcon} />
+                </div>
+                Medical Certification License
+              </h2>
+              <div className="p-4 bg-slate-50 border rounded-2xl flex flex-col gap-4">
+                <div className="flex items-center gap-3">
+                  <span className="text-sm font-semibold text-slate-700">Verification Status:</span>
+                  {doc.isVerified ? (
+                    <span className="px-3 py-1 bg-emerald-100 border border-emerald-300 text-emerald-800 text-xs font-bold rounded-full flex items-center gap-1">
+                      <CheckCircle className="w-3.5 h-3.5" /> Verified Practitioner
+                    </span>
+                  ) : doc.verificationStatus === "Pending" ? (
+                    <span className="px-3 py-1 bg-amber-50 border border-amber-300 text-amber-800 text-xs font-bold rounded-full flex items-center gap-1 animate-pulse">
+                      <AlertCircle className="w-3.5 h-3.5" /> Verification Pending
+                    </span>
+                  ) : (
+                    <span className="px-3 py-1 bg-slate-100 border border-slate-300 text-slate-700 text-xs font-bold rounded-full flex items-center gap-1">
+                      <AlertCircle className="w-3.5 h-3.5" /> Unverified
+                    </span>
+                  )}
+                </div>
+
+                {doc.certificateUrl && (
+                  <div className="text-sm">
+                    <a
+                      href={doc.certificateUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-emerald-700 hover:text-emerald-800 font-bold underline"
+                    >
+                      📄 View Uploaded Professional License/Certificate
+                    </a>
+                  </div>
+                )}
+
+                {editing && (
+                  <div className="space-y-2">
+                    <label className="block text-xs font-bold text-slate-500 uppercase">Upload New Certificate Document (PDF/Image)</label>
+                    <input
+                      type="file"
+                      accept="image/*,application/pdf"
+                      onChange={async (e) => {
+                        const file = e.target.files?.[0];
+                        if (!file) return;
+                        
+                        addToast("Uploading certificate...", "info");
+                        try {
+                          const form = new FormData();
+                          form.append("certificate", file);
+                          
+                          const token = localStorage.getItem(STORAGE_KEY);
+                          const headers = token ? { Authorization: `Bearer ${token}` } : {};
+                          
+                          const res = await fetch(`${API_BASE}/${id}/certificate`, {
+                            method: "PUT",
+                            headers,
+                            body: form,
+                          });
+                          const json = await res.json();
+                          if (json.success) {
+                            setDoc(json.data);
+                            addToast("Certificate uploaded successfully!", "success");
+                          } else {
+                            addToast(json.message || "Upload failed", "error");
+                          }
+                        } catch (err) {
+                          addToast("Error uploading certificate", "error");
+                        }
+                      }}
+                      className="text-xs text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-emerald-50 file:text-emerald-700 hover:file:bg-emerald-100"
+                    />
+                  </div>
+                )}
+              </div>
+            </div>
+
             {/* Schedule */}
             <div className={styles.formSection}>
               <div className={styles.scheduleHeader}>
@@ -661,6 +852,83 @@ export default function EditProfilePage({ apiBase }) {
                 </div>
               </div>
 
+              {/* Daily Recurring Slots Card */}
+              {editing && (
+                <div className="mb-6 p-4 bg-slate-50 border border-slate-200 rounded-2xl">
+                  <div className="flex items-center justify-between mb-3">
+                    <div>
+                      <h3 className="text-sm font-bold text-slate-800 flex items-center gap-1.5 font-sans">
+                        <Clock className="w-4 h-4 text-emerald-600" /> Daily Recurring Time Slots
+                      </h3>
+                      <p className="text-[11px] text-slate-400">These slots repeat every day and apply to all scheduled dates.</p>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-wrap gap-2 mb-3">
+                    {(!doc.recurringSlots || doc.recurringSlots.length === 0) ? (
+                      <span className="text-xs text-slate-400 italic">No daily recurring slots defined yet.</span>
+                    ) : (
+                      doc.recurringSlots.map((slot, idx) => (
+                        <div key={idx} className="flex items-center gap-1.5 px-3 py-1 bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-semibold rounded-full">
+                          <span>{slot}</span>
+                          <button
+                            type="button"
+                            onClick={() => removeRecurringSlot(slot)}
+                            className="text-emerald-600 hover:text-emerald-800 hover:bg-emerald-100 rounded-full p-0.5 cursor-pointer"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        </div>
+                      ))
+                    )}
+                  </div>
+
+                  <div className="flex items-center gap-2 max-w-xs">
+                    <input
+                      type="time"
+                      id="recurring-slot-input"
+                      className={styles.addSlotInput}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" && e.target.value) {
+                          addRecurringSlot(e.target.value);
+                          e.target.value = "";
+                        }
+                      }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const input = document.getElementById("recurring-slot-input");
+                        if (input && input.value) {
+                          addRecurringSlot(input.value);
+                          input.value = "";
+                        }
+                      }}
+                      className={styles.addSlotButton}
+                    >
+                      <Plus className={styles.addSlotIcon} />
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {!editing && doc.recurringSlots && doc.recurringSlots.length > 0 && (
+                <div className="mb-6 p-4 bg-slate-50 border border-slate-200 rounded-2xl">
+                  <div className="mb-2">
+                    <h3 className="text-sm font-bold text-slate-800 flex items-center gap-1.5 font-sans">
+                      <Clock className="w-4 h-4 text-emerald-600" /> Daily Recurring Time Slots
+                    </h3>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {doc.recurringSlots.map((slot, idx) => (
+                      <span key={idx} className="px-3 py-1 bg-slate-100 border border-slate-200 text-slate-700 text-xs font-semibold rounded-full">
+                        {slot}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               {Object.keys(doc.schedule || {}).length === 0 ? (
                 <div className={styles.emptySchedule}>
                   <Calendar className={styles.emptyScheduleIcon} />
@@ -675,97 +943,312 @@ export default function EditProfilePage({ apiBase }) {
                 <div className={styles.scheduleGrid}>
                   {Object.entries(doc.schedule)
                     .sort(([a], [b]) => (a > b ? 1 : -1))
-                    .map(([date, slots]) => (
-                      <div key={date} className={styles.dateCard}>
-                        <div className={styles.dateHeader}>
-                          <div className="flex items-center gap-3">
-                            <div className={styles.dateIconContainer}>
-                              <Calendar className={styles.dateIcon} />
-                            </div>
-                            <div>
-                              <div className={styles.dateTitle}>
-                                {new Date(date).toLocaleDateString("en-US", {
-                                  weekday: "short",
-                                  month: "short",
-                                  day: "numeric",
-                                })}
-                              </div>
-                              <div className={styles.dateSubtitle}>{date}</div>
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <span className={styles.dateSlotCount}>
-                              {slots.length} slot{slots.length !== 1 ? "s" : ""}
-                            </span>
-                            <button
-                              onClick={() => editing && removeDate(date)}
-                              disabled={!editing}
-                              className={styles.dateDeleteButton(editing)}
-                            >
-                              <Trash className={styles.dateDeleteIcon} />
-                            </button>
-                          </div>
-                        </div>
+                    .map(([date, slots]) => {
+                      const dateSpecificSlots = slots || [];
+                      const recurringSlots = Array.isArray(doc.recurringSlots) ? doc.recurringSlots : [];
+                      const blockedSlots = Array.isArray(doc.blockedSlots) ? doc.blockedSlots : [];
+                      
+                      // Combine and sort
+                      const allSlotsCombined = Array.from(new Set([...dateSpecificSlots, ...recurringSlots]));
+                      allSlotsCombined.sort((a, b) => parse12HourTimeToMinutes(a) - parse12HourTimeToMinutes(b));
 
-                        <div className={styles.timeSlotContainer}>
-                          {slots.map((slot, idx) => (
-                            <div key={idx} className={styles.timeSlotItem}>
-                              <div className="flex items-center gap-3">
-                                <Clock className={styles.timeSlotIcon} />
-                                <span className={styles.timeSlotText}>
-                                  {slot}
-                                </span>
+                      return (
+                        <div key={date} className={styles.dateCard}>
+                          <div className={styles.dateHeader}>
+                            <div className="flex items-center gap-3">
+                              <div className={styles.dateIconContainer}>
+                                <Calendar className={styles.dateIcon} />
                               </div>
+                              <div>
+                                <div className={styles.dateTitle}>
+                                  {new Date(date).toLocaleDateString("en-US", {
+                                    weekday: "short",
+                                    month: "short",
+                                    day: "numeric",
+                                  })}
+                                </div>
+                                <div className={styles.dateSubtitle}>{date}</div>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className={styles.dateSlotCount}>
+                                {allSlotsCombined.length} slot{allSlotsCombined.length !== 1 ? "s" : ""}
+                              </span>
+                              {editing && dateSpecificSlots.length > 0 && (
+                                <button
+                                  type="button"
+                                  onClick={() => applyTimesToAllDates(date)}
+                                  title="Apply this day's date-specific times to all scheduled dates"
+                                  className="p-1.5 text-slate-500 hover:text-emerald-600 hover:bg-slate-100 rounded-xl transition cursor-pointer"
+                                >
+                                  <RefreshCw className="w-3.5 h-3.5" />
+                                </button>
+                              )}
                               <button
-                                onClick={() =>
-                                  editing && removeSlot(date, slot)
-                                }
+                                onClick={() => editing && removeDate(date)}
                                 disabled={!editing}
-                                className={styles.timeSlotDeleteButton(editing)}
+                                className={styles.dateDeleteButton(editing)}
                               >
-                                <X className={styles.timeSlotDeleteIcon} />
+                                <Trash className={styles.dateDeleteIcon} />
                               </button>
                             </div>
-                          ))}
+                          </div>
 
-                          {editing && (
-                            <div className={styles.addSlotContainer}>
-                              <div className="flex items-center gap-2">
-                                <input
-                                  type="time"
-                                  className={styles.addSlotInput}
-                                  onKeyDown={(e) => {
-                                    if (e.key === "Enter" && e.target.value) {
-                                      addSlot(date, e.target.value);
-                                      e.target.value = "";
-                                    }
-                                  }}
-                                  onBlur={(e) => {
-                                    if (e.target.value) {
-                                      addSlot(date, e.target.value);
-                                      e.target.value = "";
-                                    }
-                                  }}
-                                />
-                                <button
-                                  onClick={(e) => {
-                                    const input =
-                                      e.currentTarget.previousElementSibling;
-                                    if (input.value) {
-                                      addSlot(date, input.value);
-                                      input.value = "";
-                                    }
-                                  }}
-                                  className={styles.addSlotButton}
+                          <div className={styles.timeSlotContainer}>
+                            {allSlotsCombined.map((slot, idx) => {
+                              const isRecurring = recurringSlots.includes(slot);
+                              const isBlocked = blockedSlots.some((b) => b && b.date === date && b.slot === slot);
+                              
+                              return (
+                                <div
+                                  key={idx}
+                                  className={`${styles.timeSlotItem} ${
+                                    isBlocked
+                                      ? "bg-slate-100/70 border-slate-200 opacity-60 line-through text-slate-400"
+                                      : isRecurring
+                                        ? "bg-emerald-50/40 border-emerald-200/60"
+                                        : "bg-white"
+                                  }`}
                                 >
-                                  <Plus className={styles.addSlotIcon} />
-                                </button>
+                                  <div className="flex items-center gap-2">
+                                    <Clock className={`${styles.timeSlotIcon} ${isBlocked ? "text-slate-300" : isRecurring ? "text-emerald-500" : ""}`} />
+                                    <span className={`${styles.timeSlotText} ${isBlocked ? "text-slate-400 font-normal" : ""}`}>
+                                      {slot}
+                                    </span>
+                                    {isRecurring && !isBlocked && (
+                                      <span className="px-1.5 py-0.5 bg-emerald-100 border border-emerald-300 text-emerald-800 text-[9px] font-bold rounded-full uppercase leading-none font-sans">
+                                        Daily
+                                      </span>
+                                    )}
+                                    {isBlocked && (
+                                      <span className="px-1.5 py-0.5 bg-slate-200 border border-slate-300 text-slate-600 text-[9px] font-bold rounded-full uppercase leading-none font-sans">
+                                        Blocked
+                                      </span>
+                                    )}
+                                  </div>
+                                  {isBlocked ? (
+                                    editing && (
+                                      <button
+                                        type="button"
+                                        onClick={() => restoreBlockedSlot(date, slot)}
+                                        title="Unblock this slot"
+                                        className="p-1 text-emerald-600 hover:text-emerald-800 hover:bg-emerald-50 rounded-full transition-colors cursor-pointer"
+                                      >
+                                        <Plus className="w-3.5 h-3.5" />
+                                      </button>
+                                    )
+                                  ) : (
+                                    <button
+                                      onClick={() => editing && removeSlot(date, slot)}
+                                      disabled={!editing}
+                                      className={styles.timeSlotDeleteButton(editing)}
+                                      title={isRecurring ? "Block for this date only" : "Remove slot"}
+                                    >
+                                      <X className={styles.timeSlotDeleteIcon} />
+                                    </button>
+                                  )}
+                                </div>
+                              );
+                            })}
+
+                            {editing && (
+                              <div className={styles.addSlotContainer}>
+                                <div className="flex flex-col gap-2 mt-2 pt-2 border-t border-slate-100">
+                                  <div className="flex items-center gap-2">
+                                    <input
+                                      type="time"
+                                      id={`time-input-${date}`}
+                                      className={styles.addSlotInput}
+                                      onKeyDown={(e) => {
+                                        if (e.key === "Enter" && e.target.value) {
+                                          const repeat = !!repeatAllMap[date];
+                                          const isDaily = !!document.getElementById(`repeat-daily-input-${date}`)?.checked;
+                                          addSlot(date, e.target.value, isDaily, repeat);
+                                          e.target.value = "";
+                                          if (document.getElementById(`repeat-daily-input-${date}`)) {
+                                            document.getElementById(`repeat-daily-input-${date}`).checked = false;
+                                          }
+                                        }
+                                      }}
+                                    />
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        const input = document.getElementById(`time-input-${date}`);
+                                        if (input && input.value) {
+                                          const repeat = !!repeatAllMap[date];
+                                          const isDaily = !!document.getElementById(`repeat-daily-input-${date}`)?.checked;
+                                          addSlot(date, input.value, isDaily, repeat);
+                                          input.value = "";
+                                          if (document.getElementById(`repeat-daily-input-${date}`)) {
+                                            document.getElementById(`repeat-daily-input-${date}`).checked = false;
+                                          }
+                                        }
+                                      }}
+                                      className={styles.addSlotButton}
+                                    >
+                                      <Plus className={styles.addSlotIcon} />
+                                    </button>
+                                  </div>
+                                  <div className="flex items-center gap-4 mt-1.5">
+                                    <label className="flex items-center gap-1.5 text-[11px] text-slate-500 font-sans cursor-pointer select-none">
+                                      <input
+                                        type="checkbox"
+                                        id={`repeat-daily-input-${date}`}
+                                        className="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500/20 h-3.5 w-3.5"
+                                      />
+                                      Repeat daily (every day)
+                                    </label>
+                                    <label className="flex items-center gap-1.5 text-[11px] text-slate-500 font-sans cursor-pointer select-none">
+                                      <input
+                                        type="checkbox"
+                                        checked={!!repeatAllMap[date]}
+                                        onChange={(e) => setRepeatAllMap(prev => ({ ...prev, [date]: e.target.checked }))}
+                                        className="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500/20 h-3.5 w-3.5"
+                                      />
+                                      Repeat to all dates
+                                    </label>
+                                  </div>
+                                </div>
                               </div>
-                            </div>
-                          )}
+                            )}
+                          </div>
                         </div>
+                      );
+                    })}
+                </div>
+              )}
+            </div>
+
+            {/* Consultation Pricing Tiers */}
+            <div className={styles.formSection}>
+              <h2 className={styles.sectionTitle}>
+                <div className={styles.sectionIconContainer}>
+                  <Banknote className={styles.sectionIcon} />
+                </div>
+                Consultation Pricing Tiers
+              </h2>
+              <p className="text-xs text-slate-400 mb-4">Set different fees per consultation type. Patients will see these when booking.</p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {[{type: 'video', emoji: '🎥', label: 'Video Call'}, {type: 'offline', emoji: '🏢', label: 'Offline Visit'}].map(opt => (
+                  <div key={opt.type} className="p-4 bg-slate-50 border rounded-2xl flex flex-col gap-2">
+                    <div className="text-lg text-center">{opt.emoji}</div>
+                    <div className="text-xs font-bold text-slate-600 text-center">{opt.label}</div>
+                    <div className="flex items-center border rounded-xl overflow-hidden bg-white">
+                      <span className="px-3 text-xs font-bold text-slate-500 bg-slate-50 border-r h-full flex items-center py-2">Tk</span>
+                      <input
+                        type="number"
+                        min={0}
+                        step={50}
+                        value={doc?.pricingTiers?.[opt.type] ?? ''}
+                        onChange={(e) => editing && setDoc(d => ({
+                          ...d,
+                          pricingTiers: { ...(d.pricingTiers || {}), [opt.type]: e.target.value === '' ? '' : Number(e.target.value) }
+                        }))}
+                        disabled={!editing}
+                        placeholder="0"
+                        className="flex-1 px-3 py-2 text-sm font-bold text-emerald-700 outline-none bg-transparent"
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Vacation & Blackout Calendar */}
+            <div className={styles.formSection}>
+              <h2 className={styles.sectionTitle}>
+                <div className={styles.sectionIconContainer}>
+                  <Calendar className={styles.sectionIcon} />
+                </div>
+                Vacation & Blackout Periods
+              </h2>
+              <p className="text-xs text-slate-400 mb-4">Block out dates when you are unavailable. Patients with affected appointments will be notified to reschedule.</p>
+
+              {/* Add blackout period */}
+              {editing && (
+                <div className="flex flex-wrap gap-3 mb-4 items-end">
+                  <div className="flex flex-col gap-1">
+                    <label className="text-xs font-bold text-slate-500">Start Date</label>
+                    <input
+                      id="blackout-start"
+                      type="date"
+                      min={new Date().toISOString().split('T')[0]}
+                      className="px-3 py-2 border border-slate-200 rounded-xl text-sm outline-none focus:border-emerald-400"
+                    />
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <label className="text-xs font-bold text-slate-500">End Date</label>
+                    <input
+                      id="blackout-end"
+                      type="date"
+                      min={new Date().toISOString().split('T')[0]}
+                      className="px-3 py-2 border border-slate-200 rounded-xl text-sm outline-none focus:border-emerald-400"
+                    />
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <label className="text-xs font-bold text-slate-500">Reason (optional)</label>
+                    <input
+                      id="blackout-reason"
+                      type="text"
+                      placeholder="e.g. Medical conference"
+                      className="px-3 py-2 border border-slate-200 rounded-xl text-sm outline-none focus:border-emerald-400 w-48"
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const start = document.getElementById('blackout-start')?.value;
+                      const end = document.getElementById('blackout-end')?.value;
+                      const reason = document.getElementById('blackout-reason')?.value || '';
+                      if (!start || !end) { addToast('Please select both start and end dates', 'error'); return; }
+                      if (start > end) { addToast('End date must be after start date', 'error'); return; }
+                      setDoc(d => ({
+                        ...d,
+                        blackoutPeriods: [...(d.blackoutPeriods || []), { startDate: start, endDate: end, reason }]
+                      }));
+                      document.getElementById('blackout-start').value = '';
+                      document.getElementById('blackout-end').value = '';
+                      document.getElementById('blackout-reason').value = '';
+                      addToast(`Blackout period added: ${start} to ${end}`, 'success');
+                    }}
+                    className="px-5 py-2 bg-red-500 hover:bg-red-600 text-white text-xs font-bold rounded-xl flex items-center gap-1.5 cursor-pointer"
+                  >
+                    <Plus className="w-3.5 h-3.5" /> Block Dates
+                  </button>
+                </div>
+              )}
+
+              {/* Display blackout periods */}
+              {(doc?.blackoutPeriods || []).length === 0 ? (
+                <div className="text-center py-6 text-slate-300 text-sm">
+                  <Calendar className="w-8 h-8 mx-auto mb-1 opacity-40" />
+                  No blackout periods set
+                </div>
+              ) : (
+                <div className="flex flex-wrap gap-2">
+                  {(doc.blackoutPeriods || []).map((bp, idx) => (
+                    <div key={idx} className="flex items-center gap-2 px-3 py-2 bg-red-50 border border-red-200 rounded-2xl text-xs">
+                      <span className="text-red-500">🚧</span>
+                      <div>
+                        <span className="font-bold text-red-800">{bp.startDate}</span>
+                        {bp.endDate !== bp.startDate && <span className="text-red-500"> → {bp.endDate}</span>}
+                        {bp.reason && <span className="text-red-400 ml-1">({bp.reason})</span>}
                       </div>
-                    ))}
+                      {editing && (
+                        <button
+                          type="button"
+                          onClick={() => setDoc(d => ({
+                            ...d,
+                            blackoutPeriods: (d.blackoutPeriods || []).filter((_, i) => i !== idx)
+                          }))}
+                          className="ml-1 text-red-400 hover:text-red-700 cursor-pointer"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                    </div>
+                  ))}
                 </div>
               )}
             </div>

@@ -66,7 +66,11 @@ export default function AppointmentsPage() {
         const url = `${API_BASE}/api/appointments?limit=200${
           q ? `&search=${encodeURIComponent(q)}` : ""
         }`;
-        const res = await fetch(url);
+        const res = await fetch(url, {
+          headers: {
+            Authorization: "Bearer " + localStorage.getItem("adminToken_v1"),
+          },
+        });
         if (!res.ok) {
           const body = await res.json().catch(() => ({}));
           throw new Error(body?.message || `Failed to fetch (${res.status})`);
@@ -179,7 +183,10 @@ export default function AppointmentsPage() {
 
       const res = await fetch(`${API_BASE}/api/appointments/${id}/cancel`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: "Bearer " + localStorage.getItem("adminToken_v1"),
+        },
       });
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
@@ -210,7 +217,11 @@ export default function AppointmentsPage() {
       setError(err.message || "Failed to cancel appointment");
       // revert optimistic update (simple approach: reload)
       try {
-        const reload = await fetch(`${API_BASE}/api/appointments?limit=200`);
+        const reload = await fetch(`${API_BASE}/api/appointments?limit=200`, {
+          headers: {
+            Authorization: "Bearer " + localStorage.getItem("adminToken_v1"),
+          },
+        });
         if (reload.ok) {
           const body = await reload.json();
           const items = (body?.appointments || []).map((a) => ({

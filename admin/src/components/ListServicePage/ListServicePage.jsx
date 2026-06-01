@@ -121,7 +121,11 @@ function sortSlotsForDisplay(slots = []) {
   // Load services from backend
   async function fetchServices() {
     try {
-      const res = await fetch(`${API_BASE}/api/services`);
+      const res = await fetch(`${API_BASE}/api/services`, {
+        headers: {
+          Authorization: "Bearer " + localStorage.getItem("adminToken_v1"),
+        },
+      });
       const body = await res.json().catch(() => null);
       if (!res.ok) {
         console.error("Failed to fetch services", body);
@@ -332,7 +336,11 @@ function sortSlotsForDisplay(slots = []) {
     let latest = service;
     if (service.id) {
       try {
-        const res = await fetch(`${API_BASE}/api/services/${service.id}`);
+        const res = await fetch(`${API_BASE}/api/services/${service.id}`, {
+          headers: {
+            Authorization: "Bearer " + localStorage.getItem("adminToken_v1"),
+          },
+        });
         const body = await res.json().catch(() => null);
         if (res.ok && body) {
           // body might be { success:true, data: service }
@@ -542,6 +550,9 @@ function sortSlotsForDisplay(slots = []) {
       const id = editForm.id;
       const res = await fetch(`${API_BASE}/api/services/${id}`, {
         method: "PUT",
+        headers: {
+          Authorization: "Bearer " + localStorage.getItem("adminToken_v1"),
+        },
         body: fd,
       });
       const body = await res.json().catch(() => null);
@@ -596,6 +607,9 @@ function sortSlotsForDisplay(slots = []) {
     try {
       const res = await fetch(`${API_BASE}/api/services/${id}`, {
         method: "DELETE",
+        headers: {
+          Authorization: "Bearer " + localStorage.getItem("adminToken_v1"),
+        },
       });
       const body = await res.json().catch(() => null);
       if (!res.ok) {

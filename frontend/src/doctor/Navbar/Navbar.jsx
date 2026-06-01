@@ -1,8 +1,10 @@
 import React, { useState, useMemo } from "react";
 import { NavLink, useParams, useLocation } from "react-router-dom";
-import { Home, Calendar, Edit, Menu, X, LogOut } from "lucide-react";
+import { Home, Calendar, Edit, Menu, X, LogOut, MessageSquare } from "lucide-react";
 import logo from "../../assets/logo.png";
 import { navbarStylesDr } from "../../assets/dummyStyles";
+
+const STORAGE_KEY = "doctorToken_v1";
 
 export default function Navbar() {
   const [open, setOpen] = useState(false);
@@ -26,6 +28,7 @@ export default function Navbar() {
     { name: "Dashboard", to: `${basePath}`, Icon: Home },
     { name: "Appointments", to: `${basePath}/appointments`, Icon: Calendar },
     { name: "Edit Profile", to: `${basePath}/profile/edit`, Icon: Edit },
+    { name: "Community Forum", to: "/forum", Icon: MessageSquare },
   ];
 
   return (
@@ -42,9 +45,9 @@ export default function Navbar() {
             />
           </div>
           <div className={navbarStylesDr.brandTextContainer}>
-            <div className={navbarStylesDr.brandTitle}>Medtek</div>
+            <div className={navbarStylesDr.brandTitle}>Mediunity</div>
             <div className={navbarStylesDr.brandSubtitle}>
-              HealthCare Solutions
+              Your Healthcare Solution
             </div>
           </div>
         </div>
@@ -77,7 +80,7 @@ export default function Navbar() {
           <button
             className={navbarStylesDr.logoutButtonDesktop}
             onClick={() => {
-              // TODO: integrate real logout (clear auth + redirect)
+              localStorage.removeItem(STORAGE_KEY);
               window.location.href = "/doctor-admin/login";
             }}
           >
@@ -132,6 +135,7 @@ export default function Navbar() {
             className={navbarStylesDr.mobileLogoutButton}
             onClick={() => {
               setOpen(false);
+              localStorage.removeItem(STORAGE_KEY);
               window.location.href = "/doctor-admin/login";
             }}
           >

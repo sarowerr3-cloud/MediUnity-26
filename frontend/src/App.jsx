@@ -1,16 +1,20 @@
 // src/App.jsx
 import React, { useEffect, useState } from "react";
-import { Routes, Route, useLocation } from "react-router-dom";
+import { Routes, Route, useLocation, Navigate } from "react-router-dom";
 
 // Pages
 import Home from "./pages/Home/Home";
 import Doctors from "./pages/Doctors/Doctors";
-import Contact from "./pages/Contact/Contact";
-import Service from "./pages/Service/Service";
 import DoctorDetail from "./pages/DoctorDetail/DoctorDetail";
-import ServiceDetailPage from "./pages/ServiceDetailPage/ServiceDetailPage";
 import Appointments from "./pages/Appointments/Appointments";
 import Login from "./pages/Login/Login";
+import Profile from "./pages/Profile/Profile";
+import Forum from "./pages/Forum/Forum";
+import Articles from "./pages/Articles/Articles";
+import ArticleDetail from "./pages/Articles/ArticleDetail";
+import Journals from "./pages/Journals/Journals";
+import HealthTracker from "./pages/HealthTracker/HealthTracker";
+import SymptomChecker from "./pages/SymptomChecker/SymptomChecker";
 
 // Doctor Admin
 import DHome from "./pages/DHome/DHome";
@@ -20,7 +24,7 @@ import EditProfile from "./pages/EditProfile/EditProfile";
 // Lucide icon
 import { CircleChevronUp } from "lucide-react";
 import VerifyPaymentPage from "../VerifyPaymetPage";
-import VerifyServicePaymentPage from "../VerifyServicePaymentPage";
+import { useAuth } from "./context/AuthContext";
 
 /* ================= Scroll To Top ================= */
 const ScrollToTop = () => {
@@ -62,6 +66,27 @@ const ScrollButton = () => {
   );
 };
 
+/* ================= Protected Route Guard ================= */
+const ProtectedRoute = ({ children }) => {
+  const { isSignedIn, loading } = useAuth();
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center font-serif text-emerald-800 bg-slate-50">
+        <div className="text-center">
+          <p className="font-bold text-lg">Loading Mediunity...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!isSignedIn) {
+    return <Navigate to="/" replace />;
+  }
+
+  return children;
+};
+
 /* ================= Main App ================= */
 const App = () => {
   // Lock horizontal overflow globally
@@ -84,24 +109,49 @@ const App = () => {
           <Route path="/" element={<Home />} />
           <Route path="/doctors" element={<Doctors />} />
           <Route path="/doctors/:id" element={<DoctorDetail />} />
-          <Route path="/contact" element={<Contact />} />
-          <Route path="/services" element={<Service />} />
-          <Route path="/services/:id" element={<ServiceDetailPage />} />
-          <Route path="/appointments" element={<Appointments />} />
+
+          <Route
+            path="/appointments"
+            element={
+              <ProtectedRoute>
+                <Appointments />
+              </ProtectedRoute>
+            }
+          />
+          <Route path="/login" element={<Login />} />
           <Route path="/doctor-admin/login" element={<Login />} />
+          <Route
+            path="/profile"
+            element={
+              <ProtectedRoute>
+                <Profile />
+              </ProtectedRoute>
+            }
+          />
+          <Route path="/forum" element={<Forum />} />
+          <Route path="/articles" element={<Articles />} />
+          <Route path="/articles/:id" element={<ArticleDetail />} />
+          <Route path="/journals" element={<Journals />} />
+          <Route
+            path="/health-tracker"
+            element={
+              <ProtectedRoute>
+                <HealthTracker />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/symptom-checker"
+            element={
+              <ProtectedRoute>
+                <SymptomChecker />
+              </ProtectedRoute>
+            }
+          />
 
           {/* ✅ STRIPE PAYMENT ROUTES */}
           <Route path="/appointment/success" element={<VerifyPaymentPage />} />
           <Route path="/appointment/cancel" element={<VerifyPaymentPage />} />
-
-          <Route
-            path="/service-appointment/success"
-            element={<VerifyServicePaymentPage />}
-          />
-          <Route
-            path="/service-appointment/cancel"
-            element={<VerifyServicePaymentPage />}
-          />
 
           {/* Doctor Admin */}
           <Route path="/doctor-admin/:id" element={<DHome />} />

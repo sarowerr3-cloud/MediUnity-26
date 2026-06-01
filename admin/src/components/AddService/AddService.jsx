@@ -101,7 +101,11 @@ export default function AddService({ apiBase, serviceId }) {
     async function loadService() {
       if (!serviceId) return;
       try {
-        const res = await fetch(`${API_BASE}/api/services/${serviceId}`);
+        const res = await fetch(`${API_BASE}/api/services/${serviceId}`, {
+          headers: {
+            Authorization: "Bearer " + localStorage.getItem("adminToken_v1"),
+          },
+        });
         if (!res.ok) {
           const txt = await res.text().catch(() => "");
           console.warn("Failed to fetch service:", res.status, txt);
@@ -321,7 +325,13 @@ export default function AddService({ apiBase, serviceId }) {
         : `${API_BASE}/api/services`;
       const method = serviceId ? "PUT" : "POST";
 
-      const res = await fetch(url, { method, body: fd });
+      const res = await fetch(url, {
+        method,
+        headers: {
+          Authorization: "Bearer " + localStorage.getItem("adminToken_v1"),
+        },
+        body: fd,
+      });
       const data = await res.json().catch(() => null);
 
       if (!res.ok) {

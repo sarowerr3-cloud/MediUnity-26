@@ -1,6 +1,6 @@
 import React from "react";
 import { Routes, Route } from "react-router-dom";
-import { useUser } from "@clerk/clerk-react";
+import { useUser, useAuth } from "./context/AuthContext";
 import { Link } from "react-router-dom";
 
 // Import your pages
@@ -8,112 +8,147 @@ import Home from "./pages/Home/Home";
 import Add from "./pages/Add/Add";
 import List from "./pages/List/List";
 import Appointments from "./pages/Appointments/Appointments";
-import SerDashboard from "./pages/SerDashboard/SerDashboard";
-import AddSer from "./pages/AddSer/AddSer";
-import ListService from "./pages/ListService/ListService";
-import ServiceAppointments from "./pages/ServiceAppointments/ServiceAppointments";
+import VerifyIdentities from "./pages/VerifyIdentities/VerifyIdentities";
 import Hero from "./components/Hero/Hero";
+import AdminLogin from "./pages/AdminLogin/AdminLogin";
+import AuditLogs from "./pages/AuditLogs/AuditLogs";
+import CommunityPosts from "./pages/CommunityPosts/CommunityPosts";
+import InactivityTimeout from "./components/InactivityTimeout/InactivityTimeout";
 
-function RequireAuth({ children }) {
-  const { isLoaded, isSignedIn } = useUser();
+function RequireAuth({ children, allowedRoles }) {
+  const { isLoaded, isSignedIn, user } = useUser();
 
   if (!isLoaded) return null; // prevent flicker
   if (!isSignedIn)
     return (
-      <div className="min-h-screen font-mono flex items-center justify-center bg-linear-to-b from-emerald-50 via-green-50 to-emerald-100 px-4">
+      <div className="min-h-screen font-mono flex items-center justify-center bg-linear-to-b from-slate-900 via-slate-900 to-emerald-950 px-4">
         <div className="text-center">
-          {/* Animated text */}
-          <p className="text-emerald-800 font-semibold text-lg sm:text-2xl mb-4 animate-fade-in">
-            Please sign in to view this page
+          <p className="text-emerald-400 font-semibold text-lg sm:text-2xl mb-4 animate-fade-in">
+            Access Restricted: Admin Credentials Required
           </p>
 
-          {/* Button on new line */}
           <div className="flex justify-center">
             <Link
-              to="/"
-              className="px-4 py-2 text-sm rounded-full bg-emerald-600 text-white shadow-sm
-                       hover:bg-emerald-700 hover:shadow-md
-                       transition-all duration-300 ease-in-out
-                       animate-bounce-subtle"
+              to="/admin-login"
+              className="px-6 py-2.5 text-xs font-bold rounded-full bg-emerald-600 text-white shadow-md
+                       hover:bg-emerald-700 hover:shadow-lg
+                       transition-all duration-300 ease-in-out uppercase tracking-wider"
             >
-              HOME
+              Secure Login
             </Link>
           </div>
         </div>
       </div>
     );
+
+  // Role-based access check
+  if (allowedRoles && user?.role && !allowedRoles.includes(user.role)) {
+    return (
+      <div className="min-h-screen font-mono flex items-center justify-center bg-linear-to-b from-slate-900 via-slate-900 to-rose-950 px-4">
+        <div className="text-center">
+          <p className="text-rose-400 font-semibold text-lg sm:text-2xl mb-2 animate-fade-in">
+            ⛔ Insufficient Permissions
+          </p>
+          <p className="text-slate-500 text-sm mb-4">
+            Your role ({user.role}) does not have access to this page.
+          </p>
+          <Link
+            to="/h"
+            className="px-6 py-2.5 text-xs font-bold rounded-full bg-slate-700 text-white shadow-md
+                     hover:bg-slate-600 hover:shadow-lg
+                     transition-all duration-300 ease-in-out uppercase tracking-wider"
+          >
+            Back to Dashboard
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
   return children;
 }
 
 const App = () => {
   return (
-    <Routes>
-      <Route path="/" element={<Hero />} />
-      <Route
-        path="/h"
-        element={
-          <RequireAuth>
-            <Home />
-          </RequireAuth>
-        }
-      />
-      <Route
-        path="/add"
-        element={
-          <RequireAuth>
-            <Add />
-          </RequireAuth>
-        }
-      />
-      <Route
-        path="/list"
-        element={
-          <RequireAuth>
-            <List />
-          </RequireAuth>
-        }
-      />
-      <Route
-        path="/appointments"
-        element={
-          <RequireAuth>
-            <Appointments />
-          </RequireAuth>
-        }
-      />
-      <Route
-        path="/service-dashboard"
-        element={
-          <RequireAuth>
-            <SerDashboard />
-          </RequireAuth>
-        }
-      />
-      <Route
-        path="/add-service"
-        element={
-          <RequireAuth>
-            <AddSer />
-          </RequireAuth>
-        }
-      />
-      <Route
-        path="/list-service"
-        element={
-          <RequireAuth>
-            <ListService />
-          </RequireAuth>
-        }
-      />
-      <Route
-        path="/service-appointments"
-        element={
-          <RequireAuth>
-            <ServiceAppointments />
-          </RequireAuth>
-        }
-      />
-    </Routes>
+    <>
+      {/* Auto-logout after 15 min inactivity */}
+      <InactivityTimeout />
+
+      <Routes>
+        <Route path="/" element={<Hero />} />
+        <Route path="/admin-login" element={<AdminLogin />} />
+
+        {/* Dashboard — all roles */}
+        <Route
+          path="/h"
+          element={
+            <RequireAuth>
+              <Home />
+            </RequireAuth>
+          }
+        />
+
+        {/* Add Doctor — super-admin only */}
+        <Route
+          path="/add"
+          element={
+            <RequireAuth allowedRoles={["super-admin"]}>
+              <Add />
+            </RequireAuth>
+          }
+        />
+
+        {/* List Doctors — super-admin and moderator */}
+        <Route
+          path="/list"
+          element={
+            <RequireAuth allowedRoles={["super-admin", "moderator"]}>
+              <List />
+            </RequireAuth>
+          }
+        />
+
+        {/* Appointments — super-admin and moderator */}
+        <Route
+          path="/appointments"
+          element={
+            <RequireAuth allowedRoles={["super-admin", "moderator"]}>
+              <Appointments />
+            </RequireAuth>
+          }
+        />
+
+        {/* Verification — all roles */}
+        <Route
+          path="/verify-identities"
+          element={
+            <RequireAuth>
+              <VerifyIdentities />
+            </RequireAuth>
+          }
+        />
+
+        {/* Community Posts — super-admin and moderator */}
+        <Route
+          path="/community-posts"
+          element={
+            <RequireAuth allowedRoles={["super-admin", "moderator"]}>
+              <CommunityPosts />
+            </RequireAuth>
+          }
+        />
+
+        {/* Audit Logs — super-admin only */}
+        <Route
+          path="/audit-logs"
+          element={
+            <RequireAuth allowedRoles={["super-admin"]}>
+              <AuditLogs />
+            </RequireAuth>
+          }
+        />
+      </Routes>
+    </>
   );
 };
 

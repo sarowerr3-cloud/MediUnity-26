@@ -43,6 +43,13 @@ const appointmentSchema = new mongoose.Schema(
 
     fees: { type: Number, required: true, min: 0, default: 0 },
 
+    consultType: { type: String, enum: ["video", "phone", "chat", "offline"], default: "video" },
+    queueState: { type: String, enum: ["Scheduled", "CheckedIn", "InConsultation", "Completed"], default: "Scheduled" },
+    checkedInAt: { type: Date },
+
+    rescheduleRequired: { type: Boolean, default: false },
+    rescheduleReason: { type: String, default: "" },
+
     status: {
       type: String,
       enum: ["Pending", "Confirmed", "Completed", "Canceled", "Rescheduled"],

@@ -2,7 +2,7 @@
 import ServiceAppointment from "../models/serviceAppointment.js";
 import Service from "../models/Service.js";
 import axios from "axios";
-import { getAuth } from "@clerk/express";
+// Removed Clerk import
 
 const safeNumber = (val) => {
   if (val === undefined || val === null || val === "") return null;
@@ -40,19 +40,7 @@ const buildFrontendBase = (req) => {
 };
 
 function resolveClerkUserId(req) {
-  try {
-    const auth = req.auth || {};
-    const candidate = auth?.userId || auth?.user_id || auth?.user?.id || req.user?.id || null;
-    if (candidate) return candidate;
-    try {
-      const serverAuth = getAuth ? getAuth(req) : null;
-      return serverAuth?.userId || null;
-    } catch (e) {
-      return null;
-    }
-  } catch (e) {
-    return null;
-  }
+  return req.auth?.userId || null;
 }
 
 /* CREATE */

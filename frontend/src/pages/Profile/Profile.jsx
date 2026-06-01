@@ -1,0 +1,876 @@
+import React, { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
+import { User, ShieldCheck, Calendar, FileText, Upload, Plus, Trash, AlertCircle, CheckCircle2, Phone, Key, HelpCircle } from "lucide-react";
+import Navbar from "../../components/Navbar/Navbar";
+import Footer from "../../components/Footer/Footer";
+import { useAuth, useUser } from "../../context/AuthContext";
+import toast, { Toaster } from "react-hot-toast";
+
+const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:4000";
+
+export default function Profile() {
+  const { isLoaded, isSignedIn, getToken, reloadUserProfile } = useAuth();
+  const { user } = useUser();
+
+  const [activeTab, setActiveTab] = useState("overview");
+  const [profile, setProfile] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  // Form states
+  const [nidNumber, setNidNumber] = useState("");
+  const [phoneNumber, setPhoneNumber] = useState("");
+  const [nidFile, setNidFile] = useState(null);
+  const [nidPreview, setNidPreview] = useState("");
+  const [submittingVerification, setSubmittingVerification] = useState(false);
+
+  // Edit Profile states
+  const [editName, setEditName] = useState("");
+  const [editImageFile, setEditImageFile] = useState(null);
+  const [editImagePreview, setEditImagePreview] = useState("");
+  const [updatingProfile, setUpdatingProfile] = useState(false);
+
+  // OTP states
+  const [showOtpModal, setShowOtpModal] = useState(false);
+  const [simulatedOtp, setSimulatedOtp] = useState("");
+  const [enteredOtp, setEnteredOtp] = useState("");
+  const [isPhoneConfirmed, setIsPhoneConfirmed] = useState(false);
+
+  // Medical History states
+  const [showHistoryForm, setShowHistoryForm] = useState(false);
+  const [historyForm, setHistoryForm] = useState({ condition: "", date: "", notes: "" });
+  const [historyFile, setHistoryFile] = useState(null);
+  const [submittingHistory, setSubmittingHistory] = useState(false);
+
+  // Saved Articles states
+  const [bookmarkedArticles, setBookmarkedArticles] = useState([]);
+  const [loadingBookmarks, setLoadingBookmarks] = useState(false);
+
+  // Load profile
+  useEffect(() => {
+    if (isLoaded && isSignedIn) {
+      loadPatientProfile();
+    }
+  }, [isLoaded, isSignedIn]);
+
+  useEffect(() => {
+    if (activeTab === "bookmarks" && isSignedIn) {
+      loadBookmarkedArticles();
+    }
+  }, [activeTab, isSignedIn]);
+
+  async function loadBookmarkedArticles() {
+    setLoadingBookmarks(true);
+    try {
+      const token = await getToken();
+      const res = await fetch(`${API_BASE}/api/patients/profile/bookmarks`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const json = await res.json();
+      if (json.success) {
+        setBookmarkedArticles(json.bookmarks);
+      }
+    } catch (err) {
+      toast.error("Failed to load bookmarked articles");
+    } finally {
+      setLoadingBookmarks(false);
+    }
+  }
+
+  async function handleRemoveBookmark(articleId) {
+    try {
+      const token = await getToken();
+      const res = await fetch(`${API_BASE}/api/patients/profile/bookmarks/${articleId}`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const json = await res.json();
+      if (json.success) {
+        setBookmarkedArticles(prev => prev.filter(b => (b._id || b) !== articleId));
+        toast.success("Bookmark removed!");
+      }
+    } catch (err) {
+      toast.error("Failed to remove bookmark");
+    }
+  }
+
+  async function loadPatientProfile() {
+    setLoading(true);
+    try {
+      const token = await getToken();
+      const res = await fetch(`${API_BASE}/api/patients/profile`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const json = await res.json();
+      if (json.success) {
+        setProfile(json.profile);
+        setNidNumber(json.profile.nid || "");
+        setPhoneNumber(json.profile.phone || "");
+        setEditName(json.profile.name || "");
+        setEditImagePreview(json.profile.imageUrl || "");
+        // Pre-fill phone confirmed state from backend if phone exists and isVerified is true
+        if (json.profile.phone && json.profile.isVerified) {
+          setIsPhoneConfirmed(true);
+        }
+      }
+    } catch (e) {
+      toast.error("Failed to load patient profile");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  // Trigger simulated OTP
+  function handleSendOtp() {
+    if (!phoneNumber) {
+      toast.error("Please enter a valid phone number");
+      return;
+    }
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
+    setSimulatedOtp(code);
+    setShowOtpModal(true);
+    setEnteredOtp("");
+
+    // Simulate SMS toast
+    setTimeout(() => {
+      toast((t) => (
+        <span className="flex flex-col gap-1">
+          <b className="text-emerald-800">✉️ SMS SIMULATOR:</b>
+          <span className="text-slate-700">Mediunity verification code: <code className="bg-slate-100 px-2 py-0.5 rounded font-mono font-bold text-emerald-600">{code}</code></span>
+        </span>
+      ), { duration: 8000, position: "top-center" });
+    }, 800);
+  }
+
+  function handleVerifyOtp() {
+    if (enteredOtp === simulatedOtp) {
+      setIsPhoneConfirmed(true);
+      setShowOtpModal(false);
+      toast.success("Phone number verified successfully!");
+    } else {
+      toast.error("Incorrect OTP code. Please try again.");
+    }
+  }
+
+  // Submit NID & Phone Verification
+  async function handleSubmitVerification(e) {
+    e.preventDefault();
+    if (!nidNumber) {
+      toast.error("NID number is required");
+      return;
+    }
+    if (!isPhoneConfirmed) {
+      toast.error("Please verify your phone number using OTP first");
+      return;
+    }
+
+    setSubmittingVerification(true);
+    try {
+      const token = await getToken();
+      const form = new FormData();
+      form.append("nid", nidNumber);
+      form.append("phone", phoneNumber);
+      if (nidFile) {
+        form.append("nidImage", nidFile);
+      }
+
+      const res = await fetch(`${API_BASE}/api/patients/profile`, {
+        method: "PUT",
+        headers: { Authorization: `Bearer ${token}` },
+        body: form,
+      });
+
+      const json = await res.json();
+      if (json.success) {
+        toast.success("Identity documents submitted for verification!");
+        setProfile(json.profile);
+        setActiveTab("overview");
+      } else {
+        toast.error(json.message || "Submission failed");
+      }
+    } catch (err) {
+      toast.error("Network error during submission");
+    } finally {
+      setSubmittingVerification(false);
+    }
+  }
+
+  // Edit Patient Profile Info
+  async function handleUpdateProfile(e) {
+    e.preventDefault();
+    if (!editName.trim()) {
+      toast.error("Name is required");
+      return;
+    }
+
+    setUpdatingProfile(true);
+    try {
+      const token = await getToken();
+      const form = new FormData();
+      form.append("name", editName.trim());
+      if (editImageFile) {
+        form.append("image", editImageFile);
+      }
+
+      const res = await fetch(`${API_BASE}/api/patients/profile`, {
+        method: "PUT",
+        headers: { Authorization: `Bearer ${token}` },
+        body: form,
+      });
+
+      const json = await res.json();
+      if (json.success) {
+        toast.success("Profile updated successfully!");
+        setProfile(json.profile);
+        // Refresh AuthContext session
+        await reloadUserProfile();
+        setActiveTab("overview");
+      } else {
+        toast.error(json.message || "Failed to update profile");
+      }
+    } catch (err) {
+      toast.error("Network error during profile update");
+    } finally {
+      setUpdatingProfile(false);
+    }
+  }
+
+  // Add Medical History Record
+  async function handleAddMedicalHistory(e) {
+    e.preventDefault();
+    if (!historyForm.condition || !historyForm.date) {
+      toast.error("Condition name and date are required");
+      return;
+    }
+
+    setSubmittingHistory(true);
+    try {
+      const token = await getToken();
+      const form = new FormData();
+      form.append("condition", historyForm.condition);
+      form.append("date", historyForm.date);
+      form.append("notes", historyForm.notes);
+      if (historyFile) {
+        form.append("reportFile", historyFile);
+      }
+
+      const res = await fetch(`${API_BASE}/api/patients/profile/medical-history`, {
+        method: "PUT",
+        headers: { Authorization: `Bearer ${token}` },
+        body: form,
+      });
+
+      const json = await res.json();
+      if (json.success) {
+        toast.success("Medical record added successfully!");
+        setProfile(json.profile);
+        setShowHistoryForm(false);
+        setHistoryForm({ condition: "", date: "", notes: "" });
+        setHistoryFile(null);
+      } else {
+        toast.error(json.message || "Failed to add record");
+      }
+    } catch (err) {
+      toast.error("Network error adding record");
+    } finally {
+      setSubmittingHistory(false);
+    }
+  }
+
+  // Delete Medical History Record
+  async function handleDeleteHistory(itemId) {
+    if (!window.confirm("Are you sure you want to remove this medical history record?")) return;
+
+    try {
+      const token = await getToken();
+      const res = await fetch(`${API_BASE}/api/patients/profile/medical-history/${itemId}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      const json = await res.json();
+      if (json.success) {
+        toast.success("Record deleted");
+        setProfile(json.profile);
+      } else {
+        toast.error(json.message || "Delete failed");
+      }
+    } catch (err) {
+      toast.error("Network error deleting record");
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center font-serif text-emerald-800">
+        Loading patient profile portal...
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-linear-to-br from-green-50/50 to-emerald-100/30 flex flex-col font-serif">
+      <Navbar />
+      <Toaster position="top-right" />
+
+      <main className="flex-grow max-w-5xl w-full mx-auto px-4 py-24">
+        {/* User Card */}
+        <div className="bg-white rounded-3xl p-6 sm:p-8 mb-8 border border-emerald-100 shadow-sm flex flex-col sm:flex-row items-center gap-6">
+          <div className="w-24 h-24 rounded-full overflow-hidden border-4 border-emerald-200 bg-emerald-50 shrink-0">
+            {user?.imageUrl ? (
+              <img src={user.imageUrl} alt={user.fullName} className="w-full h-full object-cover" />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center text-emerald-700 font-extrabold text-2xl">
+                {(user?.fullName || "P").charAt(0)}
+              </div>
+            )}
+          </div>
+
+          <div className="flex-grow text-center sm:text-left">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-2 justify-center sm:justify-start">
+              <h2 className="text-2xl font-bold text-slate-800">{user?.fullName || user?.username}</h2>
+              
+              {/* Verification status badge */}
+              {profile?.isVerified ? (
+                <span className="inline-flex items-center gap-1 px-3 py-1 bg-emerald-100 text-emerald-800 text-xs font-bold rounded-full border border-emerald-300 w-fit mx-auto sm:mx-0">
+                  <ShieldCheck className="w-3.5 h-3.5" /> Verified Patient
+                </span>
+              ) : profile?.verificationStatus === "Pending" ? (
+                <span className="inline-flex items-center gap-1 px-3 py-1 bg-amber-50 text-amber-800 text-xs font-bold rounded-full border border-amber-300 w-fit mx-auto sm:mx-0 animate-pulse">
+                  <AlertCircle className="w-3.5 h-3.5" /> Verification Pending
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-1 px-3 py-1 bg-slate-100 text-slate-700 text-xs font-bold rounded-full border border-slate-300 w-fit mx-auto sm:mx-0">
+                  <AlertCircle className="w-3.5 h-3.5" /> Unverified
+                </span>
+              )}
+            </div>
+
+            <p className="text-slate-500 text-sm mt-1">{user?.primaryEmailAddress?.emailAddress}</p>
+          </div>
+        </div>
+
+        {/* Tab Controls */}
+        <div className="flex border-b border-slate-200 mb-6 gap-6">
+          <button
+            onClick={() => setActiveTab("overview")}
+            className={`pb-3 font-semibold text-sm transition ${
+              activeTab === "overview" ? "border-b-2 border-emerald-600 text-emerald-700" : "text-slate-500 hover:text-slate-800"
+            }`}
+          >
+            Overview
+          </button>
+
+          <button
+            onClick={() => setActiveTab("edit")}
+            className={`pb-3 font-semibold text-sm transition ${
+              activeTab === "edit" ? "border-b-2 border-emerald-600 text-emerald-700" : "text-slate-500 hover:text-slate-800"
+            }`}
+          >
+            Edit Profile
+          </button>
+          
+          {!profile?.isVerified && (
+            <button
+              onClick={() => setActiveTab("verification")}
+              className={`pb-3 font-semibold text-sm transition ${
+                activeTab === "verification" ? "border-b-2 border-emerald-600 text-emerald-700" : "text-slate-500 hover:text-slate-800"
+              }`}
+            >
+              Verify Identity
+            </button>
+          )}
+
+          <button
+            onClick={() => setActiveTab("history")}
+            className={`pb-3 font-semibold text-sm transition ${
+              activeTab === "history" ? "border-b-2 border-emerald-600 text-emerald-700" : "text-slate-500 hover:text-slate-800"
+            }`}
+          >
+            Medical History
+          </button>
+
+          <button
+            onClick={() => setActiveTab("bookmarks")}
+            className={`pb-3 font-semibold text-sm transition ${
+              activeTab === "bookmarks" ? "border-b-2 border-emerald-600 text-emerald-700" : "text-slate-500 hover:text-slate-800"
+            }`}
+          >
+            Saved Articles
+          </button>
+        </div>
+
+        {/* Tab content 1: Overview */}
+        {activeTab === "overview" && (
+          <div className="bg-white rounded-3xl p-6 sm:p-8 border border-emerald-100 shadow-sm space-y-6">
+            <h3 className="text-xl font-bold text-slate-800 mb-4">Patient Profile Details</h3>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200/60">
+                <p className="text-xs text-slate-400 font-bold uppercase tracking-wider">NID Number</p>
+                <p className="text-slate-800 font-medium text-lg mt-1">{profile?.nid || "Not Provided"}</p>
+              </div>
+
+              <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200/60">
+                <p className="text-xs text-slate-400 font-bold uppercase tracking-wider">Phone Number</p>
+                <p className="text-slate-800 font-medium text-lg mt-1">{profile?.phone || "Not Provided"}</p>
+              </div>
+            </div>
+
+            {profile?.nidImageUrl && (
+              <div className="border border-slate-200 rounded-3xl p-6 bg-slate-50 w-fit max-w-sm mt-4">
+                <p className="text-xs text-slate-400 font-bold uppercase tracking-wider mb-2">Uploaded NID Card</p>
+                <img src={profile.nidImageUrl} alt="NID Document" className="rounded-xl border border-slate-300 w-full object-cover max-h-48" />
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Tab content 4: Edit Profile */}
+        {activeTab === "edit" && (
+          <div className="bg-white rounded-3xl p-6 sm:p-8 border border-emerald-100 shadow-sm">
+            <h3 className="text-xl font-bold text-slate-800 mb-6">Edit Profile Details</h3>
+            
+            <form onSubmit={handleUpdateProfile} className="space-y-6">
+              {/* Profile Pic Upload */}
+              <div className="flex flex-col sm:flex-row items-center gap-6 pb-4 border-b border-slate-100">
+                <div className="relative group w-24 h-24 rounded-full overflow-hidden border-4 border-emerald-100 bg-slate-50 flex items-center justify-center shrink-0">
+                  {editImagePreview ? (
+                    <img src={editImagePreview} alt="Preview" className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="text-slate-400 font-bold text-lg uppercase">
+                      {(editName || user?.fullName || "P").charAt(0)}
+                    </div>
+                  )}
+                  
+                  <label className="absolute inset-0 bg-slate-900/60 flex items-center justify-center text-white text-[10px] font-bold opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer">
+                    Change Pic
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          setEditImageFile(file);
+                          setEditImagePreview(URL.createObjectURL(file));
+                        }
+                      }}
+                      className="hidden"
+                    />
+                  </label>
+                </div>
+
+                <div className="text-center sm:text-left">
+                  <h4 className="font-bold text-slate-700 text-sm">Profile Avatar</h4>
+                  <p className="text-xs text-slate-400 mt-1">Accepts JPG, PNG, or WEBP up to 5MB. Click the image placeholder to change.</p>
+                  <label className="inline-block mt-3 px-4 py-2 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-700 rounded-xl font-bold text-xs cursor-pointer transition">
+                    Upload Photo
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          setEditImageFile(file);
+                          setEditImagePreview(URL.createObjectURL(file));
+                        }
+                      }}
+                      className="hidden"
+                    />
+                  </label>
+                </div>
+              </div>
+
+              {/* Name Input */}
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-1.5">Full Name</label>
+                <div className="relative">
+                  <span className="absolute inset-y-0 left-0 flex items-center pl-3.5 text-slate-400 pointer-events-none">
+                    <User className="w-4 h-4" />
+                  </span>
+                  <input
+                    type="text"
+                    placeholder="Enter your name"
+                    value={editName}
+                    onChange={(e) => setEditName(e.target.value)}
+                    className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
+                    required
+                  />
+                </div>
+              </div>
+
+              {/* Email (Read Only) */}
+              <div>
+                <label className="block text-sm font-semibold text-slate-500 mb-1.5">Email Address (Registered)</label>
+                <input
+                  type="email"
+                  value={profile?.email || ""}
+                  className="w-full px-4 py-2.5 bg-slate-100 border border-slate-200 text-slate-400 rounded-xl text-sm cursor-not-allowed"
+                  disabled
+                />
+              </div>
+
+              {/* Phone (Read Only) */}
+              <div>
+                <label className="block text-sm font-semibold text-slate-500 mb-1.5">Phone Number (Registered)</label>
+                <input
+                  type="tel"
+                  value={profile?.phone || ""}
+                  className="w-full px-4 py-2.5 bg-slate-100 border border-slate-200 text-slate-400 rounded-xl text-sm cursor-not-allowed"
+                  disabled
+                />
+              </div>
+
+              {/* Action Buttons */}
+              <div className="pt-4 flex justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEditName(profile?.name || "");
+                    setEditImagePreview(profile?.imageUrl || "");
+                    setEditImageFile(null);
+                    setActiveTab("overview");
+                  }}
+                  className="px-5 py-2.5 rounded-full border border-slate-300 text-slate-600 font-semibold text-sm"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={updatingProfile}
+                  className="px-6 py-2.5 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm shadow-md hover:shadow-lg disabled:opacity-50 transition cursor-pointer"
+                >
+                  {updatingProfile ? "Updating Details..." : "Save Changes"}
+                </button>
+              </div>
+            </form>
+          </div>
+        )}
+
+        {/* Tab content 2: Identity Verification Form */}
+        {activeTab === "verification" && !profile?.isVerified && (
+          <div className="bg-white rounded-3xl p-6 sm:p-8 border border-emerald-100 shadow-sm">
+            <div className="mb-6 flex gap-3 items-start p-4 bg-emerald-50 border border-emerald-200 rounded-2xl">
+              <HelpCircle className="w-5 h-5 text-emerald-700 shrink-0 mt-0.5" />
+              <div>
+                <h4 className="text-emerald-950 font-bold">Why verify your identity?</h4>
+                <p className="text-xs text-emerald-800/80 leading-relaxed mt-1">
+                  Verifying your account using National ID (NID) and Phone prevents identity theft, protects your confidential medical histories, and establishes trust so doctors can consult with confidence.
+                </p>
+              </div>
+            </div>
+
+            <form onSubmit={handleSubmitVerification} className="space-y-5">
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-1.5">National ID (NID) Number</label>
+                <input
+                  type="text"
+                  placeholder="e.g. 1998342732918"
+                  value={nidNumber}
+                  onChange={(e) => setNidNumber(e.target.value)}
+                  className="w-full border border-slate-300 rounded-xl px-4 py-2.5 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-1.5">Mobile Phone Number</label>
+                <div className="flex gap-2">
+                  <input
+                    type="tel"
+                    placeholder="e.g. +8801700000000"
+                    value={phoneNumber}
+                    onChange={(e) => {
+                      setPhoneNumber(e.target.value);
+                      setIsPhoneConfirmed(false); // require re-verification if number changes
+                    }}
+                    className="flex-grow border border-slate-300 rounded-xl px-4 py-2.5 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    required
+                  />
+                  <button
+                    type="button"
+                    onClick={handleSendOtp}
+                    disabled={isPhoneConfirmed || !phoneNumber}
+                    className={`px-5 py-2.5 rounded-xl font-semibold text-sm transition shrink-0 cursor-pointer ${
+                      isPhoneConfirmed
+                        ? "bg-emerald-100 text-emerald-800 border border-emerald-300 cursor-not-allowed"
+                        : "bg-emerald-600 hover:bg-emerald-700 text-white"
+                    }`}
+                  >
+                    {isPhoneConfirmed ? "Verified ✓" : "Verify Phone"}
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-1.5">Upload NID Card Image</label>
+                <div className="border-2 border-dashed border-slate-300 rounded-2xl p-6 text-center bg-slate-50/50 hover:bg-slate-50 transition relative">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        setNidFile(file);
+                        setNidPreview(URL.createObjectURL(file));
+                      }
+                    }}
+                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                  />
+                  <Upload className="w-8 h-8 text-slate-400 mx-auto mb-2" />
+                  <p className="text-sm font-semibold text-slate-600">Click to upload NID image</p>
+                  <p className="text-xs text-slate-400 mt-1">PNG, JPG or JPEG up to 5MB</p>
+                </div>
+
+                {nidPreview && (
+                  <div className="mt-4 border border-slate-200 p-3 rounded-2xl w-fit bg-white">
+                    <img src={nidPreview} alt="NID Preview" className="h-32 object-contain rounded-lg" />
+                  </div>
+                )}
+              </div>
+
+              <div className="pt-4 flex justify-end">
+                <button
+                  type="submit"
+                  disabled={submittingVerification || !isPhoneConfirmed}
+                  className="px-8 py-3 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold shadow-md hover:shadow-lg disabled:opacity-50 cursor-pointer"
+                >
+                  {submittingVerification ? "Submitting Documents..." : "Submit for Verification"}
+                </button>
+              </div>
+            </form>
+          </div>
+        )}
+
+        {/* Tab content 3: Medical History */}
+        {activeTab === "history" && (
+          <div className="bg-white rounded-3xl p-6 sm:p-8 border border-emerald-100 shadow-sm space-y-6">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-xl font-bold text-slate-800">My Medical Records</h3>
+              
+              <button
+                onClick={() => setShowHistoryForm(true)}
+                className="flex items-center gap-1.5 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-full font-bold text-xs shadow-md transition cursor-pointer"
+              >
+                <Plus className="w-4 h-4" /> Add Record
+              </button>
+            </div>
+
+            {/* Modal Form: Add Record */}
+            {showHistoryForm && (
+              <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4 animate-fade-in">
+                <div className="bg-white rounded-3xl p-6 sm:p-8 max-w-md w-full border border-emerald-200 shadow-2xl">
+                  <div className="flex justify-between items-center mb-6">
+                    <h3 className="text-xl font-bold text-slate-800">Add Medical History</h3>
+                    <button onClick={() => setShowHistoryForm(false)} className="text-slate-400 hover:text-slate-600 font-bold">✕</button>
+                  </div>
+
+                  <form onSubmit={handleAddMedicalHistory} className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-semibold text-slate-700 mb-1">Condition Name</label>
+                      <input
+                        type="text"
+                        placeholder="e.g. Type-2 Diabetes"
+                        value={historyForm.condition}
+                        onChange={(e) => setHistoryForm(prev => ({ ...prev, condition: e.target.value }))}
+                        className="w-full border border-slate-300 rounded-xl px-4 py-2 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
+                        required
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-semibold text-slate-700 mb-1">Diagnosis Date</label>
+                      <input
+                        type="date"
+                        value={historyForm.date}
+                        onChange={(e) => setHistoryForm(prev => ({ ...prev, date: e.target.value }))}
+                        className="w-full border border-slate-300 rounded-xl px-4 py-2 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
+                        required
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-semibold text-slate-700 mb-1">Notes / Description</label>
+                      <textarea
+                        rows={3}
+                        placeholder="Allergies, severity, daily medication details..."
+                        value={historyForm.notes}
+                        onChange={(e) => setHistoryForm(prev => ({ ...prev, notes: e.target.value }))}
+                        className="w-full border border-slate-300 rounded-xl px-4 py-2 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-semibold text-slate-700 mb-1">Upload Clinical Report (PDF/Image)</label>
+                      <input
+                        type="file"
+                        accept="image/*,application/pdf"
+                        onChange={(e) => setHistoryFile(e.target.files?.[0] || null)}
+                        className="w-full text-xs text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-emerald-50 file:text-emerald-700 hover:file:bg-emerald-100"
+                      />
+                    </div>
+
+                    <div className="flex gap-3 justify-end pt-4">
+                      <button
+                        type="button"
+                        onClick={() => setShowHistoryForm(false)}
+                        className="px-4 py-2 rounded-full border border-slate-300 text-slate-600 font-semibold text-sm"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="submit"
+                        disabled={submittingHistory}
+                        className="px-5 py-2 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-sm flex items-center gap-1.5 shadow-md disabled:opacity-50"
+                      >
+                        {submittingHistory ? "Saving..." : "Save Record"}
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              </div>
+            )}
+
+            {/* List existing records */}
+            {!profile?.medicalHistory || profile.medicalHistory.length === 0 ? (
+              <div className="bg-slate-50 rounded-2xl p-10 text-center text-slate-500 border border-dashed border-slate-200">
+                <FileText className="w-10 h-10 mx-auto text-emerald-300 mb-2" />
+                <p className="font-semibold text-base">No medical history recorded</p>
+                <p className="text-xs text-slate-400 mt-0.5">Add past conditions or clinical test reports to share with your doctors.</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {profile.medicalHistory.map((item) => (
+                  <div key={item._id} className="p-5 border border-slate-200 rounded-2xl bg-slate-50 flex items-start justify-between gap-4">
+                    <div className="space-y-1.5">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-bold text-slate-800 text-base">{item.condition}</span>
+                        <span className="text-[10px] bg-emerald-100 border border-emerald-200 text-emerald-800 px-2 py-0.5 rounded-full font-bold">
+                          Diagnosed: {item.date}
+                        </span>
+                      </div>
+                      
+                      {item.notes && (
+                        <p className="text-slate-600 text-sm leading-relaxed">{item.notes}</p>
+                      )}
+
+                      {item.fileUrl && (
+                        <a
+                          href={item.fileUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1 text-xs text-emerald-700 hover:text-emerald-800 font-bold mt-1"
+                        >
+                          <FileText className="w-3.5 h-3.5" /> View Clinical Report Document
+                        </a>
+                      )}
+                    </div>
+
+                    <button
+                      onClick={() => handleDeleteHistory(item._id)}
+                      className="p-2 text-rose-500 hover:bg-rose-50 rounded-full transition"
+                      title="Remove record"
+                    >
+                      <Trash className="w-4 h-4" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Tab content 5: Bookmarked Articles */}
+        {activeTab === "bookmarks" && (
+          <div className="bg-white rounded-3xl p-6 sm:p-8 border border-emerald-100 shadow-sm space-y-6">
+            <h3 className="text-xl font-bold text-slate-800 mb-4 font-sans">Saved Health Articles</h3>
+
+            {loadingBookmarks ? (
+              <p className="text-slate-400 text-sm italic font-sans py-4">Loading saved articles...</p>
+            ) : bookmarkedArticles.length === 0 ? (
+              <div className="bg-slate-50 rounded-2xl p-10 text-center text-slate-500 border border-dashed border-slate-200 font-sans">
+                <Bookmark className="w-10 h-10 mx-auto text-emerald-300 mb-2" />
+                <p className="font-semibold text-base">No saved articles yet</p>
+                <p className="text-xs text-slate-400 mt-0.5 font-sans">Bookmarks are helpful to save expert tips and articles from our Health Hub.</p>
+                <Link to="/articles" className="inline-block mt-4 px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-full text-xs font-bold shadow-md transition font-sans cursor-pointer">
+                  Browse Health Hub
+                </Link>
+              </div>
+            ) : (
+              <div className="space-y-4 font-sans">
+                {bookmarkedArticles.map((article) => (
+                  <div key={article._id || article} className="p-5 border border-slate-200 rounded-2xl bg-slate-50 flex items-center justify-between gap-4">
+                    <div className="space-y-1">
+                      <span className="px-2.5 py-0.5 bg-emerald-100 text-emerald-800 text-[10px] font-bold rounded-full">
+                        {article.category}
+                      </span>
+                      <h4 className="font-bold text-slate-800 text-base mt-1.5">{article.title}</h4>
+                      <p className="text-xs text-slate-400 font-semibold">Published by {article.doctorName}</p>
+                    </div>
+
+                    <div className="flex items-center gap-2 shrink-0">
+                      <Link
+                        to={`/articles/${article._id || article}`}
+                        className="px-4 py-2 bg-emerald-50 hover:bg-emerald-100/70 text-emerald-700 rounded-full font-bold text-xs transition"
+                      >
+                        Read
+                      </Link>
+                      <button
+                        onClick={() => handleRemoveBookmark(article._id || article)}
+                        className="p-2 text-rose-500 hover:bg-rose-50 rounded-full transition cursor-pointer"
+                        title="Remove bookmark"
+                      >
+                        <Trash className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Modal: SMS OTP verification simulation */}
+        {showOtpModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4">
+            <div className="bg-white rounded-3xl p-6 sm:p-8 max-w-sm w-full border border-emerald-200 shadow-2xl">
+              <div className="text-center mb-6">
+                <div className="w-12 h-12 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-3 text-emerald-700">
+                  <Key className="w-6 h-6 animate-bounce" />
+                </div>
+                <h3 className="text-lg font-bold text-slate-800">Phone Verification</h3>
+                <p className="text-xs text-slate-500 mt-1">We've sent a simulated verification code to <span className="font-semibold">{phoneNumber}</span></p>
+              </div>
+
+              <div className="space-y-4">
+                <input
+                  type="text"
+                  placeholder="Enter 6-digit OTP code"
+                  value={enteredOtp}
+                  onChange={(e) => setEnteredOtp(e.target.value)}
+                  className="w-full border-2 border-slate-300 rounded-xl px-4 py-2.5 text-center text-lg font-mono tracking-widest focus:outline-none focus:border-emerald-500"
+                  maxLength={6}
+                />
+
+                <div className="flex gap-2 pt-2">
+                  <button
+                    onClick={() => setShowOtpModal(false)}
+                    className="w-1/2 px-4 py-2.5 rounded-full border border-slate-300 text-slate-600 text-sm font-semibold"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleVerifyOtp}
+                    className="w-1/2 px-4 py-2.5 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold shadow-md"
+                  >
+                    Verify OTP
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+      </main>
+      <Footer />
+    </div>
+  );
+}

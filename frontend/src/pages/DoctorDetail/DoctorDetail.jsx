@@ -19,8 +19,8 @@ import {
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
-// Clerk client hooks
-import { useAuth, useUser } from "@clerk/clerk-react";
+// Auth hooks
+import { useAuth, useUser } from "../../context/AuthContext";
 import { doctorDetailStyles } from "../../assets/dummyStyles";
 
 const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:4000";
@@ -109,6 +109,7 @@ export default function DoctorDetail() {
   });
 
   const [paymentMethod, setPaymentMethod] = useState("Cash");
+  const [consultType, setConsultType] = useState("video");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Clerk hooks
@@ -147,7 +148,7 @@ export default function DoctorDetail() {
       }));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [userLoaded, user]);
+  }, [userLoaded, user?.id]);
 
   useEffect(() => {
     let mounted = true;
@@ -180,10 +181,41 @@ export default function DoctorDetail() {
   const next7 = useMemo(() => getScheduleDates(doctor?.schedule), [doctor]);
   const fee = Number(doctor?.fee ?? doctor?.fees ?? 0);
 
+  const selectedFee = useMemo(() => {
+    if (doctor?.pricingTiers && doctor.pricingTiers[consultType] !== undefined) {
+      return Number(doctor.pricingTiers[consultType]);
+    }
+    return fee;
+  }, [doctor, consultType, fee]);
+
   const slots = useMemo(() => {
-    if (!selectedDate || !doctor?.schedule) return [];
+    if (!selectedDate || !doctor) return [];
     const key = selectedDate.toISOString().split("T")[0];
-    return doctor.schedule && doctor.schedule[key] ? doctor.schedule[key] : [];
+    const rawSlots = doctor.schedule && doctor.schedule[key] ? doctor.schedule[key] : [];
+    const recurring = Array.isArray(doctor.recurringSlots) ? doctor.recurringSlots : [];
+    
+    // Combine rawSlots and recurring, deduping
+    const combined = Array.from(new Set([...rawSlots, ...recurring]));
+    
+    // Filter out blocked slots
+    const blocked = Array.isArray(doctor.blockedSlots) ? doctor.blockedSlots : [];
+    const filtered = combined.filter(slot => {
+      return !blocked.some(b => b && b.date === key && b.slot === slot);
+    });
+    
+    // Sort chronologically
+    const parseTime = (t) => {
+      if (!t) return 0;
+      const parts = t.trim().split(/\s+/);
+      const timeParts = parts[0].split(":");
+      let h = Number(timeParts[0]) % 12;
+      const min = Number(timeParts[1] || 0);
+      const ampm = (parts[1] || "").toUpperCase();
+      if (ampm === "PM") h += 12;
+      return h * 60 + min;
+    };
+    filtered.sort((a, b) => parseTime(a) - parseTime(b));
+    return filtered;
   }, [selectedDate, doctor]);
 
   // Mobile input handlers: only digits, max 10
@@ -280,8 +312,9 @@ export default function DoctorDetail() {
       gender: formData.gender,
       date: dateISO,
       time: selectedSlot,
-      fee: fee,
-      fees: fee,
+      fee: selectedFee,
+      fees: selectedFee,
+      consultType: consultType,
       paymentMethod: paymentMethod || "Online",
       email: formData.email || undefined,
     };
@@ -732,10 +765,46 @@ export default function DoctorDetail() {
                         Consultation Fee:
                       </span>
                       <span className={doctorDetailStyles.feeDisplay}>
-                        Tk {fee}
+                        Tk {selectedFee}
                       </span>
                     </div>
                   </div>
+
+                  {/* CONSULTATION TYPE SELECTOR */}
+                  {doctor?.pricingTiers && (
+                    <div style={{ marginBottom: '1rem' }}>
+                      <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '700', color: '#6b7280', textTransform: 'uppercase', marginBottom: '0.5rem' }}>
+                        Consultation Type
+                      </label>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
+                        {[{type: 'video', icon: '🎥', label: 'Video'}, {type: 'offline', icon: '🏢', label: 'Offline'}].map(opt => (
+                          <button
+                            key={opt.type}
+                            type="button"
+                            onClick={() => setConsultType(opt.type)}
+                            style={{
+                              padding: '0.6rem 0.4rem',
+                              borderRadius: '0.75rem',
+                              border: consultType === opt.type ? '2px solid #10b981' : '1.5px solid #e5e7eb',
+                              background: consultType === opt.type ? '#ecfdf5' : '#f9fafb',
+                              color: consultType === opt.type ? '#065f46' : '#374151',
+                              fontWeight: '700',
+                              fontSize: '0.7rem',
+                              cursor: 'pointer',
+                              textAlign: 'center',
+                              transition: 'all 0.2s',
+                            }}
+                          >
+                            <div style={{ fontSize: '1.1rem', marginBottom: '0.1rem' }}>{opt.icon}</div>
+                            <div>{opt.label}</div>
+                            <div style={{ color: '#10b981', marginTop: '0.1rem', fontWeight: '800' }}>
+                              Tk {doctor.pricingTiers[opt.type] ?? (opt.type === 'offline' ? 400 : 500)}
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
 
                   {/* PAYMENT METHOD SELECTOR */}
                   <div className={doctorDetailStyles.paymentContainer}>
@@ -801,7 +870,224 @@ export default function DoctorDetail() {
             </div>
           </div>
         </div>
+
+        {/* Doctor Posts Feed */}
+        <DoctorPostsFeed doctorId={doctor._id || doctor.id} doctorName={doctor.name} />
       </div>{" "}
+    </div>
+  );
+}
+
+function DoctorPostsFeed({ doctorId, doctorName }) {
+  const [posts, setPosts] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [commentText, setCommentText] = useState({}); // { [postId]: "" }
+  const [showComments, setShowComments] = useState({}); // { [postId]: false }
+  const { getToken } = useAuth();
+  const { user, isSignedIn } = useUser();
+
+  useEffect(() => {
+    async function fetchPosts() {
+      setLoading(true);
+      try {
+        const res = await fetch(`${API_BASE}/api/posts?authorId=${doctorId}&authorRole=doctor`);
+        const json = await res.json();
+        if (json.success) {
+          setPosts(json.posts || []);
+        }
+      } catch (err) {
+        console.error("fetch posts error:", err);
+      } finally {
+        setLoading(false);
+      }
+    }
+    if (doctorId) {
+      fetchPosts();
+    }
+  }, [doctorId]);
+
+  const handleLikePost = async (postId) => {
+    if (!isSignedIn) {
+      toast.error("Please sign in to like this post.", { position: "top-center" });
+      return;
+    }
+    try {
+      const token = await getToken();
+      const res = await fetch(`${API_BASE}/api/posts/${postId}/like`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+      const json = await res.json();
+      if (json.success) {
+        setPosts(prev => prev.map(p => p._id === postId ? json.post : p));
+      } else {
+        toast.error(json.message || "Failed to like post.");
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error("Network error.");
+    }
+  };
+
+  const handleAddComment = async (e, postId) => {
+    e.preventDefault();
+    if (!isSignedIn) {
+      toast.error("Please sign in to comment.", { position: "top-center" });
+      return;
+    }
+    const text = commentText[postId];
+    if (!text || !text.trim()) return;
+
+    try {
+      const token = await getToken();
+      const res = await fetch(`${API_BASE}/api/posts/${postId}/comments`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          content: text,
+          authorName: user.fullName || `${user.firstName || ""} ${user.lastName || ""}`.trim() || "Patient"
+        })
+      });
+      const json = await res.json();
+      if (json.success) {
+        setPosts(prev => prev.map(p => p._id === postId ? json.post : p));
+        setCommentText(prev => ({ ...prev, [postId]: "" }));
+      } else {
+        toast.error(json.message || "Failed to add comment.");
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error("Network error.");
+    }
+  };
+
+  const toggleComments = (postId) => {
+    setShowComments(prev => ({ ...prev, [postId]: !prev[postId] }));
+  };
+
+  if (loading) {
+    return (
+      <div className="mt-8 bg-white border border-slate-200 rounded-3xl p-8 text-center text-slate-400 text-sm flex items-center justify-center gap-2">
+        <span className="w-5 h-5 border-2 border-emerald-600 border-t-transparent rounded-full animate-spin"></span>
+        Loading doctor's posts...
+      </div>
+    );
+  }
+
+  if (posts.length === 0) {
+    return null;
+  }
+
+  return (
+    <div className="mt-8 bg-white border border-slate-200 rounded-3xl p-6 sm:p-8 shadow-sm">
+      <div className="flex items-center gap-2 mb-6 border-b pb-3">
+        <div className="p-2 bg-emerald-50 rounded-xl text-emerald-700">
+          <Zap className="w-5 h-5" />
+        </div>
+        <div>
+          <h2 className="text-xl font-bold text-slate-900 font-serif">Doctor's Feed & Posts</h2>
+          <p className="text-xs text-slate-500 mt-0.5">Read articles, medical advice, and updates from {doctorName}.</p>
+        </div>
+      </div>
+
+      <div className="space-y-6">
+        {posts.map((post) => {
+          const isLiked = isSignedIn && post.likes?.includes(user?.id);
+          const commentsCount = post.comments?.length || 0;
+
+          return (
+            <div key={post._id} className="border border-slate-100/80 rounded-2xl p-5 hover:shadow-md transition duration-200 space-y-4">
+              <div className="flex items-center justify-between">
+                <span className="px-2.5 py-0.5 bg-emerald-50 text-emerald-700 text-[10px] font-bold rounded-full uppercase tracking-wider">
+                  {post.category}
+                </span>
+                <span className="text-[11px] text-slate-400 font-medium">
+                  {new Date(post.createdAt).toLocaleDateString("en-GB", {
+                    day: "numeric",
+                    month: "short",
+                    year: "numeric"
+                  })}
+                </span>
+              </div>
+
+              <div className="space-y-2">
+                <h3 className="text-lg font-bold text-slate-800 font-serif leading-snug">{post.title}</h3>
+                <p className="text-sm text-slate-600 leading-relaxed whitespace-pre-line font-sans">{post.content}</p>
+              </div>
+
+              <div className="flex items-center gap-4 pt-2 border-t border-slate-100 text-xs">
+                <button
+                  onClick={() => handleLikePost(post._id)}
+                  className={`flex items-center gap-1.5 font-semibold transition cursor-pointer bg-transparent border-none ${
+                    isLiked ? "text-emerald-600" : "text-slate-500 hover:text-slate-700"
+                  }`}
+                >
+                  <Heart className={`w-4 h-4 ${isLiked ? "fill-emerald-600 text-emerald-600" : ""}`} />
+                  <span>{post.likes?.length || 0} Likes</span>
+                </button>
+
+                <button
+                  onClick={() => toggleComments(post._id)}
+                  className="flex items-center gap-1.5 font-semibold text-slate-500 hover:text-slate-700 cursor-pointer bg-transparent border-none"
+                >
+                  <Users className="w-4 h-4" />
+                  <span>{commentsCount} Comment{commentsCount !== 1 ? "s" : ""}</span>
+                </button>
+              </div>
+
+              {/* Comments Section */}
+              {showComments[post._id] && (
+                <div className="pt-4 border-t border-slate-50 space-y-4">
+                  {commentsCount > 0 && (
+                    <div className="space-y-3 max-h-60 overflow-y-auto pr-1">
+                      {post.comments.map((comment) => (
+                        <div key={comment._id} className="p-3 bg-slate-50 rounded-xl text-xs space-y-1">
+                          <div className="flex justify-between items-center font-medium">
+                            <span className={comment.authorRole === "doctor" ? "text-emerald-700 font-bold font-serif" : "text-slate-800"}>
+                              {comment.authorName} {comment.authorRole === "doctor" && " (Doctor)"}
+                            </span>
+                            <span className="text-[10px] text-slate-400">
+                              {new Date(comment.createdAt).toLocaleDateString("en-GB", {
+                                day: "numeric",
+                                month: "short"
+                              })}
+                            </span>
+                          </div>
+                          <p className="text-slate-600 leading-relaxed font-sans">{comment.content}</p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Add Comment Input */}
+                  <form onSubmit={(e) => handleAddComment(e, post._id)} className="flex gap-2">
+                    <input
+                      type="text"
+                      placeholder={isSignedIn ? "Write a comment or query..." : "Please sign in to comment..."}
+                      disabled={!isSignedIn}
+                      value={commentText[post._id] || ""}
+                      onChange={(e) => setCommentText(prev => ({ ...prev, [post._id]: e.target.value }))}
+                      className="flex-grow border border-slate-200 rounded-xl px-4 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-emerald-500 bg-slate-50 focus:bg-white"
+                    />
+                    <button
+                      type="submit"
+                      disabled={!isSignedIn}
+                      className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-300 text-white font-bold text-xs rounded-full shadow transition cursor-pointer border-none"
+                    >
+                      Comment
+                    </button>
+                  </form>
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }

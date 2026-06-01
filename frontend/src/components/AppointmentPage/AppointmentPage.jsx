@@ -9,8 +9,14 @@ import {
   CheckCircle,
   XCircle,
   Bell,
+  Video as VideoIcon,
+  FileText,
+  MessageSquare,
 } from "lucide-react";
-import { useAuth, useUser } from "@clerk/clerk-react";
+import { useAuth, useUser } from "../../context/AuthContext";
+import VideoConsultation from "../VideoConsultation/VideoConsultation";
+import ChatModal from "../Chat/ChatModal";
+import IntakeSummaryModal from "../IntakeSummary/IntakeSummaryModal";
 import {
   appointmentPageStyles,
   cardStyles,
@@ -155,16 +161,32 @@ export default function AppointmentPage() {
   const { user } = useUser();
 
   const [loadingDoctors, setLoadingDoctors] = useState(false);
-  const [loadingServices, setLoadingServices] = useState(false);
 
   const [doctorAppts, setDoctorAppts] = useState([]);
-  const [serviceAppts, setServiceAppts] = useState([]);
 
   const [appointmentsRaw, setAppointmentsRaw] = useState({
     doctors: [],
-    services: [],
   });
   const [error, setError] = useState(null);
+
+  // New features state
+  const [activeVideoCall, setActiveVideoCall] = useState(null);
+  const [viewingPrescription, setViewingPrescription] = useState(null);
+  const [prescriptionModalOpen, setPrescriptionModalOpen] = useState(false);
+  const [chattingAppt, setChattingAppt] = useState(null);
+
+  // Intake Summary states
+  const [intakeSummaryOpen, setIntakeSummaryOpen] = useState(false);
+  const [intakeSummaryApptId, setIntakeSummaryApptId] = useState(null);
+  const [intakeSummaryOnProceed, setIntakeSummaryOnProceed] = useState(() => () => {});
+
+  const handleOpenChatWithIntake = (item) => {
+    setIntakeSummaryApptId(item.id);
+    setIntakeSummaryOnProceed(() => () => {
+      setChattingAppt(item);
+    });
+    setIntakeSummaryOpen(true);
+  };
 
   /* -------------------- Fetch Doctor Appointments -------------------- */
   const loadDoctorAppointments = useCallback(async () => {
@@ -256,93 +278,70 @@ export default function AppointmentPage() {
     } finally {
       setLoadingDoctors(false);
     }
-  }, [isLoaded, getToken, user]);
-
-  /* -------------------- Fetch Service Appointments -------------------- */
-  const loadServiceAppointments = useCallback(async () => {
-    if (!isLoaded) return;
-    setLoadingServices(true);
-    setError(null);
-
-    let token = null;
-    try {
-      token = await getToken();
-    } catch (err) {
-      console.error("Failed to get Clerk token (frontend): err", err);
-    }
-    const headers = token ? { Authorization: `Bearer ${token}` } : {};
-    console.log("Outgoing headers for /api/service-appointments/me:", headers);
-
-    try {
-      const resp = await API.get("/api/service-appointments/me", { headers });
-      console.log("Response from /api/service-appointments/me:", resp?.data);
-
-      const fetched =
-        resp?.data?.appointments ?? resp?.data?.data ?? resp?.data ?? [];
-      const arr = Array.isArray(fetched) ? fetched : [];
-      console.log(arr);
-
-      setServiceAppts(arr);
-      setAppointmentsRaw((p) => ({ ...p, services: arr }));
-    } catch (err) {
-      console.error(
-        "Error calling /api/service-appointments/me:",
-        err?.response?.data || err.message || err,
-      );
-
-      if (user?.id) {
-        try {
-          console.log("Attempting debug request with ?createdBy=", user.id);
-          const debugResp = await API.get(
-            `/api/service-appointments/me?createdBy=${user.id}`,
-            { headers },
-          );
-          console.log("Debug fallback response (services):", debugResp?.data);
-
-          const fetched =
-            debugResp?.data?.appointments ??
-            debugResp?.data?.data ??
-            debugResp?.data ??
-            [];
-          const arr = Array.isArray(fetched) ? fetched : [];
-          setServiceAppts(arr);
-          setAppointmentsRaw((p) => ({ ...p, services: arr }));
-        } catch (err2) {
-          console.error(
-            "Debug fallback failed (services):",
-            err2?.response?.data || err2.message || err2,
-          );
-          setError((prev) =>
-            prev
-              ? prev + " | Services failed"
-              : "Failed to load service appointments. Check console.",
-          );
-          setServiceAppts([]);
-        }
-      } else {
-        setError((prev) =>
-          prev
-            ? prev + " | No user id for services"
-            : "Failed to load service appointments and no user id available for debug fallback.",
-        );
-        setServiceAppts([]);
-      }
-    } finally {
-      setLoadingServices(false);
-    }
-  }, [isLoaded, getToken, user]);
+  }, [isLoaded, getToken, user?.id]);
 
   /* -------------------- Combined loader -------------------- */
   useEffect(() => {
-    loadDoctorAppointments();
-    loadServiceAppointments();
-  }, [
-    isLoaded,
-    isSignedIn,
-    user,
-    loadDoctorAppointments,
-    loadServiceAppointments,
-  ]);
+    if (isLoaded && isSignedIn) {
+      loadDoctorAppointments();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isLoaded, isSignedIn, user?.id]);
+
+  function isToday(dateStr) {
+    if (!dateStr) return false;
+    const today = new Date();
+    const y = today.getFullYear();
+    const m = String(today.getMonth() + 1).padStart(2, "0");
+    const d = String(today.getDate()).padStart(2, "0");
+    return dateStr.slice(0, 10) === `${y}-${m}-${d}`;
+  }
+
+  function handleStartVideoCall(item) {
+    setIntakeSummaryApptId(item.id);
+    setIntakeSummaryOnProceed(() => () => {
+      setActiveVideoCall({
+        roomName: `medicare-appt-${item.id}`,
+        displayName: user?.fullName || "Patient",
+      });
+    });
+    setIntakeSummaryOpen(true);
+  }
+
+  async function handleViewPrescription(appointmentId) {
+    try {
+      const token = await getToken();
+      const res = await fetch(`${API_BASE}/api/prescriptions/appointment/${appointmentId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const json = await res.json();
+      if (json.success && json.prescription) {
+        setViewingPrescription(json.prescription);
+        setPrescriptionModalOpen(true);
+      } else {
+        toast.error("No prescription found or not yet published by the doctor.");
+      }
+    } catch (err) {
+      toast.error("Error loading prescription");
+    }
+  }
+
+  async function handleCheckIn(item) {
+    try {
+      let token = null;
+      try { token = await getToken(); } catch (e) { /* noop */ }
+      const headers = token ? { Authorization: `Bearer ${token}` } : {};
+      const resp = await API.put(`/api/appointments/${item.id}/check-in`, {}, { headers });
+      if (resp.data?.success) {
+        toast.success("✅ Checked in! The doctor will see you shortly.");
+        loadDoctorAppointments();
+      } else {
+        toast.error(resp.data?.message || "Check-in failed.");
+      }
+    } catch (err) {
+      toast.error(err?.response?.data?.message || "Check-in failed. Please try again.");
+    }
+  }
 
   /* -------------------- Normalization for UI -------------------- */
   function normalizeRescheduled(rt) {
@@ -425,59 +424,16 @@ export default function AppointmentPage() {
           payment,
           status,
           rescheduledTo,
+          consultType: a.consultType || "video",
+          rescheduleRequired: a.rescheduleRequired || false,
+          rescheduleReason: a.rescheduleReason || "",
+          queueState: a.queueState || "Scheduled",
         };
       })
       .map((x) => ({ ...x, status: computeStatus(x) }));
   }, [doctorAppts]);
 
-  const serviceData = useMemo(() => {
-    return serviceAppts
-      .map((s) => {
-        const id = s._id || s.id || String(s._id || "");
-        const svc =
-          typeof s.serviceId === "object" && s.serviceId ? s.serviceId : {};
-        const image =
-          svc.imageUrl ||
-          svc.image ||
-          svc.imageSmall ||
-          s.serviceImage?.url ||
-          s.serviceImage ||
-          "";
-        const name = s.serviceName || svc.name || svc.title || "Service";
-        const patientName = s.patientName || s.patient || "Patient";
-        const price = s.fees ?? s.amount ?? s.price ?? 0;
-        const date = s.date || "";
-        let time = s.time || "";
-        if (!time) {
-          if (s.hour !== undefined && s.minute !== undefined && s.ampm) {
-            time = `${s.hour}:${pad(s.minute)} ${s.ampm}`;
-          } else if (s.hour !== undefined && s.ampm) {
-            time = `${s.hour}:00 ${s.ampm}`;
-          }
-        }
 
-        const payment = (s.payment && s.payment.method) || "Cash";
-        const status =
-          s.status ||
-          (s.payment && s.payment.status === "Paid" ? "Confirmed" : "Pending");
-
-        const rescheduledTo = normalizeRescheduled(s.rescheduledTo || null);
-
-        return {
-          id,
-          image,
-          name,
-          patientName,
-          price,
-          date,
-          time,
-          payment,
-          status,
-          rescheduledTo,
-        };
-      })
-      .map((x) => ({ ...x, status: computeStatus(x) }));
-  }, [serviceAppts]);
 
   /* -------------------- Render -------------------- */
   return (
@@ -541,68 +497,225 @@ export default function AppointmentPage() {
                   </span>
                 </div>
               ) : null}
+
+              {/* Action Buttons */}
+              <div className="mt-4 pt-3 border-t border-slate-100 flex flex-col gap-2 w-full">
+
+                {/* RESCHEDULE REQUIRED ALERT */}
+                {item.rescheduleRequired && (
+                  <div className="flex items-start gap-2 p-2.5 bg-red-50 border border-red-200 rounded-2xl text-xs">
+                    <span className="text-red-500 text-base leading-none mt-0.5">⚠️</span>
+                    <div>
+                      <div className="font-bold text-red-700">Reschedule Required</div>
+                      {item.rescheduleReason && <div className="text-red-500 mt-0.5">{item.rescheduleReason}</div>}
+                    </div>
+                  </div>
+                )}
+
+                {/* SELF CHECK-IN BUTTON */}
+                {(item.status === "Confirmed" || item.status === "Rescheduled") &&
+                  isToday(item.date) &&
+                  item.queueState === "Scheduled" && (
+                  <button
+                    onClick={() => handleCheckIn(item)}
+                    className="w-full text-xs font-bold py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-full transition flex items-center justify-center gap-1.5 cursor-pointer"
+                  >
+                    ✓ Check In Now
+                  </button>
+                )}
+
+                {item.queueState === "CheckedIn" && (
+                  <div className="w-full text-xs font-bold py-1.5 bg-amber-50 border border-amber-300 text-amber-800 rounded-full text-center">
+                    ⏳ Checked in — waiting for the doctor
+                  </div>
+                )}
+
+                {item.queueState === "InConsultation" && (
+                  <div className="w-full text-xs font-bold py-1.5 bg-purple-50 border border-purple-300 text-purple-800 rounded-full text-center animate-pulse">
+                    🩺 Your consult is starting!
+                  </div>
+                )}
+
+                {(item.status === "Confirmed" || item.status === "Rescheduled") && isToday(item.date) && (
+                  <button
+                    onClick={() => handleStartVideoCall(item)}
+                    className="w-full text-xs font-bold py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-full transition flex items-center justify-center gap-1.5 cursor-pointer animate-pulse"
+                  >
+                    <VideoIcon className="w-3.5 h-3.5" /> Join Video Call
+                  </button>
+                )}
+
+                {item.status === "Completed" && (
+                  <button
+                    onClick={() => handleViewPrescription(item.id)}
+                    className="w-full text-xs font-bold py-2 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-full border border-blue-200 transition flex items-center justify-center gap-1.5 cursor-pointer"
+                  >
+                    <FileText className="w-3.5 h-3.5" /> View Prescription
+                  </button>
+                )}
+
+                {item.status !== "Canceled" && (
+                  <button
+                    onClick={() => handleOpenChatWithIntake(item)}
+                    className="w-full text-xs font-bold py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-full border border-emerald-200 transition flex items-center justify-center gap-1.5 cursor-pointer"
+                  >
+                    <MessageSquare className="w-3.5 h-3.5" /> Chat with Doctor
+                  </button>
+                )}
+              </div>
             </div>
           ))}
         </div>
 
-        {/* ------------ SERVICE BOOKINGS ------------ */}
-        <h2 className={appointmentPageStyles.serviceTitle}>
-          Your Booked Services
-        </h2>
 
-        {loadingServices && (
-          <div className={appointmentPageStyles.serviceLoadingText}>
-            Loading service bookings...
-          </div>
-        )}
+      </div>
 
-        {!loadingServices && serviceData.length === 0 && (
-          <div className={appointmentPageStyles.serviceEmptyStateText}>
-            No service bookings found.
-          </div>
-        )}
+      {/* Embedded Video Consultation Jitsi iframe overlay */}
+      {activeVideoCall && (
+        <VideoConsultation
+          roomName={activeVideoCall.roomName}
+          displayName={activeVideoCall.displayName}
+          onClose={() => setActiveVideoCall(null)}
+        />
+      )}
 
-        <div className={appointmentPageStyles.serviceGrid}>
-          {serviceData.map((srv) => (
-            <div key={srv.id} className={cardStyles.serviceCard}>
-              <div className={cardStyles.serviceImageContainer}>
-                <img
-                  src={srv.image || "/placeholder-service.png"}
-                  alt={srv.name}
-                  className={cardStyles.image}
-                  loading="lazy"
-                />
+      {/* Telehealth Direct Messaging Modal */}
+      <ChatModal
+        isOpen={!!chattingAppt}
+        onClose={() => setChattingAppt(null)}
+        appointmentId={chattingAppt?.id}
+        senderRole="patient"
+        recipientName={chattingAppt?.doctor}
+      />
+
+      <IntakeSummaryModal
+        isOpen={intakeSummaryOpen}
+        onClose={() => setIntakeSummaryOpen(false)}
+        appointmentId={intakeSummaryApptId}
+        senderRole="patient"
+        onProceed={intakeSummaryOnProceed}
+      />
+
+      {/* Prescription Viewer Modal */}
+      {prescriptionModalOpen && viewingPrescription && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-3xl p-6 sm:p-8 max-w-2xl w-full border border-blue-200 shadow-2xl flex flex-col max-h-[90vh]">
+            <div className="flex justify-between items-center mb-4 border-b pb-3 shrink-0">
+              <h3 className="text-xl font-bold text-blue-950 font-serif">
+                Prescription Details (Rx)
+              </h3>
+              <button
+                onClick={() => setPrescriptionModalOpen(false)}
+                className="text-slate-400 hover:text-slate-600 font-bold text-lg"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Printable Prescription Template */}
+            <div id="printable-prescription" className="flex-1 overflow-y-auto pr-1 space-y-6 font-serif text-sm p-4 border rounded-2xl bg-slate-50/50">
+              <div className="flex justify-between items-start border-b pb-4">
+                <div>
+                  <h4 className="text-lg font-bold text-emerald-800">Mediunity</h4>
+                  <p className="text-xs text-slate-500">Your Healthcare Solution</p>
+                </div>
+                <div className="text-right">
+                  <h5 className="font-bold text-slate-800">{viewingPrescription.doctorName}</h5>
+                  <p className="text-xs text-slate-500">Consultant Physician</p>
+                </div>
               </div>
 
-              <h3 className={cardStyles.serviceName}>{srv.name}</h3>
-
-              <p className={cardStyles.price}>Tk {srv.price}</p>
-
-              <p className={cardStyles.serviceDateContainer}>
-                <CalendarDays className={iconSize.medium} /> {srv.date}
-              </p>
-
-              <p className={cardStyles.serviceTimeContainer}>
-                <Clock className={iconSize.medium} /> {srv.time}
-              </p>
-
-              <div className={cardStyles.badgesContainer}>
-                <PaymentBadge payment={srv.payment} />
-                <StatusBadge itemStatus={srv.status} />
-              </div>
-
-              {srv.status === "Rescheduled" && srv.rescheduledTo ? (
-                <div className={cardStyles.serviceRescheduledText}>
-                  Rescheduled to{" "}
-                  <span className={cardStyles.rescheduledSpan}>
-                    {srv.rescheduledTo.date} : {srv.rescheduledTo.time}
+              <div className="grid grid-cols-2 gap-4 text-xs bg-white p-3 rounded-xl border">
+                <div>
+                  <span className="text-slate-400 font-bold uppercase">Patient:</span>{" "}
+                  <span className="font-semibold text-slate-800">{viewingPrescription.patientName}</span>
+                </div>
+                <div className="text-right">
+                  <span className="text-slate-400 font-bold uppercase">Date:</span>{" "}
+                  <span className="font-semibold text-slate-800">
+                    {new Date(viewingPrescription.date).toLocaleDateString("en-GB")}
                   </span>
                 </div>
-              ) : null}
+              </div>
+
+              {viewingPrescription.symptoms && (
+                <div>
+                  <h5 className="font-bold text-slate-800 uppercase text-xs mb-1">Symptoms:</h5>
+                  <p className="text-slate-700 bg-white p-2.5 rounded-xl border">{viewingPrescription.symptoms}</p>
+                </div>
+              )}
+
+              {viewingPrescription.diagnosis && (
+                <div>
+                  <h5 className="font-bold text-slate-800 uppercase text-xs mb-1">Diagnosis:</h5>
+                  <p className="text-slate-700 bg-white p-2.5 rounded-xl border">{viewingPrescription.diagnosis}</p>
+                </div>
+              )}
+
+              {/* Medicines List */}
+              {viewingPrescription.medicines?.length > 0 && (
+                <div>
+                  <h5 className="font-bold text-slate-800 uppercase text-xs mb-2">Rx (Prescribed Medicines):</h5>
+                  <div className="bg-white rounded-xl border divide-y overflow-hidden">
+                    {viewingPrescription.medicines.map((med, index) => (
+                      <div key={index} className="p-3 flex justify-between items-center flex-wrap gap-2">
+                        <div>
+                          <p className="font-bold text-slate-800">{index + 1}. {med.name}</p>
+                          <p className="text-xs text-slate-400 mt-0.5">{med.frequency}</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-sm font-bold text-emerald-700">{med.dosage}</p>
+                          <p className="text-xs text-slate-500 mt-0.5">Duration: {med.duration}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {viewingPrescription.tests && (
+                <div>
+                  <h5 className="font-bold text-slate-800 uppercase text-xs mb-1">Recommended Tests:</h5>
+                  <p className="text-slate-700 bg-white p-2.5 rounded-xl border">{viewingPrescription.tests}</p>
+                </div>
+              )}
+
+              {viewingPrescription.advice && (
+                <div>
+                  <h5 className="font-bold text-slate-800 uppercase text-xs mb-1">Advice:</h5>
+                  <p className="text-slate-700 bg-white p-2.5 rounded-xl border">{viewingPrescription.advice}</p>
+                </div>
+              )}
             </div>
-          ))}
+
+            <div className="pt-4 border-t mt-4 flex justify-end gap-3 shrink-0">
+              <button
+                onClick={() => setPrescriptionModalOpen(false)}
+                className="px-5 py-2.5 rounded-full border text-slate-600 font-semibold text-sm"
+              >
+                Close
+              </button>
+              <button
+                onClick={() => {
+                  const printContents = document.getElementById("printable-prescription").innerHTML;
+                  const originalContents = document.body.innerHTML;
+                  document.body.innerHTML = `
+                    <div style="padding: 40px; font-family: serif; font-size: 14px;">
+                      ${printContents}
+                    </div>
+                  `;
+                  window.print();
+                  document.body.innerHTML = originalContents;
+                  window.location.reload(); // refresh react bindings after printing
+                }}
+                className="px-6 py-2.5 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-sm shadow-md cursor-pointer"
+              >
+                Print Prescription
+              </button>
+            </div>
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }

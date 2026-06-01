@@ -1,261 +1,80 @@
 import React from "react";
+import { Link } from "react-router-dom";
 import {
   Facebook,
   Twitter,
   Instagram,
   Linkedin,
   Youtube,
-  Mail,
-  Phone,
-  MapPin,
-  ArrowRight,
-  Send,
-  Stethoscope,
-  Activity,
 } from "lucide-react";
-import logo from "../../assets/logo.png";
 import { footerStyles } from "../../assets/dummyStyles";
 
 const Footer = () => {
   const currentYear = new Date().getFullYear();
 
-  const quickLinks = [
+  const links = [
     { name: "Home", href: "/" },
     { name: "Doctors", href: "/doctors" },
-    { name: "Services", href: "/services" },
-    { name: "Contact", href: "/contact" },
     { name: "Appointments", href: "/appointments" },
-  ];
-
-  const services = [
-    { name: "Blood Pressure Check", href: "/services" },
-    { name: "Blood Sugar Test", href: "/services" },
-    { name: "Full Blood Count", href: "/services" },
-    { name: "X-Ray Scan", href: "/services" },
-    { name: "Heart Rate Monitor", href: "/services" },
+    { name: "Community Forum", href: "/forum" },
+    { name: "Health Hub", href: "/articles" },
+    { name: "Recovery Logs", href: "/journals" },
+    { name: "Health Tracker", href: "/health-tracker" },
+    { name: "Symptom Checker", href: "/symptom-checker" },
+    { name: "Privacy Policy", href: "#" },
+    { name: "Terms of Service", href: "#" },
   ];
 
   const socialLinks = [
-    {
-      Icon: Facebook,
-      color: footerStyles.facebookColor,
-      name: "Facebook",
-      href: "https://www.facebook.com",
-    },
-    {
-      Icon: Twitter,
-      color: footerStyles.twitterColor,
-      name: "Twitter",
-      href: "https://www.linkedin.com",
-    },
-    {
-      Icon: Instagram,
-      color: footerStyles.instagramColor,
-      name: "Instagram",
-      href: "http://instagram.com",
-    },
-    {
-      Icon: Linkedin,
-      color: footerStyles.linkedinColor,
-      name: "LinkedIn",
-      href: "https://www.linkedin.com",
-    },
-    {
-      Icon: Youtube,
-      color: footerStyles.youtubeColor,
-      name: "YouTube",
-      href: "https://youtube.com",
-    },
+    { Icon: Facebook, href: "https://facebook.com", name: "Facebook", color: footerStyles.facebookColor },
+    { Icon: Twitter, href: "https://twitter.com", name: "Twitter", color: footerStyles.twitterColor },
+    { Icon: Instagram, href: "https://instagram.com", name: "Instagram", color: footerStyles.instagramColor },
+    { Icon: Linkedin, href: "https://linkedin.com", name: "LinkedIn", color: footerStyles.linkedinColor },
+    { Icon: Youtube, href: "https://youtube.com", name: "YouTube", color: footerStyles.youtubeColor },
   ];
 
   return (
     <footer className={footerStyles.footerContainer}>
-      {/* Floating Medical Icons */}
-      <div className={footerStyles.floatingIcon1}>
-        <Stethoscope className={footerStyles.stethoscopeIcon} />
-      </div>
-
-      <div
-        className={footerStyles.floatingIcon2}
-        style={{ animationDelay: "3s" }}
-      >
-        <Activity className={footerStyles.activityIcon} />
-      </div>
-
-      {/* Main Footer Content */}
       <div className={footerStyles.mainContent}>
-        <div className={footerStyles.gridContainer}>
-          {/* Company Info & Logo */}
-          <div className={footerStyles.companySection}>
-            <div className={footerStyles.logoContainer}>
-              <div className={footerStyles.logoWrapper}>
-                <div className={footerStyles.logoImageContainer}>
-                  <img
-                    src={logo}
-                    alt="MedBook Logo"
-                    className={footerStyles.logoImage}
-                  />
-                </div>
-              </div>
-
-              <div>
-                <h2 className={footerStyles.companyName}>MediCare Cumilla</h2>
-                <p className={footerStyles.companyTagline}>
-                  Healthcare Solutions
-                </p>
-              </div>
-            </div>
-
-            <p className={footerStyles.companyDescription}>
-              Your trusted partner in healthcare innovation. We're committed to
-              providing exceptional medical care with cutting-edge technology
-              and compassionate service.
-            </p>
-
-            <div className={footerStyles.contactContainer}>
-              <div className={footerStyles.contactItem}>
-                <div className={footerStyles.contactIconWrapper}>
-                  <Phone className={footerStyles.contactIcon} />
-                </div>
-                <span className={footerStyles.contactText}>01533102070</span>
-              </div>
-              <div className={footerStyles.contactItem}>
-                <div className={footerStyles.contactIconWrapper}>
-                  <Mail className={footerStyles.contactIcon} />
-                </div>
-                <span className={footerStyles.contactText}>
-                  Medicares@gmail.com
-                </span>
-              </div>
-              <div className={footerStyles.contactItem}>
-                <div className={footerStyles.contactIconWrapper}>
-                  <MapPin className={footerStyles.contactIcon} />
-                </div>
-                <span className={footerStyles.contactText}>Cumilla, Bangladesh</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Quick Links */}
-          <div className={footerStyles.linksSection}>
-            <h3 className={footerStyles.sectionTitle}>Quick Links</h3>
-            <ul className={footerStyles.linksList}>
-              {quickLinks.map((link, index) => (
-                <li key={link.name} className={footerStyles.linkItem}>
-                  <a
-                    href={link.href}
-                    className={footerStyles.quickLink}
-                    aria-label={link.name}
-                    style={{ animationDelay: `${index * 60}ms` }}
-                  >
-                    <div className={footerStyles.quickLinkIconWrapper}>
-                      <ArrowRight className={footerStyles.quickLinkIcon} />
-                    </div>
-                    <span>{link.name}</span>
-                  </a>
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          {/* Services */}
-          <div className={footerStyles.linksSection}>
-            <h3 className={footerStyles.sectionTitle}>Our Services</h3>
-            <ul className={footerStyles.linksList}>
-              {services.map((service, index) => (
-                <li key={`${service.name}-${index}`}>
-                  <a href={service.href} className={footerStyles.serviceLink}>
-                    <div className={footerStyles.serviceIcon} />
-                    <span>{service.name}</span>
-                  </a>
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          {/* Newsletter & Social */}
-          <div className={footerStyles.newsletterSection}>
-            <h3 className={footerStyles.newsletterTitle}>Stay Connected</h3>
-            <p className={footerStyles.newsletterDescription}>
-              Subscribe for health tips, medical updates, and wellness insights
-              delivered to your inbox.
-            </p>
-
-            {/* Newsletter form */}
-            <div className={footerStyles.newsletterForm}>
-              {/* Mobile newsletter */}
-              <div className={footerStyles.mobileNewsletterContainer}>
-                <input
-                  type="email"
-                  placeholder="Enter your email"
-                  className={footerStyles.emailInput}
-                  aria-label="Email"
-                />
-                <button className={footerStyles.mobileSubscribeButton}>
-                  <Send className={footerStyles.mobileButtonIcon} />
-                  Subscribe
-                </button>
-              </div>
-
-              {/* Desktop newsletter */}
-              <div className={footerStyles.desktopNewsletterContainer}>
-                <input
-                  type="email"
-                  placeholder="Enter your email"
-                  className={footerStyles.desktopEmailInput}
-                  aria-label="Email"
-                />
-                <button className={footerStyles.desktopSubscribeButton}>
-                  <Send className={footerStyles.desktopButtonIcon} />
-                  <span className={footerStyles.desktopButtonText}>
-                    Subscribe
-                  </span>
-                </button>
-              </div>
-
-              {/* Social icons */}
-              <div className={footerStyles.socialContainer}>
-                {socialLinks.map(({ Icon, color, name, href }, index) => (
-                  <a
-                    key={name}
-                    href={href}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className={footerStyles.socialLink}
-                    aria-label={name}
-                    style={{ animationDelay: `${index * 120}ms` }}
-                  >
-                    <div className={footerStyles.socialIconBackground} />
-                    <Icon className={`${footerStyles.socialIcon} ${color}`} />
-                  </a>
-                ))}
-              </div>
-            </div>
-          </div>
+        {/* Navigation Links */}
+        <div className={footerStyles.linksList}>
+          {links.map((link, idx) => (
+            <Link
+              key={idx}
+              to={link.href}
+              className={footerStyles.quickLink}
+            >
+              {link.name}
+            </Link>
+          ))}
         </div>
 
-        {/* Bottom */}
+        {/* Divider / Social & Copyright */}
         <div className={footerStyles.bottomSection}>
+          {/* Copyright & Info */}
           <div className={footerStyles.copyright}>
-            <span>© {currentYear} MediCare Cumilla.</span>
+            <span>© {currentYear} Mediunity. All rights reserved.</span>
+            <span className="hidden sm:inline text-slate-300 dark:text-slate-700">|</span>
+            <span className="text-[11px] text-slate-400 dark:text-slate-500">Your Healthcare Solution</span>
           </div>
 
-          <div className={footerStyles.designerText}>
-            <span>Designed by</span>
-            <a
-              href="Sarower & Joy"
-              target="_blank"
-              rel="noopener noreferrer"
-              className={footerStyles.designerLink}
-            >
-              SRJR
-            </a>
+          {/* Social Icons */}
+          <div className={footerStyles.socialContainer}>
+            {socialLinks.map(({ Icon, href, name, color }) => (
+              <a
+                key={name}
+                href={href}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={`${footerStyles.socialIcon} ${color}`}
+                aria-label={name}
+              >
+                <Icon size={16} />
+              </a>
+            ))}
           </div>
         </div>
       </div>
-
-      {/* Animation Styles */}
-      <style>{footerStyles.animationStyles}</style>
     </footer>
   );
 };

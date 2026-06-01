@@ -222,7 +222,11 @@ const HomeDoctors = ({ apiBase, previewCount = 8 }) => {
                   <div className={homeDoctorsStyles.experienceContainer}>
                     <div className={homeDoctorsStyles.experienceBadge}>
                       <Medal className={`${iconSize.small} h-4`} />
-                      <span>{doctor.experience} years Experience</span>
+                      <span>
+                        {String(doctor.experience).toLowerCase().includes("year")
+                          ? `${doctor.experience} Experience`
+                          : `${doctor.experience} years Experience`}
+                      </span>
                     </div>
                   </div>
 
