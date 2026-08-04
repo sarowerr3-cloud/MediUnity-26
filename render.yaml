@@ -19,11 +19,10 @@ services:
       - key: MONGODB_URI
         sync: false
 
-  # 2. Patient Portal React/Vite Static Site
+  # 2. Patient Portal React/Vite Static Site (Static sites are free by default on Render)
   - type: web
     name: mediunity-patient
     env: static
-    plan: free
     rootDir: frontend
     buildCommand: npm install && npm run build
     staticPublishPath: ./dist
@@ -36,11 +35,10 @@ services:
       - key: VITE_API_URL
         value: https://mediunity-api.onrender.com
 
-  # 3. Doctor Portal React/Vite Static Site
+  # 3. Doctor Portal React/Vite Static Site (Static sites are free by default on Render)
   - type: web
     name: mediunity-doctor
     env: static
-    plan: free
     rootDir: frontend-doctor
     buildCommand: npm install && npm run build
     staticPublishPath: ./dist
@@ -53,11 +51,10 @@ services:
       - key: VITE_API_URL
         value: https://mediunity-api.onrender.com
 
-  # 4. Admin Panel React/Vite Static Site
+  # 4. Admin Panel React/Vite Static Site (Static sites are free by default on Render)
   - type: web
     name: mediunity-admin
     env: static
-    plan: free
     rootDir: admin
     buildCommand: npm install && npm run build
     staticPublishPath: ./dist
