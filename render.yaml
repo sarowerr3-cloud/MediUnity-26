@@ -13,13 +13,19 @@ services:
     autoDeploy: true
     envVars:
       - key: PORT
-        value: "4000"
+        value: "10000"
       - key: NODE_ENV
         value: production
       - key: MONGODB_URI
         sync: false
+      - key: CLOUDINARY_CLOUD_NAME
+        sync: false
+      - key: CLOUDINARY_API_KEY
+        sync: false
+      - key: CLOUDINARY_API_SECRET
+        sync: false
 
-  # 2. Patient Portal React/Vite Static Site (Static sites are free by default on Render)
+  # 2. Patient Portal React/Vite Static Site
   - type: web
     name: mediunity-patient
     env: static
@@ -35,7 +41,7 @@ services:
       - key: VITE_API_URL
         value: https://mediunity-api.onrender.com
 
-  # 3. Doctor Portal React/Vite Static Site (Static sites are free by default on Render)
+  # 3. Doctor Portal React/Vite Static Site
   - type: web
     name: mediunity-doctor
     env: static
@@ -51,7 +57,7 @@ services:
       - key: VITE_API_URL
         value: https://mediunity-api.onrender.com
 
-  # 4. Admin Panel React/Vite Static Site (Static sites are free by default on Render)
+  # 4. Admin Panel React/Vite Static Site
   - type: web
     name: mediunity-admin
     env: static
