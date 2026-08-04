@@ -7,13 +7,13 @@ import { Link } from "react-router-dom";
 import Home from "./pages/Home/Home";
 import Add from "./pages/Add/Add";
 import List from "./pages/List/List";
-import Appointments from "./pages/Appointments/Appointments";
 import VerifyIdentities from "./pages/VerifyIdentities/VerifyIdentities";
 import Hero from "./components/Hero/Hero";
 import AdminLogin from "./pages/AdminLogin/AdminLogin";
 import AuditLogs from "./pages/AuditLogs/AuditLogs";
 import CommunityPosts from "./pages/CommunityPosts/CommunityPosts";
 import InactivityTimeout from "./components/InactivityTimeout/InactivityTimeout";
+import UserManagement from "./pages/UserManagement/UserManagement";
 
 function RequireAuth({ children, allowedRoles }) {
   const { isLoaded, isSignedIn, user } = useUser();
@@ -108,15 +108,7 @@ const App = () => {
           }
         />
 
-        {/* Appointments — super-admin and moderator */}
-        <Route
-          path="/appointments"
-          element={
-            <RequireAuth allowedRoles={["super-admin", "moderator"]}>
-              <Appointments />
-            </RequireAuth>
-          }
-        />
+
 
         {/* Verification — all roles */}
         <Route
@@ -144,6 +136,16 @@ const App = () => {
           element={
             <RequireAuth allowedRoles={["super-admin"]}>
               <AuditLogs />
+            </RequireAuth>
+          }
+        />
+
+        {/* User Management — super-admin only */}
+        <Route
+          path="/users"
+          element={
+            <RequireAuth allowedRoles={["super-admin"]}>
+              <UserManagement />
             </RequireAuth>
           }
         />

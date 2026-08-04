@@ -1,0 +1,986 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MediUnity — Comprehensive Project Report</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500&display=swap');
+
+    :root {
+      --emerald: #059669;
+      --emerald-light: #d1fae5;
+      --emerald-dark: #064e3b;
+      --blue: #2563eb;
+      --blue-light: #dbeafe;
+      --indigo: #4f46e5;
+      --slate-50: #f8fafc;
+      --slate-100: #f1f5f9;
+      --slate-200: #e2e8f0;
+      --slate-300: #cbd5e1;
+      --slate-500: #64748b;
+      --slate-600: #475569;
+      --slate-700: #334155;
+      --slate-800: #1e293b;
+      --slate-900: #0f172a;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      color: var(--slate-800);
+      background: #fff;
+      line-height: 1.7;
+      font-size: 11pt;
+    }
+
+    @media print {
+      body { font-size: 10pt; }
+      .page-break { page-break-before: always; }
+      .no-print { display: none !important; }
+      .cover-page { page-break-after: always; }
+      table { font-size: 9pt; }
+    }
+
+    /* ============ COVER PAGE ============ */
+    .cover-page {
+      min-height: 100vh;
+      background: linear-gradient(135deg, var(--slate-900) 0%, #0c1425 50%, var(--emerald-dark) 100%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      text-align: center;
+      padding: 60px 40px;
+      position: relative;
+      overflow: hidden;
+    }
+    .cover-page::before {
+      content: '';
+      position: absolute;
+      top: -100px;
+      right: -100px;
+      width: 400px;
+      height: 400px;
+      border-radius: 50%;
+      background: rgba(5, 150, 105, 0.1);
+      filter: blur(80px);
+    }
+    .cover-page::after {
+      content: '';
+      position: absolute;
+      bottom: -80px;
+      left: -80px;
+      width: 350px;
+      height: 350px;
+      border-radius: 50%;
+      background: rgba(37, 99, 235, 0.08);
+      filter: blur(80px);
+    }
+    .cover-logo {
+      font-size: 18pt;
+      font-weight: 900;
+      letter-spacing: 6px;
+      background: linear-gradient(to right, #34d399, #93c5fd, #818cf8);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 12px;
+    }
+    .cover-subtitle {
+      font-size: 10pt;
+      letter-spacing: 4px;
+      text-transform: uppercase;
+      color: #94a3b8;
+      margin-bottom: 60px;
+    }
+    .cover-title {
+      font-size: 32pt;
+      font-weight: 800;
+      line-height: 1.2;
+      margin-bottom: 16px;
+      max-width: 700px;
+    }
+    .cover-desc {
+      font-size: 13pt;
+      color: #94a3b8;
+      max-width: 550px;
+      margin-bottom: 60px;
+    }
+    .cover-meta {
+      display: flex;
+      gap: 40px;
+      font-size: 9pt;
+      color: #64748b;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+    }
+    .cover-meta span { display: flex; flex-direction: column; gap: 4px; }
+    .cover-meta strong { color: #cbd5e1; font-weight: 600; }
+
+    /* ============ CONTENT ============ */
+    .content {
+      max-width: 850px;
+      margin: 0 auto;
+      padding: 50px 40px;
+    }
+
+    h1 {
+      font-size: 22pt;
+      font-weight: 800;
+      color: var(--slate-900);
+      margin: 50px 0 10px;
+      padding-bottom: 10px;
+      border-bottom: 3px solid var(--emerald);
+    }
+    h1:first-child { margin-top: 0; }
+
+    h2 {
+      font-size: 16pt;
+      font-weight: 700;
+      color: var(--slate-800);
+      margin: 35px 0 10px;
+      padding-bottom: 6px;
+      border-bottom: 1px solid var(--slate-200);
+    }
+
+    h3 {
+      font-size: 12pt;
+      font-weight: 700;
+      color: var(--emerald-dark);
+      margin: 25px 0 8px;
+    }
+
+    p { margin: 8px 0; color: var(--slate-700); }
+
+    /* ============ TABLE OF CONTENTS ============ */
+    .toc {
+      background: var(--slate-50);
+      border: 1px solid var(--slate-200);
+      border-radius: 12px;
+      padding: 30px 35px;
+      margin: 20px 0 40px;
+    }
+    .toc h2 { border: none; margin-top: 0; font-size: 14pt; color: var(--slate-900); }
+    .toc ol {
+      counter-reset: toc-counter;
+      list-style: none;
+      padding: 0;
+    }
+    .toc ol li {
+      counter-increment: toc-counter;
+      padding: 6px 0;
+      border-bottom: 1px dotted var(--slate-200);
+      font-size: 10.5pt;
+      color: var(--slate-600);
+    }
+    .toc ol li::before {
+      content: counter(toc-counter) ".";
+      font-weight: 700;
+      color: var(--emerald);
+      margin-right: 10px;
+      min-width: 24px;
+      display: inline-block;
+    }
+
+    /* ============ TABLES ============ */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 15px 0;
+      font-size: 10pt;
+    }
+    thead th {
+      background: var(--slate-800);
+      color: white;
+      font-weight: 600;
+      text-align: left;
+      padding: 10px 14px;
+      font-size: 9pt;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    thead th:first-child { border-radius: 8px 0 0 0; }
+    thead th:last-child { border-radius: 0 8px 0 0; }
+    tbody td {
+      padding: 9px 14px;
+      border-bottom: 1px solid var(--slate-100);
+      vertical-align: top;
+    }
+    tbody tr:nth-child(even) { background: var(--slate-50); }
+    tbody tr:hover { background: var(--emerald-light); }
+    td code, p code {
+      background: #f1f5f9;
+      color: #be185d;
+      padding: 1px 6px;
+      border-radius: 4px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 9pt;
+    }
+
+    /* ============ INFO BOXES ============ */
+    .info-box {
+      border-left: 4px solid;
+      padding: 14px 20px;
+      border-radius: 0 8px 8px 0;
+      margin: 18px 0;
+      font-size: 10pt;
+    }
+    .info-box.note { border-color: var(--blue); background: var(--blue-light); }
+    .info-box.tip { border-color: var(--emerald); background: var(--emerald-light); }
+    .info-box.important { border-color: #d97706; background: #fef3c7; }
+    .info-box.caution { border-color: #dc2626; background: #fee2e2; }
+    .info-box strong { display: block; margin-bottom: 4px; }
+
+    /* ============ CODE BLOCKS ============ */
+    pre {
+      background: var(--slate-900);
+      color: #e2e8f0;
+      padding: 20px;
+      border-radius: 10px;
+      overflow-x: auto;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 9pt;
+      line-height: 1.6;
+      margin: 15px 0;
+    }
+
+    /* ============ LISTS ============ */
+    ul, ol {
+      margin: 8px 0;
+      padding-left: 24px;
+    }
+    li { margin: 4px 0; color: var(--slate-700); }
+    li strong { color: var(--slate-800); }
+
+    /* ============ FLOW DIAGRAM (CSS-based) ============ */
+    .flow-diagram {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin: 20px 0;
+      padding: 20px;
+      background: var(--slate-50);
+      border-radius: 12px;
+      border: 1px solid var(--slate-200);
+    }
+    .flow-box {
+      background: white;
+      border: 2px solid var(--emerald);
+      border-radius: 10px;
+      padding: 10px 16px;
+      text-align: center;
+      font-size: 9pt;
+      font-weight: 600;
+      color: var(--slate-800);
+      min-width: 100px;
+    }
+    .flow-box.highlight { background: var(--emerald); color: white; }
+    .flow-box.blue { border-color: var(--blue); }
+    .flow-box.blue.highlight { background: var(--blue); color: white; border-color: var(--blue); }
+    .flow-arrow { font-size: 18pt; color: var(--slate-400); font-weight: 300; }
+
+    /* ============ SECTION DIVIDER ============ */
+    hr {
+      border: none;
+      height: 1px;
+      background: linear-gradient(to right, transparent, var(--slate-300), transparent);
+      margin: 40px 0;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 2px 10px;
+      border-radius: 20px;
+      font-size: 8pt;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .badge.green { background: var(--emerald-light); color: var(--emerald-dark); }
+    .badge.blue { background: var(--blue-light); color: var(--blue); }
+    .badge.orange { background: #fef3c7; color: #92400e; }
+
+    .stat-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+      margin: 20px 0;
+    }
+    .stat-card {
+      background: var(--slate-50);
+      border: 1px solid var(--slate-200);
+      border-radius: 12px;
+      padding: 18px;
+      text-align: center;
+    }
+    .stat-card .number {
+      font-size: 28pt;
+      font-weight: 800;
+      color: var(--emerald);
+    }
+    .stat-card .label {
+      font-size: 9pt;
+      color: var(--slate-500);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-top: 4px;
+    }
+
+    .footer-print {
+      text-align: center;
+      color: var(--slate-400);
+      font-size: 9pt;
+      margin-top: 60px;
+      padding-top: 20px;
+      border-top: 1px solid var(--slate-200);
+    }
+  </style>
+</head>
+<body>
+
+<!-- ============ COVER PAGE ============ -->
+<div class="cover-page">
+  <div class="cover-logo">MEDIUNITY</div>
+  <div class="cover-subtitle">Healthcare Solution Platform</div>
+  <div class="cover-title">Comprehensive Project Report</div>
+  <div class="cover-desc">
+    A full-stack, multi-portal healthcare platform connecting patients, doctors,
+    hospitals, diagnostic centers, and pharmacies under a single unified system.
+  </div>
+  <div class="cover-meta">
+    <span><strong>Version</strong>1.0.0</span>
+    <span><strong>Date</strong>July 30, 2026</span>
+    <span><strong>Audience</strong>Global (Worldwide)</span>
+    <span><strong>Type</strong>Technical Report</span>
+  </div>
+</div>
+
+<!-- ============ CONTENT ============ -->
+<div class="content">
+
+  <!-- Quick Stats -->
+  <div class="stat-grid">
+    <div class="stat-card"><div class="number">30</div><div class="label">Database Models</div></div>
+    <div class="stat-card"><div class="number">22</div><div class="label">API Routes</div></div>
+    <div class="stat-card"><div class="number">20</div><div class="label">Controllers</div></div>
+    <div class="stat-card"><div class="number">150+</div><div class="label">Source Files</div></div>
+  </div>
+
+  <!-- TABLE OF CONTENTS -->
+  <div class="toc">
+    <h2>Table of Contents</h2>
+    <ol>
+      <li>Executive Summary</li>
+      <li>System Architecture</li>
+      <li>Technology Stack</li>
+      <li>Project Structure &amp; File Layout</li>
+      <li>Database Schema (30 Models)</li>
+      <li>API Layer (22 Route Modules, 20 Controllers)</li>
+      <li>Authentication &amp; Security</li>
+      <li>Patient Portal — Features</li>
+      <li>Doctor Portal — Features</li>
+      <li>Partner Portals — Features</li>
+      <li>Admin Panel — Features</li>
+      <li>Payment &amp; Revenue System</li>
+      <li>Background Workers &amp; Queues</li>
+      <li>Third-Party Integrations</li>
+      <li>Deployment &amp; DevOps</li>
+      <li>Known Issues &amp; Improvement Opportunities</li>
+      <li>File Count Summary</li>
+    </ol>
+  </div>
+
+  <hr>
+
+  <!-- ============ SECTION 1 ============ -->
+  <h1>1. Executive Summary</h1>
+  <p>
+    <strong>MediUnity</strong> is a full-stack, multi-portal healthcare platform that connects
+    <strong>patients</strong>, <strong>doctors</strong>, <strong>hospitals</strong>,
+    <strong>diagnostic centers</strong>, and <strong>pharmacies</strong> under a single unified system.
+    The platform handles the entire lifecycle of healthcare delivery — from discovering a doctor,
+    booking an appointment, paying online, receiving a video consultation, getting a digital
+    prescription, ordering medicines, and tracking the entire process with SMS reminders.
+  </p>
+  <p>The platform consists of <strong>4 independently runnable applications</strong>:</p>
+  <table>
+    <thead><tr><th>Application</th><th>Port</th><th>Purpose</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Backend API</strong></td><td><code>4000</code></td><td>REST API server handling all business logic, authentication, and data</td></tr>
+      <tr><td><strong>Frontend (Patient + Doctor)</strong></td><td><code>5173</code></td><td>Patient &amp; Doctor-facing web app</td></tr>
+      <tr><td><strong>Admin Panel</strong></td><td><code>5174</code></td><td>Administrative dashboard for platform management</td></tr>
+      <tr><td><strong>Launch Script</strong></td><td>N/A</td><td><code>LAUNCH_MEDI_UNITY.bat</code> starts all services simultaneously</td></tr>
+    </tbody>
+  </table>
+
+  <hr>
+
+  <!-- ============ SECTION 2 ============ -->
+  <h1>2. System Architecture</h1>
+
+  <h3>Request Flow</h3>
+  <div class="flow-diagram">
+    <div class="flow-box">User Browser</div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-box">React Frontend<br/><small>Port 5173</small></div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-box highlight">Express API<br/><small>Port 4000</small></div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-box blue">MongoDB Atlas<br/><small>Cloud DB</small></div>
+  </div>
+
+  <h3>Security Middleware Pipeline</h3>
+  <div class="flow-diagram">
+    <div class="flow-box">Helmet</div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-box">CORS</div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-box">Rate Limiter</div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-box">Firebase Auth</div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-box">Mongo Sanitize</div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-box">XSS Clean</div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-box highlight">Route Handler</div>
+  </div>
+
+  <p>Every request passes through 7 security layers before reaching the route handler. Sensitive fields (email, phone, NID, emergency contacts) are automatically <strong>AES-256-GCM encrypted</strong> in the database and <strong>decrypted transparently</strong> on retrieval.</p>
+
+  <hr>
+
+  <!-- ============ SECTION 3 ============ -->
+  <div class="page-break"></div>
+  <h1>3. Technology Stack</h1>
+
+  <h2>3.1 Frontend</h2>
+  <table>
+    <thead><tr><th>Technology</th><th>Version</th><th>Purpose</th></tr></thead>
+    <tbody>
+      <tr><td>React</td><td>19.1.1</td><td>UI component library</td></tr>
+      <tr><td>Vite</td><td>7.1.7</td><td>Build tool &amp; dev server</td></tr>
+      <tr><td>Tailwind CSS</td><td>4.1.17</td><td>Utility-first CSS framework</td></tr>
+      <tr><td>React Router DOM</td><td>7.9.5</td><td>Client-side routing</td></tr>
+      <tr><td>Lucide React</td><td>0.553.0</td><td>Icon library</td></tr>
+      <tr><td>Firebase</td><td>12.13.0</td><td>Client-side authentication</td></tr>
+      <tr><td>Axios</td><td>1.13.2</td><td>HTTP client</td></tr>
+      <tr><td>i18next</td><td>23.11.5</td><td>Internationalization (EN/BN)</td></tr>
+      <tr><td>VitePWA</td><td>0.21.1</td><td>Progressive Web App support</td></tr>
+    </tbody>
+  </table>
+
+  <h2>3.2 Backend</h2>
+  <table>
+    <thead><tr><th>Technology</th><th>Version</th><th>Purpose</th></tr></thead>
+    <tbody>
+      <tr><td>Node.js + Express</td><td>5.2.1</td><td>HTTP server framework</td></tr>
+      <tr><td>Mongoose</td><td>9.0.1</td><td>MongoDB ODM</td></tr>
+      <tr><td>Firebase Admin</td><td>12.0.0</td><td>Server-side token verification</td></tr>
+      <tr><td>JWT (jsonwebtoken)</td><td>9.0.3</td><td>Doctor &amp; Admin auth</td></tr>
+      <tr><td>bcrypt / bcryptjs</td><td>6.0.0 / 3.0.3</td><td>Password hashing</td></tr>
+      <tr><td>Helmet</td><td>7.1.0</td><td>HTTP security headers</td></tr>
+      <tr><td>express-rate-limit</td><td>7.1.5</td><td>API rate limiting</td></tr>
+      <tr><td>Multer</td><td>2.0.2</td><td>File upload handling</td></tr>
+      <tr><td>Cloudinary</td><td>2.8.0</td><td>Cloud image storage</td></tr>
+      <tr><td>Stripe</td><td>20.0.0</td><td>International payments</td></tr>
+      <tr><td>Twilio</td><td>6.0.2</td><td>SMS notifications</td></tr>
+      <tr><td>Nodemailer</td><td>8.0.10</td><td>Email OTP</td></tr>
+      <tr><td>BullMQ</td><td>5.79.3</td><td>Background job queue</td></tr>
+      <tr><td>Cheerio</td><td>1.2.0</td><td>BMDC web scraping</td></tr>
+      <tr><td>Tesseract.js</td><td>7.0.0</td><td>OCR document verification</td></tr>
+      <tr><td>PDFKit</td><td>0.18.0</td><td>PDF generation</td></tr>
+    </tbody>
+  </table>
+
+  <hr>
+
+  <!-- ============ SECTION 4 ============ -->
+  <div class="page-break"></div>
+  <h1>4. Project Structure &amp; File Layout</h1>
+  <pre>
+MediUnity/
+├── backend/                    # Node.js + Express API Server
+│   ├── config/                 # Database (db.js) &amp; Redis (redis.js)
+│   ├── controllers/            # 20 controller files (business logic)
+│   ├── middlewares/            # 10 middleware files
+│   ├── models/                 # 30 Mongoose schema files
+│   ├── routes/                 # 22 Express route modules
+│   ├── queues/                 # BullMQ queue definitions
+│   ├── workers/                # Background workers
+│   ├── utils/                  # 13 utility files
+│   └── index.js                # Main entry (720 lines)
+│
+├── frontend/                   # React + Vite Portal
+│   ├── src/
+│   │   ├── pages/              # 26 page directories
+│   │   ├── components/         # 23 component directories
+│   │   ├── doctor/             # 5 doctor components
+│   │   ├── context/            # AuthContext.jsx
+│   │   ├── hooks/              # useDataSaver.js
+│   │   └── App.jsx             # Router (30+ routes)
+│   └── vite.config.js          # Vite + Tailwind + PWA
+│
+├── admin/                      # Admin Dashboard
+│   └── src/
+│       ├── pages/              # 14 admin pages
+│       └── components/         # 12 admin components
+│
+├── LAUNCH_MEDI_UNITY.bat       # One-click launcher
+└── render.yaml                 # Cloud deployment manifest</pre>
+
+  <hr>
+
+  <!-- ============ SECTION 5 ============ -->
+  <div class="page-break"></div>
+  <h1>5. Database Schema (30 Models)</h1>
+
+  <h2>5.1 Core User Models</h2>
+  <table>
+    <thead><tr><th>Model</th><th>Key Fields</th><th>Purpose</th></tr></thead>
+    <tbody>
+      <tr><td><strong>PatientProfile</strong></td><td><code>clerkUserId</code>, <code>email</code> 🔒, <code>phone</code> 🔒, <code>nid</code> 🔒, <code>emergencyContacts</code> 🔒, <code>medicalHistory</code>, <code>allergies</code>, <code>followingDoctors</code>, <code>verificationStatus</code></td><td>Patient identity &amp; health records. All PII is AES-256-GCM encrypted at rest.</td></tr>
+      <tr><td><strong>Doctor</strong></td><td><code>email</code> 🔒, <code>password</code> 🔑, <code>name</code>, <code>specialization</code>, <code>bmdcNumber</code>, <code>locationGeo</code> (2dsphere), <code>fee</code>, <code>schedule</code>, <code>pricingTiers</code>, <code>rating</code>, <code>reputationPoints</code></td><td>Doctor profiles with geospatial search, scheduling, and gamification.</td></tr>
+      <tr><td><strong>Admin</strong></td><td><code>email</code>, <code>password</code>, <code>role</code></td><td>Platform administrators (super-admin, moderator, support).</td></tr>
+    </tbody>
+  </table>
+  <p><small>🔒 = AES-256-GCM encrypted at rest &nbsp; 🔑 = bcrypt hashed</small></p>
+
+  <h2>5.2 Appointment &amp; Consultation Models</h2>
+  <table>
+    <thead><tr><th>Model</th><th>Key Fields</th><th>Purpose</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Appointment</strong></td><td><code>serialNumber</code>, <code>doctorId</code>, <code>consultType</code> (video/phone/chat/offline), <code>queueState</code>, <code>payment</code>, <code>commissionRate</code> (15%), <code>platformCommission</code>, <code>doctorPayout</code>, <code>followUpDate</code></td><td>Core appointment system with revenue split and queue management.</td></tr>
+      <tr><td><strong>ServiceAppointment</strong></td><td>Hospital/Diagnostic/Pharmacy service references</td><td>Partner service bookings.</td></tr>
+      <tr><td><strong>Prescription</strong></td><td><code>appointmentId</code>, <code>medicines[]</code> (name, dosage, frequency, duration), <code>diagnosis</code>, <code>advice</code></td><td>Digital prescriptions linked to appointments.</td></tr>
+    </tbody>
+  </table>
+
+  <h2>5.3 Community &amp; Content Models</h2>
+  <table>
+    <thead><tr><th>Model</th><th>Purpose</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Post</strong></td><td>Community forum posts with media, likes, comments</td></tr>
+      <tr><td><strong>Article</strong></td><td>Health articles authored by doctors</td></tr>
+      <tr><td><strong>Journal</strong></td><td>Private patient recovery journals</td></tr>
+      <tr><td><strong>HealthLog</strong></td><td>Daily health tracker entries</td></tr>
+      <tr><td><strong>Message</strong></td><td>Doctor-patient messaging</td></tr>
+      <tr><td><strong>MedicalFile</strong></td><td>Uploaded medical documents (locker)</td></tr>
+      <tr><td><strong>Review</strong></td><td>Patient reviews for doctors</td></tr>
+      <tr><td><strong>Notification</strong></td><td>Real-time SSE notifications</td></tr>
+    </tbody>
+  </table>
+
+  <h2>5.4 Partner Models</h2>
+  <table>
+    <thead><tr><th>Model</th><th>Purpose</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Hospital</strong></td><td>Hospital profiles with servicesCatalog, beds, emergency contacts</td></tr>
+      <tr><td><strong>DiagnosticCenter</strong></td><td>Diagnostic labs with testsCatalog (name, category, price, prep)</td></tr>
+      <tr><td><strong>Pharmacy</strong></td><td>Pharmacy profiles with medicine inventory</td></tr>
+      <tr><td><strong>HospitalAd</strong></td><td>Sponsored partner advertisements</td></tr>
+      <tr><td><strong>DiagnosticTestBooking</strong></td><td>Patient test bookings</td></tr>
+      <tr><td><strong>HospitalTestBooking</strong></td><td>Patient hospital service bookings</td></tr>
+      <tr><td><strong>PharmacyOrder</strong></td><td>Patient medicine orders</td></tr>
+    </tbody>
+  </table>
+
+  <h2>5.5 Financial &amp; System Models</h2>
+  <table>
+    <thead><tr><th>Model</th><th>Purpose</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Payment</strong></td><td>Payment transaction records</td></tr>
+      <tr><td><strong>Payout</strong></td><td>Doctor payouts (Bank/bKash/Nagad/Stripe/Manual)</td></tr>
+      <tr><td><strong>DoctorSubscription</strong></td><td>Doctor subscription tiers (Free/Professional/Premium)</td></tr>
+      <tr><td><strong>PlatformSettings</strong></td><td>Singleton config: commission rates, payout schedules, tier pricing</td></tr>
+      <tr><td><strong>AuditLog</strong></td><td>Admin action audit trail</td></tr>
+      <tr><td><strong>Referral</strong></td><td>Doctor-to-doctor patient referrals</td></tr>
+      <tr><td><strong>RefreshToken</strong></td><td>JWT refresh tokens</td></tr>
+      <tr><td><strong>ChatRoom</strong></td><td>Chat session management</td></tr>
+      <tr><td><strong>Service</strong></td><td>Platform service definitions</td></tr>
+    </tbody>
+  </table>
+
+  <hr>
+
+  <!-- ============ SECTION 6 ============ -->
+  <div class="page-break"></div>
+  <h1>6. API Layer (22 Routes, 20 Controllers)</h1>
+
+  <h2>6.1 Route Modules</h2>
+  <table>
+    <thead><tr><th>Route File</th><th>Base Path</th><th>Key Endpoints</th></tr></thead>
+    <tbody>
+      <tr><td>tokenRouter</td><td><code>/api/auth</code></td><td>Token refresh &amp; validation</td></tr>
+      <tr><td>appointmentRouter</td><td><code>/api/appointments</code></td><td>CRUD, confirm, cancel, reschedule, aamarPay callbacks</td></tr>
+      <tr><td>doctorRouter</td><td><code>/api/doctors</code></td><td>Signup, login, profile, search, schedule</td></tr>
+      <tr><td>patientProfileRouter</td><td><code>/api/patients</code></td><td>Signup, login, OTP, profile, identity verification</td></tr>
+      <tr><td>postRouter</td><td><code>/api/posts</code></td><td>Forum CRUD, likes, comments, media uploads</td></tr>
+      <tr><td>articleRouter</td><td><code>/api/articles</code></td><td>Health article CRUD</td></tr>
+      <tr><td>journalRouter</td><td><code>/api/journals</code></td><td>Recovery journal CRUD</td></tr>
+      <tr><td>healthLogRouter</td><td><code>/api/health-tracker</code></td><td>Health log entries</td></tr>
+      <tr><td>messageRouter</td><td><code>/api/messages</code></td><td>Doctor-patient messaging</td></tr>
+      <tr><td>prescriptionRouter</td><td><code>/api/prescriptions</code></td><td>Prescription CRUD, PDF generation</td></tr>
+      <tr><td>medicalFileRouter</td><td><code>/api/medical-files</code></td><td>Medical file upload/download</td></tr>
+      <tr><td>hospitalRouter</td><td><code>/api/hospitals</code></td><td>Hospital CRUD, service catalog</td></tr>
+      <tr><td>diagnosticRouter</td><td><code>/api/diagnostics</code></td><td>Diagnostic center &amp; test catalog</td></tr>
+      <tr><td>pharmacyRouter</td><td><code>/api/pharmacies</code></td><td>Pharmacy &amp; inventory management</td></tr>
+      <tr><td>serviceRouter</td><td><code>/api/services</code></td><td>Platform services</td></tr>
+      <tr><td>serviceAppointmentRouter</td><td><code>/api/service-appointments</code></td><td>Service bookings + payments</td></tr>
+      <tr><td>trackingRouter</td><td><code>/api/tracking</code></td><td>Serial number booking tracking</td></tr>
+      <tr><td>reviewRouter</td><td><code>/api/reviews</code></td><td>Doctor reviews</td></tr>
+      <tr><td>notificationRouter</td><td><code>/api/notifications</code></td><td>SSE stream, CRUD</td></tr>
+      <tr><td>referralRouter</td><td><code>/api/referrals</code></td><td>Doctor referral system</td></tr>
+      <tr><td>earningsRouter</td><td><code>/api/earnings</code></td><td>Doctor earnings &amp; payouts</td></tr>
+      <tr><td>adminRouter</td><td><code>/api/admin</code></td><td>Verification, user mgmt, audit, settings, moderation</td></tr>
+    </tbody>
+  </table>
+
+  <h2>6.2 Controllers (by complexity)</h2>
+  <table>
+    <thead><tr><th>Controller</th><th>Size</th><th>Key Responsibilities</th></tr></thead>
+    <tbody>
+      <tr><td><strong>doctorController</strong></td><td>50 KB</td><td>Signup, login, profile, search, schedule, BMDC verification, certificates</td></tr>
+      <tr><td><strong>appointmentController</strong></td><td>36 KB</td><td>Booking flow, aamarPay/Stripe, rescheduling, serial numbers</td></tr>
+      <tr><td><strong>patientProfileController</strong></td><td>35 KB</td><td>Patient signup, OTP, NID/birth cert OCR, identity validation</td></tr>
+      <tr><td><strong>serviceAppointmentController</strong></td><td>21 KB</td><td>Hospital/diagnostic/pharmacy service bookings with payments</td></tr>
+      <tr><td><strong>postController</strong></td><td>16 KB</td><td>Forum with media upload, likes, comments, moderation</td></tr>
+      <tr><td><strong>earningsController</strong></td><td>16 KB</td><td>Revenue analytics, commission calc, payout generation</td></tr>
+      <tr><td><strong>hospitalController</strong></td><td>15 KB</td><td>Hospital management, beds, emergency services</td></tr>
+      <tr><td><strong>trackingController</strong></td><td>9 KB</td><td>Serial number tracking (works without login)</td></tr>
+    </tbody>
+  </table>
+
+  <hr>
+
+  <!-- ============ SECTION 7 ============ -->
+  <div class="page-break"></div>
+  <h1>7. Authentication &amp; Security</h1>
+
+  <h2>7.1 Dual Authentication System</h2>
+  <table>
+    <thead><tr><th>User Type</th><th>Auth Method</th><th>Token Type</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Patients</strong></td><td>Firebase Auth (Email/Password + Google OAuth)</td><td>Firebase ID Token</td></tr>
+      <tr><td><strong>Doctors</strong></td><td>Custom JWT (Email + bcrypt password)</td><td>JWT Token</td></tr>
+      <tr><td><strong>Admin</strong></td><td>Firebase Auth + Custom Admin JWT</td><td>JWT with role claims</td></tr>
+      <tr><td><strong>Partners</strong></td><td>Custom JWT (Email + bcrypt password)</td><td>JWT via partnerAuth middleware</td></tr>
+    </tbody>
+  </table>
+
+  <h2>7.2 Security Middleware Stack</h2>
+  <table>
+    <thead><tr><th>#</th><th>Layer</th><th>Purpose</th></tr></thead>
+    <tbody>
+      <tr><td>1</td><td><strong>Helmet</strong></td><td>CSP, HSTS, X-Frame-Options headers</td></tr>
+      <tr><td>2</td><td><strong>CORS</strong></td><td>Restricts origins (configurable via <code>ALLOWED_ORIGINS</code>)</td></tr>
+      <tr><td>3</td><td><strong>Rate Limiting</strong></td><td>Auth: 10/hr · API: 100/15min · Payments: 20/hr</td></tr>
+      <tr><td>4</td><td><strong>Firebase Auth</strong></td><td>Populates <code>req.auth</code> globally (non-blocking)</td></tr>
+      <tr><td>5</td><td><strong>express-mongo-sanitize</strong></td><td>Prevents NoSQL injection</td></tr>
+      <tr><td>6</td><td><strong>xss-clean</strong></td><td>Sanitizes against XSS</td></tr>
+      <tr><td>7</td><td><strong>hpp</strong></td><td>Prevents HTTP parameter pollution</td></tr>
+      <tr><td>8</td><td><strong>Request ID</strong></td><td><code>crypto.randomUUID()</code> for request tracing</td></tr>
+      <tr><td>9</td><td><strong>Audit Logger</strong></td><td>Logs all admin actions</td></tr>
+    </tbody>
+  </table>
+
+  <h2>7.3 Data Encryption at Rest</h2>
+  <ul>
+    <li><strong>Algorithm:</strong> AES-256-GCM (authenticated encryption)</li>
+    <li><strong>Encrypted Fields:</strong> Patient email, phone, NID, birth cert number, emergency contacts, medical history notes</li>
+    <li><strong>Blind Indexing:</strong> SHA-256 hashed email/phone for searchability without decryption</li>
+    <li><strong>Doctor Fields:</strong> Email encrypted; password bcrypt-hashed</li>
+  </ul>
+
+  <hr>
+
+  <!-- ============ SECTION 8 ============ -->
+  <div class="page-break"></div>
+  <h1>8. Patient Portal — Features</h1>
+
+  <h3>8.1 Doctor Discovery &amp; Booking</h3>
+  <ul>
+    <li>Browse, search, and filter doctors by specialty, location, availability</li>
+    <li>Full doctor profile with ratings, reviews, BMDC badge, chambers, timeslots</li>
+    <li>Book: select date/time/type → pay online (aamarPay/Stripe) or Cash → receive serial number</li>
+    <li><strong>Video Consultation:</strong> Embedded Jitsi Meet for real-time calls</li>
+  </ul>
+
+  <h3>8.2 Health Management</h3>
+  <ul>
+    <li><strong>Health Tracker:</strong> Log mood, symptoms, blood pressure, weight</li>
+    <li><strong>Symptom Checker:</strong> Interactive checker with <strong>voice recognition</strong> support → recommends specialties</li>
+    <li><strong>Recovery Journal:</strong> Private daily entries for tracking wellbeing</li>
+    <li><strong>My Health Dashboard:</strong> Aggregated health data, prescriptions, medical files</li>
+  </ul>
+
+  <h3>8.3 Community &amp; Knowledge</h3>
+  <ul>
+    <li><strong>Forum:</strong> Post health questions anonymously, get doctor answers</li>
+    <li><strong>Articles:</strong> Curated health articles by platform doctors</li>
+    <li><strong>Social Feed:</strong> Posts with likes, comments, media sharing</li>
+  </ul>
+
+  <h3>8.4 Service Booking</h3>
+  <ul>
+    <li><strong>Hospitals:</strong> Browse, view services, book beds and consultations</li>
+    <li><strong>Diagnostics:</strong> View test catalogs with prices/prep instructions, book tests</li>
+    <li><strong>Pharmacies:</strong> Browse inventory with prices, place orders</li>
+  </ul>
+
+  <h3>8.5 Other Features</h3>
+  <ul>
+    <li><strong>Messages:</strong> Direct messaging with doctors</li>
+    <li><strong>Tracking:</strong> Track any booking by serial number — <em>works without login</em></li>
+    <li><strong>Notifications:</strong> Real-time SSE + 24hr SMS reminders</li>
+    <li><strong>Identity Verification:</strong> NID/birth certificate upload → OCR scanning → admin review</li>
+    <li><strong>Medical File Locker:</strong> Secure document storage on Cloudinary</li>
+    <li><strong>Internationalization:</strong> English &amp; Bangla (বাংলা) via i18next</li>
+    <li><strong>PWA:</strong> Offline caching, background sync, installable app</li>
+  </ul>
+
+  <hr>
+
+  <!-- ============ SECTION 9 ============ -->
+  <h1>9. Doctor Portal — Features</h1>
+  <ul>
+    <li><strong>Dashboard:</strong> Today's appointments, patient queue (Scheduled → CheckedIn → InConsultation → Completed), revenue analytics</li>
+    <li><strong>Analytics Tab:</strong> Revenue trends, patient volume, consultation type breakdown, commission tracking</li>
+    <li><strong>Schedule Manager:</strong> Set timeslots, recurring slots, blocked periods, blackouts, max patients/day, per-slot chambers</li>
+    <li><strong>Appointment List:</strong> Accept/cancel/reschedule, start video calls, write prescriptions, refer patients, schedule follow-ups</li>
+    <li><strong>Profile Editor:</strong> Update all professional information and profile image</li>
+    <li><strong>Gamification:</strong> Reputation points, BMDC verified badge, follower count</li>
+  </ul>
+
+  <hr>
+
+  <!-- ============ SECTION 10 ============ -->
+  <h1>10. Partner Portals — Features</h1>
+  <table>
+    <thead><tr><th>Portal</th><th>Key Features</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Hospital Dashboard</strong></td><td>Bed availability, service catalog management, service bookings, sponsored ads</td></tr>
+      <tr><td><strong>Diagnostic Dashboard</strong></td><td>Test catalog (name, category, price, prep), test bookings, revenue</td></tr>
+      <tr><td><strong>Pharmacy Dashboard</strong></td><td>Medicine inventory (name, generic name, stock, price), order fulfillment</td></tr>
+    </tbody>
+  </table>
+  <div class="info-box note">
+    <strong>📝 Note:</strong> The backend auto-seeds mock partner data on startup for demo purposes — hospitals, diagnostic centers, and pharmacies with realistic catalogs.
+  </div>
+
+  <hr>
+
+  <!-- ============ SECTION 11 ============ -->
+  <div class="page-break"></div>
+  <h1>11. Admin Panel — Features</h1>
+
+  <h3>Admin Roles</h3>
+  <table>
+    <thead><tr><th>Role</th><th>Access Level</th></tr></thead>
+    <tbody>
+      <tr><td><code>super-admin</code></td><td>Full platform control</td></tr>
+      <tr><td><code>moderator</code></td><td>Content &amp; user moderation</td></tr>
+      <tr><td><code>support</code></td><td>Patient &amp; doctor support</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Admin Pages (14 Sections)</h3>
+  <table>
+    <thead><tr><th>Page</th><th>Purpose</th></tr></thead>
+    <tbody>
+      <tr><td>Home Dashboard</td><td>Key metrics overview</td></tr>
+      <tr><td>Appointments</td><td>View/manage all appointments</td></tr>
+      <tr><td>Doctor List</td><td>Verify, ban, or unban doctors</td></tr>
+      <tr><td>Add Doctor</td><td>Manually add doctors</td></tr>
+      <tr><td>Service Dashboard</td><td>Manage platform services</td></tr>
+      <tr><td>Service Appointments</td><td>Manage service bookings</td></tr>
+      <tr><td>User Management</td><td>Patient account management</td></tr>
+      <tr><td>Verify Identities</td><td>Review NID/birth cert OCR submissions</td></tr>
+      <tr><td>Community Posts</td><td>Moderate forum content</td></tr>
+      <tr><td>Audit Logs</td><td>Chronological admin action trail</td></tr>
+      <tr><td>Inactivity Timeout</td><td>Auto-logout after idle period</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Auto-Seeded Admin Accounts</h3>
+  <table>
+    <thead><tr><th>Email</th><th>Password</th><th>Role</th></tr></thead>
+    <tbody>
+      <tr><td>admin@mediunity.com</td><td>admin123</td><td>super-admin</td></tr>
+      <tr><td>moderator@mediunity.com</td><td>moderator123</td><td>moderator</td></tr>
+      <tr><td>support@mediunity.com</td><td>support123</td><td>support</td></tr>
+    </tbody>
+  </table>
+
+  <hr>
+
+  <!-- ============ SECTION 12 ============ -->
+  <h1>12. Payment &amp; Revenue System</h1>
+
+  <h3>Payment Gateways</h3>
+  <table>
+    <thead><tr><th>Gateway</th><th>Type</th><th>Currency</th><th>Status</th></tr></thead>
+    <tbody>
+      <tr><td><strong>aamarPay</strong></td><td>Local (Bangladesh)</td><td>BDT</td><td><span class="badge green">Active (Sandbox)</span></td></tr>
+      <tr><td><strong>Stripe</strong></td><td>International</td><td>Multi-currency</td><td><span class="badge green">Integrated</span></td></tr>
+      <tr><td><strong>Cash</strong></td><td>Offline</td><td>BDT</td><td><span class="badge green">Active</span></td></tr>
+    </tbody>
+  </table>
+
+  <h3>Revenue Split Model</h3>
+  <div class="flow-diagram">
+    <div class="flow-box">Patient Pays<br/>Consultation Fee</div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-box highlight">Revenue Split</div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-box" style="border-color:#059669"><strong>85%</strong><br/>Doctor Payout</div>
+    <div class="flow-arrow">+</div>
+    <div class="flow-box blue highlight"><strong>15%</strong><br/>Platform Commission</div>
+  </div>
+
+  <h3>Commission Rates</h3>
+  <table>
+    <thead><tr><th>Setting</th><th>Default Value</th></tr></thead>
+    <tbody>
+      <tr><td>Doctor Commission</td><td>15%</td></tr>
+      <tr><td>Pharmacy Commission</td><td>8%</td></tr>
+      <tr><td>Diagnostic Commission</td><td>10%</td></tr>
+      <tr><td>Minimum Payout</td><td>500 BDT</td></tr>
+      <tr><td>Payout Schedule</td><td>Weekly</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Doctor Subscription Tiers</h3>
+  <table>
+    <thead><tr><th>Tier</th><th>Monthly Price</th><th>Key Features</th></tr></thead>
+    <tbody>
+      <tr><td><span class="badge green">Free</span></td><td>0 BDT</td><td>Basic profile, 10 appointments/month</td></tr>
+      <tr><td><span class="badge blue">Professional</span></td><td>2,000 BDT</td><td>Unlimited appointments, AI schedule, analytics, priority support</td></tr>
+      <tr><td><span class="badge orange">Premium</span></td><td>5,000 BDT</td><td>All Pro features + priority listing, badge boost, articles, reduced commission</td></tr>
+    </tbody>
+  </table>
+
+  <hr>
+
+  <!-- ============ SECTION 13 ============ -->
+  <h1>13. Background Workers &amp; Queues</h1>
+  <table>
+    <thead><tr><th>Component</th><th>Technology</th><th>Purpose</th></tr></thead>
+    <tbody>
+      <tr><td>bmdcQueue + bmdcWorker</td><td>BullMQ + IORedis</td><td>Scrapes BMDC website to verify doctor registration numbers</td></tr>
+      <tr><td>prescriptionQueue + prescriptionWorker</td><td>BullMQ + IORedis</td><td>Async prescription creation &amp; notification</td></tr>
+      <tr><td>Hourly Cron Jobs</td><td>setInterval</td><td>Doctor schedule cleanup + pre-appointment SMS reminders</td></tr>
+    </tbody>
+  </table>
+
+  <hr>
+
+  <!-- ============ SECTION 14 ============ -->
+  <h1>14. Third-Party Integrations</h1>
+  <table>
+    <thead><tr><th>Service</th><th>Purpose</th></tr></thead>
+    <tbody>
+      <tr><td><strong>MongoDB Atlas</strong></td><td>Cloud database hosting</td></tr>
+      <tr><td><strong>Firebase</strong></td><td>Patient auth (Email/Password + Google OAuth)</td></tr>
+      <tr><td><strong>Cloudinary</strong></td><td>Image &amp; file storage (photos, certs, medical files)</td></tr>
+      <tr><td><strong>Stripe</strong></td><td>International payment processing</td></tr>
+      <tr><td><strong>aamarPay</strong></td><td>Local payment processing (Bangladesh)</td></tr>
+      <tr><td><strong>Twilio</strong></td><td>SMS notifications &amp; appointment reminders</td></tr>
+      <tr><td><strong>Jitsi Meet</strong></td><td>Video consultations (embedded, free)</td></tr>
+      <tr><td><strong>Nodemailer</strong></td><td>Email OTP delivery via Gmail SMTP</td></tr>
+      <tr><td><strong>BMDC Website</strong></td><td>Doctor registration verification (web scraping)</td></tr>
+      <tr><td><strong>Tesseract.js</strong></td><td>OCR for NID/birth certificate verification</td></tr>
+    </tbody>
+  </table>
+
+  <hr>
+
+  <!-- ============ SECTION 15 ============ -->
+  <h1>15. Deployment &amp; DevOps</h1>
+
+  <h3>Local Development</h3>
+  <p>The project includes <code>LAUNCH_MEDI_UNITY.bat</code> which opens 3 terminal windows, runs <code>npm install --legacy-peer-deps</code>, and starts Backend (4000), Frontend (5173), and Admin (5174).</p>
+
+  <h3>Cloud Deployment (Render.com)</h3>
+  <table>
+    <thead><tr><th>Service</th><th>Type</th><th>Build Command</th></tr></thead>
+    <tbody>
+      <tr><td>medicare-backend</td><td>Web (Node)</td><td><code>npm install</code> → <code>node index.js</code></td></tr>
+      <tr><td>medicare-frontend</td><td>Static</td><td><code>npm install && npm run build</code> → serves <code>dist/</code></td></tr>
+      <tr><td>medicare-admin</td><td>Static</td><td><code>npm install && npm run build</code> → serves <code>dist/</code></td></tr>
+    </tbody>
+  </table>
+
+  <h3>Utility Scripts</h3>
+  <table>
+    <thead><tr><th>Script</th><th>Purpose</th></tr></thead>
+    <tbody>
+      <tr><td>LAUNCH_MEDI_UNITY.bat</td><td>Start all services</td></tr>
+      <tr><td>KILL_AND_REINSTALL.bat</td><td>Kill all Node, delete node_modules, reinstall</td></tr>
+      <tr><td>DIAGNOSE.bat / RUN_DIAGNOSTICS.bat</td><td>System diagnostics</td></tr>
+      <tr><td>SYNC_TO_GITHUB.bat</td><td>Automated git push</td></tr>
+    </tbody>
+  </table>
+
+  <hr>
+
+  <!-- ============ SECTION 16 ============ -->
+  <div class="page-break"></div>
+  <h1>16. Known Issues &amp; Improvement Opportunities</h1>
+
+  <div class="info-box important">
+    <strong>⚠️ Portal Overlap Issue (In Progress)</strong>
+    The Patient and Doctor portals share the same React app. This causes session bleed, CSS conflicts, and security concerns. A separation plan has been approved to split into <code>frontend-patient</code> (Port 5173) and <code>frontend-doctor</code> (Port 5176).
+  </div>
+
+  <table>
+    <thead><tr><th>Area</th><th>Issue</th><th>Suggested Fix</th></tr></thead>
+    <tbody>
+      <tr><td>Prescription → Pharmacy</td><td>No direct link</td><td>Add "Order Medicines" button on prescriptions</td></tr>
+      <tr><td>Offline Support</td><td>Limited offline functionality</td><td>Expand service worker for offline viewing</td></tr>
+      <tr><td>Emergency</td><td>No SOS feature</td><td>Add emergency button with nearest hospital directions</td></tr>
+      <tr><td>Medicine Reminders</td><td>No medication reminders</td><td>Add recurring SMS/push based on prescription dosages</td></tr>
+      <tr><td>Search</td><td>Basic text queries</td><td>Implement Atlas Search or Elasticsearch</td></tr>
+    </tbody>
+  </table>
+
+  <hr>
+
+  <!-- ============ SECTION 17 ============ -->
+  <h1>17. File Count Summary</h1>
+  <table>
+    <thead><tr><th>Component</th><th>Count</th><th>Notable</th></tr></thead>
+    <tbody>
+      <tr><td>Backend Models</td><td><strong>30</strong> files</td><td>30 Mongoose schemas</td></tr>
+      <tr><td>Backend Routes</td><td><strong>22</strong> files</td><td>22 Express router modules</td></tr>
+      <tr><td>Backend Controllers</td><td><strong>20</strong> files</td><td>~280 KB total logic</td></tr>
+      <tr><td>Backend Middlewares</td><td><strong>10</strong> files</td><td>Auth, audit, upload, rate limiting</td></tr>
+      <tr><td>Backend Utils</td><td><strong>13</strong> files</td><td>Encryption, SMS, email, scrapers</td></tr>
+      <tr><td>Frontend Pages</td><td><strong>26</strong> dirs</td><td>26 page directories</td></tr>
+      <tr><td>Frontend Components</td><td><strong>23</strong> dirs</td><td>23 reusable component sets</td></tr>
+      <tr><td>Doctor Components</td><td><strong>5</strong> dirs</td><td>Doctor-specific UIs</td></tr>
+      <tr><td>Admin Pages</td><td><strong>14</strong> dirs</td><td>14 admin page sections</td></tr>
+      <tr><td>Admin Components</td><td><strong>12</strong> dirs</td><td>12 admin component sets</td></tr>
+    </tbody>
+  </table>
+
+  <div class="stat-grid" style="margin-top:30px;">
+    <div class="stat-card"><div class="number">30</div><div class="label">Models</div></div>
+    <div class="stat-card"><div class="number">22</div><div class="label">API Routes</div></div>
+    <div class="stat-card"><div class="number">20</div><div class="label">Controllers</div></div>
+    <div class="stat-card"><div class="number">150+</div><div class="label">Total Files</div></div>
+  </div>
+
+  <div class="footer-print">
+    <p>© 2026 MediUnity Healthcare Platform — Comprehensive Project Report</p>
+    <p>Generated automatically from codebase analysis. All rights reserved.</p>
+  </div>
+
+</div>
+
+</body>
+</html>

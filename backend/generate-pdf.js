@@ -6,7 +6,7 @@ import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const targetPdfPath = path.resolve(__dirname, "..", "Medicare_Project_Documentation.pdf");
+const targetPdfPath = path.resolve(__dirname, "..", "Mediunity_Project_Documentation.pdf");
 console.log("Generating detailed document PDF at:", targetPdfPath);
 
 const doc = new PDFDocument({
@@ -101,7 +101,7 @@ function codeBlock(title, lines) {
 doc.rect(0, 0, doc.page.width, doc.page.height).fill("#0f172a");
 
 // Cover text
-doc.fillColor("#ffffff").font("Helvetica-Bold").fontSize(26).text("MEDICARE PORTAL", 80, 180, { characterSpacing: 1.5 });
+doc.fillColor("#ffffff").font("Helvetica-Bold").fontSize(26).text("MEDIUNITY PORTAL", 80, 180, { characterSpacing: 1.5 });
 doc.fillColor(brandColor).font("Helvetica-Bold").fontSize(12).text("EXHAUSTIVE & DETAILED TECHNICAL DOCUMENTATION", 80, 215, { characterSpacing: 1 });
 
 doc.strokeColor(brandColor).lineWidth(3).moveTo(80, 240).lineTo(250, 240).stroke();
@@ -115,7 +115,7 @@ doc.strokeColor("#1e293b").lineWidth(1).moveTo(80, 400).lineTo(512, 400).stroke(
 doc.fillColor("#475569").font("Helvetica").fontSize(9.5).text("Core Environment: Node.js Express REST API, React SPAs, MongoDB Atlas", 80, 420);
 doc.text("Verified Standards: BM&DC Automated scraper, CAPTCHA Solver, OTP Auth", 80, 436);
 
-doc.fillColor("#475569").font("Helvetica").fontSize(9).text("© 2026 Medicare Inc. All Rights Reserved. Confidential Document.", 80, 680);
+doc.fillColor("#475569").font("Helvetica").fontSize(9).text("© 2026 Mediunity Inc. All Rights Reserved. Confidential Document.", 80, 680);
 
 doc.addPage();
 
@@ -123,7 +123,7 @@ doc.addPage();
 // Table of Contents
 // ----------------------------------------------------
 sectionHeader("Table of Contents");
-para("This document outlines the exhaustive specifications of the Medicare healthcare portal:");
+para("This document outlines the exhaustive specifications of the Mediunity medical social portal:");
 doc.moveDown(0.5);
 bullet("1. Project Overview & Functional Modules", "Detailed purpose, objectives, and roles.");
 bullet("2. Comprehensive File and Directory Map", "Folder and file breakdown of backend, frontend, and admin.");
@@ -141,7 +141,7 @@ doc.addPage();
 // Section 1: Overview
 // ----------------------------------------------------
 sectionHeader("1. Project Overview & Functional Modules");
-para("Medicare is a healthcare platform built using the MERN stack. It handles patients seeking consultations, doctors providing services, and admins monitoring clinical audits.");
+para("Mediunity is a medical social network platform built using the MERN stack. It connects patients with verified doctors, providing a community forum with chunked uploads, recovery journals, article publishing, health vital logs, private telehealth messaging, and live queue bookings.");
 
 subHeader("Patient Portal Roles");
 bullet("Doctor Selection", "Filters doctors by specialization, bio, ratings, location, and consultant fees.");
@@ -165,7 +165,7 @@ sectionHeader("2. Comprehensive File and Directory Map");
 para("The project contains three workspaces (backend, frontend, admin) and root orchestration scripts.");
 
 subHeader("Root files");
-bullet("LAUNCH_MEDICARE.bat", "Automates check installs, builds, and launches dev servers for all three components.");
+bullet("LAUNCH_MEDI_UNITY.bat", "Automates check installs, builds, and launches dev servers for all three components.");
 bullet("SYNC_TO_GITHUB.bat", "Initializes git, adds remotes, commits local changes, and forces main push.");
 bullet("render.yaml", "Configures infrastructure-as-code mappings for backend API, frontend static web, and admin static web.");
 
@@ -414,18 +414,18 @@ bullet("7. Retry and Fallback", "Retries up to 6 times. If external portal is do
 sectionHeader("9. Launch Scripts & Infrastructure Spec");
 para("Production deployments and local development launchers are fully automated via orchestrator files.");
 
-codeBlock("Smart Dev Launcher (LAUNCH_MEDICARE.bat)", [
+codeBlock("Smart Dev Launcher (LAUNCH_MEDI_UNITY.bat)", [
   "@echo off",
   "echo ========================================",
-  "echo   MEDICARE PROJECT - SMART LAUNCHER",
+  "echo   MEDIUNITY PROJECT - SMART LAUNCHER",
   "echo ========================================",
   "echo.",
   "echo [*] Starting Backend...",
-  "start \"MEDICARE BACKEND\" cmd /k \"cd backend && if not exist node_modules (npm install) && npm run dev\"",
+  "start \"MEDIUNITY BACKEND\" cmd /k \"cd backend && if not exist node_modules (npm install) && npm run dev\"",
   "echo [*] Starting Frontend...",
-  "start \"MEDICARE FRONTEND\" cmd /k \"cd frontend && if not exist node_modules (npm install) && npm run dev\"",
+  "start \"MEDIUNITY FRONTEND\" cmd /k \"cd frontend && if not exist node_modules (npm install) && npm run dev\"",
   "echo [*] Starting Admin Panel...",
-  "start \"MEDICARE ADMIN\" cmd /k \"cd admin && if not exist node_modules (npm install) && npm run dev\"",
+  "start \"MEDIUNITY ADMIN\" cmd /k \"cd admin && if not exist node_modules (npm install) && npm run dev\"",
   "echo.",
   "echo ========================================",
   "echo ✅ Launching initiated! http://localhost:5173",
@@ -435,7 +435,7 @@ codeBlock("Smart Dev Launcher (LAUNCH_MEDICARE.bat)", [
 codeBlock("Production Orchestrator Configuration (render.yaml)", [
   "services:",
   "  - type: web",
-  "    name: medicare-backend",
+  "    name: mediunity-backend",
   "    env: node",
   "    plan: free",
   "    buildCommand: npm install",
@@ -449,14 +449,34 @@ codeBlock("Production Orchestrator Configuration (render.yaml)", [
   "      - fromContext: AAMARPAY_STORE_ID",
   "      - fromContext: AAMARPAY_SIGNATURE_KEY",
   "  - type: static",
-  "    name: medicare-frontend",
+  "    name: mediunity-frontend",
   "    env: static",
   "    buildCommand: npm install && npm run build",
   "    publishDir: dist",
   "    envVars:",
   "      - key: VITE_API_URL",
-  "        value: https://medicare-backend-6eww.onrender.com"
+  "        value: https://mediunity-backend.onrender.com"
 ]);
+
+doc.addPage();
+
+// ----------------------------------------------------
+// Section 10: Image & Video Attachment Infrastructure
+// ----------------------------------------------------
+sectionHeader("10. Image & Video Attachment Infrastructure");
+para("To support media attachments in community posts and comments, a robust chunked upload pipeline was implemented:");
+bullet("300MB Maximum Video Size Limit", "Multer and local disk limits enforce a strict maximum size limit of 300MB per video file.");
+bullet("Cloudinary Chunked Upload Helper", "Files larger than 6MB are automatically streamed to Cloudinary in sequential chunks to avoid node heap memory exhaustions.");
+bullet("Dynamic Rendering", "Frontend components support visual overlays, thumbnail previews, lazy-loaded video elements, and full-screen lightboxes.");
+
+// ----------------------------------------------------
+// Section 11: Doctor Schedule Reset & Cron Details
+// ----------------------------------------------------
+sectionHeader("11. Doctor Schedule Auto-Cleanup & Conflict Resolution");
+para("To maintain database consistency and clear expired slots, automatic schedule monitors run continuously:");
+bullet("DB Startup Hook", "On server start, cleanupAllDoctorsSchedules() scans all doctor profiles and deletes slots that belong to past hours/days.");
+bullet("Hourly Interval Loop", "A background interval timer triggers every 60 minutes to auto-reset passed schedule slots.");
+bullet("Conflict Auto-Detection", "If a doctor schedules a blackout vacation or blocks a slot that is already booked, flagConflictingAppointments() marks affected appointments as 'Reschedule Required' and notifies the patient.");
 
 // Page Numbering Footer (Runs on all pages after they are buffered)
 const range = doc.bufferedPageRange();
@@ -470,7 +490,7 @@ for (let i = 0; i < range.count; i++) {
   // Header (skip cover page)
   if (i > 0) {
     doc.fillColor(muteColor).font("Helvetica-Bold").fontSize(7)
-       .text("MEDICARE PORTAL TECHNICAL DOCUMENTATION", 60, 30, { align: "left" });
+       .text("MEDIUNITY PORTAL TECHNICAL DOCUMENTATION", 60, 30, { align: "left" });
     doc.strokeColor(lineBorder).lineWidth(0.5).moveTo(60, 42).lineTo(552, 42).stroke();
   }
   

@@ -2,6 +2,7 @@ import express from "express";
 import { requireFirebaseAuth } from "../middlewares/firebaseAuth.js";
 import jwt from "jsonwebtoken";
 import Doctor from "../models/Doctor.js";
+import postMediaMulter from "../middlewares/postMediaMulter.js";
 import {
   getPosts,
   createPost,
@@ -12,6 +13,7 @@ import {
   editPost,
   banPost,
   hidePost,
+  uploadMedia,
 } from "../controllers/postController.js";
 
 const postRouter = express.Router();
@@ -115,6 +117,9 @@ postRouter.get("/", optionalAuth, getPosts);
 
 // Create post (Patient or Doctor)
 postRouter.post("/", postAuth, createPost);
+
+// Upload media (Patient or Doctor)
+postRouter.post("/upload-media", postAuth, postMediaMulter.single("media"), uploadMedia);
 
 // Edit post (Author patient or Doctor)
 postRouter.put("/:id", postAuth, editPost);

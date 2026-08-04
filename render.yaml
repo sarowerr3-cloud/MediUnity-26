@@ -1,38 +1,71 @@
+# Render Blueprint Deployment Configuration
+# Officially formatted for Render.com
+
 services:
-  # 1. Backend API
+  # 1. Backend Node.js API Web Service
   - type: web
-    name: medicare-backend
+    name: mediunity-api
     env: node
     plan: free
+    rootDir: backend
     buildCommand: npm install
     startCommand: node index.js
+    autoDeploy: true
     envVars:
+      - key: PORT
+        value: "4000"
       - key: NODE_ENV
         value: production
-      - key: PORT
-        value: 10000
-      - fromContext: MONGODB_URI
-      - fromContext: CLERK_PUBLISHABLE_KEY
-      - fromContext: CLERK_SECRET_KEY
-      - fromContext: AAMARPAY_STORE_ID
-      - fromContext: AAMARPAY_SIGNATURE_KEY
+      - key: MONGODB_URI
+        sync: false
 
-  # 2. Frontend Website
-  - type: static
-    name: medicare-frontend
+  # 2. Patient Portal React/Vite Static Site
+  - type: web
+    name: mediunity-patient
     env: static
+    plan: free
+    rootDir: frontend
     buildCommand: npm install && npm run build
-    publishDir: dist
+    staticPublishPath: ./dist
+    autoDeploy: true
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
     envVars:
       - key: VITE_API_URL
-        value: https://medicare-backend-6eww.onrender.com
+        value: https://mediunity-api.onrender.com
 
-  # 3. Admin Dashboard
-  - type: static
-    name: medicare-admin
+  # 3. Doctor Portal React/Vite Static Site
+  - type: web
+    name: mediunity-doctor
     env: static
+    plan: free
+    rootDir: frontend-doctor
     buildCommand: npm install && npm run build
-    publishDir: dist
+    staticPublishPath: ./dist
+    autoDeploy: true
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
     envVars:
       - key: VITE_API_URL
-        value: https://medicare-backend-6eww.onrender.com
+        value: https://mediunity-api.onrender.com
+
+  # 4. Admin Panel React/Vite Static Site
+  - type: web
+    name: mediunity-admin
+    env: static
+    plan: free
+    rootDir: admin
+    buildCommand: npm install && npm run build
+    staticPublishPath: ./dist
+    autoDeploy: true
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    envVars:
+      - key: VITE_API_URL
+        value: https://mediunity-api.onrender.com

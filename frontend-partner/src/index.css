@@ -1,0 +1,272 @@
+@import "tailwindcss";
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&family=Space+Grotesk:wght@300;400;500;600;700&display=swap');
+
+@theme {
+  --variant-dark: class;
+
+  /* Med Theme Custom Variables mapped dynamically */
+  --color-med-lightest: var(--med-lightest);
+  --color-med-light: var(--med-light);
+  --color-med-soft: var(--med-soft);
+  --color-med-vibrant: var(--med-vibrant);
+  --color-med-dark: var(--med-dark);
+  --color-med-accent: var(--med-accent);
+
+  /* Override Tailwind's default emerald color variables dynamically */
+  --color-emerald-50: var(--med-emerald-50);
+  --color-emerald-100: var(--med-emerald-100);
+  --color-emerald-200: var(--med-emerald-200);
+  --color-emerald-300: var(--med-emerald-300);
+  --color-emerald-400: var(--med-emerald-400);
+  --color-emerald-500: var(--med-emerald-500);
+  --color-emerald-600: var(--med-emerald-600);
+  --color-emerald-700: var(--med-emerald-700);
+  --color-emerald-800: var(--med-emerald-800);
+  --color-emerald-900: var(--med-emerald-900);
+  --color-emerald-955: var(--med-emerald-950);
+  --color-emerald-950: var(--med-emerald-950);
+
+  /* Override Tailwind's default teal color variables dynamically */
+  --color-teal-50: var(--med-emerald-50);
+  --color-teal-100: var(--med-emerald-100);
+  --color-teal-200: var(--med-emerald-200);
+  --color-teal-300: var(--med-emerald-300);
+  --color-teal-400: var(--med-emerald-400);
+  --color-teal-500: var(--med-emerald-500);
+  --color-teal-600: var(--med-emerald-600);
+  --color-teal-700: var(--med-emerald-700);
+  --color-teal-800: var(--med-emerald-800);
+  --color-teal-900: var(--med-emerald-900);
+  --color-teal-950: var(--med-emerald-950);
+
+  /* Global Font */
+  --font-sans: 'Plus Jakarta Sans', sans-serif;
+  --font-serif: 'Space Grotesk', sans-serif;
+  --font-mono: 'Space Grotesk', sans-serif;
+}
+
+/* Apply dynamic variables based on portal class */
+:root, .light.theme-patient, .light {
+  --med-lightest: #F8FAFC; /* Clean, modern white background */
+  --med-light: #F0F9FF;    /* Bright ice-blue border/accent */
+  --med-soft: #0EA5E9;     /* Accent/Interactive (Vibrant sky blue) */
+  --med-vibrant: #0EA5E9;  /* Accent/Interactive (Vibrant sky blue) */
+  --med-dark: #0369A1;     /* Main Theme Color (Deep technical blue) */
+  --med-accent: #0EA5E9;
+
+  /* Emerald dynamic overrides for Patient Portal */
+  --med-emerald-50: #f0f9ff;
+  --med-emerald-100: #e0f2fe;
+  --med-emerald-200: #bae6fd;
+  --med-emerald-300: #7dd3fc;
+  --med-emerald-400: #38bdf8;
+  --med-emerald-500: #0ea5e9;
+  --med-emerald-600: #0284c7;
+  --med-emerald-700: #0369a1;
+  --med-emerald-800: #075985;
+  --med-emerald-900: #0c4a6e;
+  --med-emerald-950: #082f49;
+}
+
+.dark.theme-patient, .dark {
+  --med-lightest: #0B1120; /* Deep navy/slate */
+  --med-light: #1E293B;    /* Slate 800 */
+  --med-soft: #0284c7;     
+  --med-vibrant: #0ea5e9;  
+  --med-dark: #38bdf8;     
+  --med-accent: #0ea5e9;
+  
+  --med-emerald-50: #f0f9ff;
+  --med-emerald-100: #e0f2fe;
+  --med-emerald-200: #bae6fd;
+  --med-emerald-300: #7dd3fc;
+  --med-emerald-400: #38bdf8;
+  --med-emerald-500: #0ea5e9;
+  --med-emerald-600: #0284c7;
+  --med-emerald-700: #0369a1;
+  --med-emerald-800: #075985;
+  --med-emerald-900: #0c4a6e;
+  --med-emerald-950: #082f49;
+}
+
+.light.theme-doctor {
+  --med-lightest: #F8FAFC; /* Comfortable off-white background */
+  --med-light: #F1F5F9;    /* Clean slate accent border */
+  --med-soft: #2563EB;     /* Soft blue accent */
+  --med-vibrant: #1D4ED8;  /* Muted blue interactive */
+  --med-dark: #0F172A;     /* Soft charcoal slate for text */
+  --med-accent: #3B82F6;
+
+  /* Sky blue dynamic overrides for Doctor Portal (Mapped to 'emerald' classes) */
+  --med-emerald-50: #f8fafc;
+  --med-emerald-100: #f1f5f9;
+  --med-emerald-200: #e2e8f0;
+  --med-emerald-300: #cbd5e1;
+  --med-emerald-400: #94a3b8;
+  --med-emerald-500: #64748b;
+  --med-emerald-600: #475569;
+  --med-emerald-700: #334155;
+  --med-emerald-800: #1e293b;
+  --med-emerald-900: #0f172a;
+  --med-emerald-950: #020617;
+}
+
+.dark.theme-doctor {
+  --med-lightest: #0B0F19; /* Deep slate black background */
+  --med-light: #151D30;    /* Dark clean panel background */
+  --med-soft: #3B82F6;     /* Muted soft blue */
+  --med-vibrant: #60A5FA;  /* Accent blue */
+  --med-dark: #F8FAFC;     /* Off-white text on dark bg */
+  --med-accent: #3B82F6;
+
+  /* Sky blue dynamic overrides for Doctor Portal (Mapped to 'emerald' classes) */
+  --med-emerald-50: #f8fafc;
+  --med-emerald-100: #f1f5f9;
+  --med-emerald-200: #e2e8f0;
+  --med-emerald-300: #cbd5e1;
+  --med-emerald-400: #94a3b8;
+  --med-emerald-500: #64748b;
+  --med-emerald-600: #475569;
+  --med-emerald-700: #334155;
+  --med-emerald-800: #1e293b;
+  --med-emerald-900: #0f172a;
+  --med-emerald-950: #020617;
+}
+
+/* Apply Plus Jakarta Sans universally for all copy text */
+*, *::before, *::after {
+  font-family: 'Plus Jakarta Sans', sans-serif !important;
+}
+
+/* Apply Space Grotesk for headings and tech monospace elements */
+h1, h2, h3, h4, h5, h6, .font-serif, .font-mono {
+  font-family: 'Space Grotesk', sans-serif !important;
+}
+
+html, body, #root {
+  font-family: 'Plus Jakarta Sans', sans-serif !important;
+  background-color: var(--med-lightest);
+}
+
+/* Custom Scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.03);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--med-soft);
+  border-radius: 9999px;
+  opacity: 0.6;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--med-dark);
+}
+
+/* High-Tech HUD Scanline Overlay */
+.hud-scanline {
+  position: relative;
+  overflow: hidden;
+}
+.dark .hud-scanline::after {
+  content: " ";
+  display: block;
+  position: absolute;
+  top: 0; left: 0; bottom: 0; right: 0;
+  background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.1) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.03), rgba(0, 255, 0, 0.01), rgba(0, 0, 255, 0.03));
+  z-index: 2;
+  background-size: 100% 3px, 6px 100%;
+  pointer-events: none;
+}
+
+/* Minimal UI Utilities */
+.glass-panel {
+  background: rgba(19, 27, 46, 0.85);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(226, 232, 240, 0.1);
+  box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.35);
+}
+
+.light .glass-panel, 
+.light.glass-panel, 
+:root:not(.dark) .glass-panel,
+.theme-doctor:not(.dark) .glass-panel {
+  background: #FFFFFF;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  border: 1.5px solid #000000;
+  box-shadow: 0 0 0 1px rgba(16, 185, 129, 0.35), 0 4px 10px -2px rgba(0, 0, 0, 0.05);
+}
+
+.neo-shadow {
+  box-shadow: 0 4px 15px -5px rgba(0, 0, 0, 0.2);
+}
+
+.light .neo-shadow,
+:root:not(.dark) .neo-shadow,
+.theme-doctor:not(.dark) .neo-shadow {
+  box-shadow: 0 3px 8px -2px rgba(0, 0, 0, 0.06);
+}
+
+.neo-glow {
+  box-shadow: none !important;
+}
+
+.light .neo-glow {
+  box-shadow: none !important;
+}
+
+.neo-glow-text {
+  text-shadow: none !important;
+}
+
+.light .neo-glow-text {
+  text-shadow: none !important;
+}
+
+.hover-lift {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.hover-lift:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px -5px rgba(0, 0, 0, 0.08);
+}
+
+.bg-grid-pattern {
+  background-image: none;
+}
+
+.dark .bg-grid-pattern {
+  background-image: radial-gradient(rgba(59, 130, 246, 0.03) 1px, transparent 1px);
+  background-size: 32px 32px;
+}
+
+@media print {
+  @page {
+    margin: 5mm;
+  }
+  
+  body.printing-clone-active {
+    margin: 0;
+    padding: 0;
+    background: white;
+  }
+
+  body.printing-clone-active > *:not(#print-clone) {
+    display: none !important;
+  }
+
+  #print-clone {
+    /* Scale down slightly and ensure it doesn't break across pages if possible */
+    transform: scale(0.95);
+    transform-origin: top left;
+    width: 105.26%; /* 100 / 0.95 to maintain full width */
+    height: auto;
+    page-break-inside: avoid;
+    overflow: hidden !important;
+  }
+}

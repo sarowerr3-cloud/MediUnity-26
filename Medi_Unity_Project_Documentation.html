@@ -1,0 +1,1213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MediUnity ( Medi-Unity ) — Complete Project Documentation</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+    :root {
+      --emerald: #059669;
+      --emerald-light: #d1fae5;
+      --emerald-dark: #065f46;
+      --slate-900: #0f172a;
+      --slate-800: #1e293b;
+      --slate-700: #334155;
+      --slate-500: #64748b;
+      --slate-300: #cbd5e1;
+      --slate-100: #f1f5f9;
+      --white: #ffffff;
+      --amber: #d97706;
+      --red: #dc2626;
+      --blue: #2563eb;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      color: var(--slate-800);
+      background: var(--white);
+      line-height: 1.7;
+      font-size: 14px;
+    }
+
+    @media print {
+      body { font-size: 11px; line-height: 1.5; }
+      .page-break { page-break-before: always; }
+      .no-print { display: none; }
+      .cover { min-height: 100vh; }
+    }
+
+    /* ---- COVER PAGE ---- */
+    .cover {
+      min-height: 100vh;
+      background: linear-gradient(135deg, var(--slate-900) 0%, var(--emerald-dark) 100%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      color: var(--white);
+      text-align: center;
+      padding: 60px 40px;
+    }
+    .cover .logo { font-size: 72px; margin-bottom: 10px; }
+    .cover h1 { font-size: 52px; font-weight: 900; letter-spacing: -2px; margin-bottom: 8px; }
+    .cover h1 span { color: #34d399; }
+    .cover .subtitle { font-size: 22px; font-weight: 300; color: #94a3b8; margin-bottom: 40px; }
+    .cover .meta { font-size: 14px; color: #64748b; line-height: 2; }
+    .cover .meta strong { color: #94a3b8; }
+    .cover .badge {
+      display: inline-block;
+      margin-top: 30px;
+      padding: 10px 28px;
+      border: 2px solid #34d399;
+      border-radius: 50px;
+      color: #34d399;
+      font-weight: 600;
+      font-size: 13px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+    }
+
+    /* ---- CONTENT ---- */
+    .content { max-width: 900px; margin: 0 auto; padding: 50px 40px; }
+
+    h2 {
+      font-size: 28px;
+      font-weight: 800;
+      color: var(--emerald-dark);
+      margin-top: 50px;
+      margin-bottom: 20px;
+      padding-bottom: 8px;
+      border-bottom: 3px solid var(--emerald);
+      letter-spacing: -0.5px;
+    }
+
+    h3 {
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--slate-900);
+      margin-top: 30px;
+      margin-bottom: 12px;
+    }
+
+    h4 {
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--slate-700);
+      margin-top: 20px;
+      margin-bottom: 8px;
+    }
+
+    p { margin-bottom: 12px; color: var(--slate-700); }
+
+    ul, ol { margin-left: 24px; margin-bottom: 14px; }
+    li { margin-bottom: 5px; }
+
+    /* ---- TABLES ---- */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 16px 0 24px;
+      font-size: 13px;
+    }
+    thead th {
+      background: var(--emerald-dark);
+      color: var(--white);
+      padding: 10px 14px;
+      text-align: left;
+      font-weight: 600;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    tbody td {
+      padding: 9px 14px;
+      border-bottom: 1px solid #e2e8f0;
+      vertical-align: top;
+    }
+    tbody tr:nth-child(even) { background: #f8fafc; }
+    tbody tr:hover { background: var(--emerald-light); }
+
+    code {
+      font-family: 'JetBrains Mono', 'Fira Code', monospace;
+      background: #f1f5f9;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 12px;
+      color: var(--emerald-dark);
+    }
+
+    pre {
+      background: var(--slate-900);
+      color: #e2e8f0;
+      padding: 16px 20px;
+      border-radius: 8px;
+      overflow-x: auto;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      margin: 12px 0 20px;
+      line-height: 1.6;
+    }
+
+    .info-box {
+      background: #eff6ff;
+      border-left: 4px solid var(--blue);
+      padding: 14px 18px;
+      border-radius: 0 8px 8px 0;
+      margin: 14px 0;
+    }
+    .warning-box {
+      background: #fffbeb;
+      border-left: 4px solid var(--amber);
+      padding: 14px 18px;
+      border-radius: 0 8px 8px 0;
+      margin: 14px 0;
+    }
+
+    .toc { list-style: none; margin-left: 0; }
+    .toc li { padding: 6px 0; border-bottom: 1px dotted #cbd5e1; }
+    .toc li a { text-decoration: none; color: var(--emerald-dark); font-weight: 500; }
+    .toc li a:hover { color: var(--emerald); }
+    .toc .sub { margin-left: 20px; font-size: 13px; border-bottom: none; }
+
+    .arch-diagram {
+      background: var(--slate-100);
+      border: 2px solid #e2e8f0;
+      border-radius: 12px;
+      padding: 30px;
+      margin: 20px 0;
+      text-align: center;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 13px;
+      line-height: 2;
+    }
+    .arch-diagram .layer {
+      display: inline-block;
+      padding: 8px 20px;
+      margin: 5px;
+      border-radius: 8px;
+      font-weight: 600;
+    }
+    .arch-diagram .frontend { background: #dbeafe; color: #1e40af; border: 1px solid #93c5fd; }
+    .arch-diagram .backend { background: #d1fae5; color: #065f46; border: 1px solid #6ee7b7; }
+    .arch-diagram .database { background: #fef3c7; color: #92400e; border: 1px solid #fcd34d; }
+    .arch-diagram .services { background: #ede9fe; color: #5b21b6; border: 1px solid #c4b5fd; }
+    .arch-diagram .arrow { color: var(--slate-500); font-size: 20px; margin: 0 8px; }
+  </style>
+</head>
+<body>
+
+<!-- ===================== COVER PAGE ===================== -->
+<div class="cover">
+  <div class="logo">🏥</div>
+  <h1>Medi<span>Unity</span></h1>
+  <p class="subtitle">Complete Healthcare Management Platform</p>
+  <div class="meta">
+    <strong>Project Name:</strong>  Medi-Unity  (MediUnity)<br>
+    <strong>Type:</strong> Full-Stack Web Application (MERN Stack)<br>
+    <strong>Version:</strong> 1.0.0 — Cloud Ready<br>
+    <strong>Architecture:</strong> Frontend + Backend API + Admin Dashboard<br>
+    <strong>Generated:</strong> July 9, 2026
+  </div>
+  <div class="badge">Comprehensive Technical Documentation</div>
+</div>
+
+<!-- ===================== TABLE OF CONTENTS ===================== -->
+<div class="content page-break">
+  <h2 id="toc">📑 Table of Contents</h2>
+  <ol class="toc">
+    <li><a href="#sec1">1. Project Overview</a></li>
+    <li><a href="#sec2">2. Technology Stack & Dependencies</a></li>
+    <li><a href="#sec3">3. System Architecture</a></li>
+    <li><a href="#sec4">4. Folder Structure</a></li>
+    <li><a href="#sec5">5. Backend — Database Models (14 Models)</a></li>
+    <li><a href="#sec6">6. Backend — API Endpoints (13 Route Files, 80+ Endpoints)</a></li>
+    <li><a href="#sec7">7. Backend — Controllers (12 Controllers)</a></li>
+    <li><a href="#sec8">8. Backend — Middleware (5 Middleware Files)</a></li>
+    <li><a href="#sec9">9. Backend — Utilities</a></li>
+    <li><a href="#sec10">10. Authentication System (Dual Auth: Firebase + Custom JWT)</a></li>
+    <li><a href="#sec11">11. Payment Integration (aamarPay)</a></li>
+    <li><a href="#sec12">12. Frontend — Patient Portal (16 Pages, 13 Components)</a></li>
+    <li><a href="#sec13">13. Frontend — Doctor Portal</a></li>
+    <li><a href="#sec14">14. Admin Dashboard (14 Pages)</a></li>
+    <li><a href="#sec15">15. Role-Based Access Control (RBAC)</a></li>
+    <li><a href="#sec16">16. Environment Variables & Configuration</a></li>
+    <li><a href="#sec17">17. Deployment (Render)</a></li>
+    <li><a href="#sec18">18. Key Features Summary</a></li>
+    <li><a href="#sec19">19. How to Run Locally</a></li>
+    <li><a href="#sec20">20. Default Admin Credentials</a></li>
+  </ol>
+</div>
+
+<!-- ===================== SECTION 1: PROJECT OVERVIEW ===================== -->
+<div class="content page-break">
+  <h2 id="sec1">1. Project Overview</h2>
+  <p><strong>MediUnity ( Medi-Unity )</strong> is a comprehensive, cloud-ready healthcare management platform built for the <strong>Cumilla region of Bangladesh</strong>. It connects patients with doctors through a feature-rich web application that supports appointment booking, online payments, health tracking, community forums, medical records, prescriptions, and an administrative control panel.</p>
+
+  <h3>1.1 Core Objectives</h3>
+  <ul>
+    <li><strong>Patient Portal:</strong> Allow patients to browse doctors, book appointments (video/offline), pay online via aamarPay, manage health records, track vitals, participate in community forums, read medical articles, and maintain recovery journals.</li>
+    <li><strong>Doctor Portal:</strong> Enable doctors to manage their profiles, schedules, appointments, prescriptions, queue boards, and communicate with patients via in-app messaging.</li>
+    <li><strong>Admin Dashboard:</strong> Provide super-admins, moderators, and support staff with tools to manage doctors, patients, services, appointments, community posts, verify identities, view audit logs, and monitor revenue analytics.</li>
+  </ul>
+
+  <h3>1.2 Target Users</h3>
+  <table>
+    <thead><tr><th>Role</th><th>Description</th><th>Access</th></tr></thead>
+    <tbody>
+      <tr><td>Patient</td><td>General users seeking healthcare services</td><td>Frontend (Patient Portal)</td></tr>
+      <tr><td>Doctor</td><td>Registered medical practitioners with BMDC verification</td><td>Frontend (Doctor Portal)</td></tr>
+      <tr><td>Super Admin</td><td>Full system control, revenue analytics, user management</td><td>Admin Dashboard (all features)</td></tr>
+      <tr><td>Moderator</td><td>Doctor/appointment management, community moderation</td><td>Admin Dashboard (limited)</td></tr>
+      <tr><td>Support</td><td>Identity verification, basic support tasks</td><td>Admin Dashboard (restricted)</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- ===================== SECTION 2: TECH STACK ===================== -->
+<div class="content page-break">
+  <h2 id="sec2">2. Technology Stack & Dependencies</h2>
+
+  <h3>2.1 Backend</h3>
+  <table>
+    <thead><tr><th>Technology</th><th>Version</th><th>Purpose</th></tr></thead>
+    <tbody>
+      <tr><td>Node.js</td><td>Latest LTS</td><td>Runtime environment</td></tr>
+      <tr><td>Express.js</td><td>v5.2.1</td><td>Web framework</td></tr>
+      <tr><td>MongoDB</td><td>v7.2.0 (driver)</td><td>Database driver</td></tr>
+      <tr><td>Mongoose</td><td>v9.0.1</td><td>ODM for MongoDB</td></tr>
+      <tr><td>JSON Web Token (JWT)</td><td>v9.0.3</td><td>Authentication tokens</td></tr>
+      <tr><td>bcrypt / bcryptjs</td><td>v6.0.0 / v3.0.3</td><td>Password hashing</td></tr>
+      <tr><td>Cloudinary</td><td>v2.8.0</td><td>Cloud image/file storage</td></tr>
+      <tr><td>Multer</td><td>v2.0.2</td><td>File upload handling</td></tr>
+      <tr><td>Nodemailer</td><td>v8.0.10</td><td>Email OTP delivery</td></tr>
+      <tr><td>Stripe</td><td>v20.0.0</td><td>Payment processing (configured)</td></tr>
+      <tr><td>Axios</td><td>v1.16.1</td><td>HTTP client (aamarPay, BMDC)</td></tr>
+      <tr><td>Cheerio</td><td>v1.2.0</td><td>HTML scraping (BMDC verification)</td></tr>
+      <tr><td>Tesseract.js</td><td>v7.0.0</td><td>OCR CAPTCHA solver (BMDC)</td></tr>
+      <tr><td>Jimp</td><td>v1.6.1</td><td>Image preprocessing</td></tr>
+      <tr><td>PDFKit</td><td>v0.18.0</td><td>PDF generation (prescriptions)</td></tr>
+      <tr><td>pdf-parse</td><td>v2.4.5</td><td>PDF parsing</td></tr>
+      <tr><td>Nodemon</td><td>v3.1.11</td><td>Dev auto-restart</td></tr>
+      <tr><td>Validator</td><td>v13.15.23</td><td>Input validation</td></tr>
+      <tr><td>CORS</td><td>v2.8.5</td><td>Cross-origin resource sharing</td></tr>
+      <tr><td>dotenv</td><td>v17.2.3</td><td>Environment variables</td></tr>
+    </tbody>
+  </table>
+
+  <h3>2.2 Frontend (Patient + Doctor Portal)</h3>
+  <table>
+    <thead><tr><th>Technology</th><th>Version</th><th>Purpose</th></tr></thead>
+    <tbody>
+      <tr><td>React</td><td>v19.1.1</td><td>UI framework</td></tr>
+      <tr><td>Vite</td><td>v7.1.7</td><td>Build tool & dev server</td></tr>
+      <tr><td>React Router DOM</td><td>v7.9.5</td><td>Client-side routing</td></tr>
+      <tr><td>TailwindCSS</td><td>v4.1.17</td><td>Utility-first CSS framework</td></tr>
+      <tr><td>Firebase</td><td>v12.13.0</td><td>Authentication (Google, Email/Password)</td></tr>
+      <tr><td>Axios</td><td>v1.13.2</td><td>HTTP client for API calls</td></tr>
+      <tr><td>Lucide React</td><td>v0.553.0</td><td>Icon library</td></tr>
+      <tr><td>React Hot Toast</td><td>v2.6.0</td><td>Toast notifications</td></tr>
+      <tr><td>React Toastify</td><td>v11.0.5</td><td>Additional notifications</td></tr>
+      <tr><td>bcryptjs</td><td>v3.0.3</td><td>Client-side hashing (if needed)</td></tr>
+    </tbody>
+  </table>
+
+  <h3>2.3 Admin Dashboard</h3>
+  <table>
+    <thead><tr><th>Technology</th><th>Version</th><th>Purpose</th></tr></thead>
+    <tbody>
+      <tr><td>React</td><td>v19.2.0</td><td>UI framework</td></tr>
+      <tr><td>Vite</td><td>v7.2.2</td><td>Build tool & dev server</td></tr>
+      <tr><td>React Router DOM</td><td>v7.9.6</td><td>Client-side routing</td></tr>
+      <tr><td>TailwindCSS</td><td>v4.1.17</td><td>Styling</td></tr>
+      <tr><td>Firebase</td><td>v12.13.0</td><td>Authentication</td></tr>
+      <tr><td>Lucide React</td><td>v0.554.0</td><td>Icon library</td></tr>
+      <tr><td>React Hot Toast</td><td>v2.6.0</td><td>Toast notifications</td></tr>
+    </tbody>
+  </table>
+
+  <h3>2.4 Database</h3>
+  <table>
+    <thead><tr><th>Service</th><th>Details</th></tr></thead>
+    <tbody>
+      <tr><td>Database</td><td>MongoDB Atlas (Cloud)</td></tr>
+      <tr><td>Database Name</td><td><code> Medi-Unity _CUMILLA</code></td></tr>
+      <tr><td>Cluster</td><td><code>cluster0.n0k8wab.mongodb.net</code></td></tr>
+      <tr><td>Connection</td><td>MongoDB SRV protocol with retryWrites</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- ===================== SECTION 3: ARCHITECTURE ===================== -->
+<div class="content page-break">
+  <h2 id="sec3">3. System Architecture</h2>
+
+  <div class="arch-diagram">
+    <div>
+      <span class="layer frontend">Patient Frontend<br>(React + Vite, Port 5173)</span>
+      <span class="layer frontend">Admin Dashboard<br>(React + Vite, Port 5174)</span>
+    </div>
+    <br>
+    <span class="arrow">⬇ ⬆ REST API (HTTPS / CORS)</span>
+    <br><br>
+    <span class="layer backend">Express.js Backend API<br>(Node.js, Port 4000)</span>
+    <br><br>
+    <span class="arrow">⬇ ⬆</span>
+    <br><br>
+    <div>
+      <span class="layer database">MongoDB Atlas<br>(Cloud DB)</span>
+      <span class="layer services">Cloudinary<br>(Image CDN)</span>
+      <span class="layer services">Firebase Auth<br>(Google SSO)</span>
+      <span class="layer services">aamarPay<br>(Payments BDT)</span>
+      <span class="layer services">Nodemailer<br>(Email OTP)</span>
+      <span class="layer services">BMDC Portal<br>(Doctor Verify)</span>
+    </div>
+  </div>
+
+  <h3>3.1 Architecture Pattern</h3>
+  <ul>
+    <li><strong>Monorepo</strong> with 3 separate applications (backend, frontend, admin) in one repository</li>
+    <li><strong>REST API</strong> architecture with JSON request/response</li>
+    <li><strong>MVC Pattern</strong> — Models (Mongoose), Controllers (business logic), Routes (Express)</li>
+    <li><strong>Dual Authentication</strong> — Firebase Auth (Google SSO) + Custom JWT (email/phone/password)</li>
+    <li><strong>Role-Based Access Control (RBAC)</strong> with 3 admin roles</li>
+    <li><strong>Cloud-First</strong> — MongoDB Atlas, Cloudinary CDN, Render hosting</li>
+  </ul>
+</div>
+
+<!-- ===================== SECTION 4: FOLDER STRUCTURE ===================== -->
+<div class="content page-break">
+  <h2 id="sec4">4. Folder Structure</h2>
+  <pre>
+ Medi-Unity  Project/
+├── backend/
+│   ├── config/
+│   │   └── db.js                    # MongoDB Atlas connection
+│   ├── controllers/                 # Business logic (12 files)
+│   │   ├── appointmentController.js # Doctor appointment CRUD + payments
+│   │   ├── articleController.js     # Medical articles CRUD
+│   │   ├── doctorController.js      # Doctor CRUD, login, BMDC verify
+│   │   ├── healthLogController.js   # Health vitals tracker
+│   │   ├── journalController.js     # Recovery journals
+│   │   ├── medicalFileController.js # Medical file uploads
+│   │   ├── messageController.js     # In-app messaging
+│   │   ├── patientProfileController.js # Patient CRUD, OTP, login
+│   │   ├── postController.js        # Community forum posts
+│   │   ├── prescriptionController.js # Prescriptions + PDF
+│   │   ├── serviceAppointmentController.js # Service bookings
+│   │   └── serviceController.js     # Hospital services CRUD
+│   ├── middlewares/
+│   │   ├── adminAuth.js             # Admin JWT + RBAC guard
+│   │   ├── doctorAuth.js            # Doctor JWT guard
+│   │   ├── firebaseAuth.js          # Firebase/Custom JWT decoder
+│   │   ├── lockerMulter.js          # File upload (medical locker)
+│   │   └── multer.js                # General file upload config
+│   ├── models/                      # Mongoose schemas (14 files)
+│   │   ├── Admin.js                 ├── Appointment.js
+│   │   ├── Article.js               ├── AuditLog.js
+│   │   ├── Doctor.js                ├── HealthLog.js
+│   │   ├── Journal.js               ├── MedicalFile.js
+│   │   ├── Message.js               ├── PatientProfile.js
+│   │   ├── Post.js                  ├── Prescription.js
+│   │   ├── Service.js               └── serviceAppointment.js
+│   ├── routes/                      # Express routers (13 files)
+│   ├── utils/
+│   │   ├── bmdcScraper.js           # BMDC web scraper + CAPTCHA solver
+│   │   ├── cloudinary.js            # Cloudinary upload/delete
+│   │   └── email.js                 # Nodemailer email utility
+│   ├── uploads/                     # Temp file upload directory
+│   ├── index.js                     # Entry point
+│   ├── package.json                 # Dependencies
+│   └── .env                         # Environment config
+│
+├── frontend/
+│   ├── src/
+│   │   ├── assets/                  # Images (S1-S8.png, react.svg)
+│   │   ├── components/              # Reusable components (13 dirs)
+│   │   ├── config/                  # Firebase config
+│   │   ├── context/                 # AuthContext (React Context API)
+│   │   ├── data/                    # Static doctor data
+│   │   ├── doctor/                  # Doctor sub-portal components
+│   │   ├── pages/                   # Page components (16 dirs)
+│   │   ├── App.jsx                  # Router + route definitions
+│   │   ├── config.js                # API base URL config
+│   │   ├── index.css                # Global styles
+│   │   └── main.jsx                 # React entry point
+│   ├── public/                      # Static assets
+│   ├── .env                         # Environment config
+│   └── package.json                 # Dependencies
+│
+├── admin/
+│   ├── src/
+│   │   ├── components/              # Reusable admin components
+│   │   ├── config/                  # Firebase config
+│   │   ├── context/                 # Admin AuthContext
+│   │   ├── pages/                   # Admin pages (14 dirs)
+│   │   ├── App.jsx                  # Admin router
+│   │   ├── config.js                # API base URL
+│   │   └── main.jsx                 # React entry point
+│   ├── .env                         # Environment config
+│   └── package.json                 # Dependencies
+│
+├── LAUNCH_ Medi-Unity .bat              # One-click launcher (Windows)
+├── SYNC_TO_GITHUB.bat               # Git sync script
+├── render.yaml                      # Render deployment config
+├── README_FIRST.md                  # Setup instructions
+└── .gitignore
+  </pre>
+</div>
+
+<!-- ===================== SECTION 5: DATABASE MODELS ===================== -->
+<div class="content page-break">
+  <h2 id="sec5">5. Backend — Database Models (14 Models)</h2>
+
+  <h3>5.1 Admin Model</h3>
+  <table>
+    <thead><tr><th>Field</th><th>Type</th><th>Details</th></tr></thead>
+    <tbody>
+      <tr><td>email</td><td>String</td><td>Required, unique, lowercase, trimmed</td></tr>
+      <tr><td>password</td><td>String</td><td>Required (bcrypt hashed)</td></tr>
+      <tr><td>role</td><td>String (Enum)</td><td><code>super-admin</code>, <code>moderator</code>, <code>support</code></td></tr>
+      <tr><td>lastLoginIp</td><td>String</td><td>Last login IP address</td></tr>
+      <tr><td>knownIps</td><td>[String]</td><td>Previously seen IPs for security alerts</td></tr>
+    </tbody>
+  </table>
+
+  <h3>5.2 Doctor Model</h3>
+  <table>
+    <thead><tr><th>Field</th><th>Type</th><th>Details</th></tr></thead>
+    <tbody>
+      <tr><td>email</td><td>String</td><td>Required, unique, lowercase, indexed</td></tr>
+      <tr><td>password</td><td>String</td><td>Required, select: false (hidden by default)</td></tr>
+      <tr><td>name</td><td>String</td><td>Required, trimmed</td></tr>
+      <tr><td>specialization</td><td>String</td><td>Medical specialization</td></tr>
+      <tr><td>bmdcNumber</td><td>String</td><td>Bangladesh Medical & Dental Council registration</td></tr>
+      <tr><td>imageUrl / imagePublicId</td><td>String</td><td>Cloudinary profile image</td></tr>
+      <tr><td>experience</td><td>String</td><td>Years/description of experience</td></tr>
+      <tr><td>qualifications</td><td>String</td><td>Academic qualifications</td></tr>
+      <tr><td>location</td><td>String</td><td>Practice location</td></tr>
+      <tr><td>about</td><td>String</td><td>Bio/description</td></tr>
+      <tr><td>fee</td><td>Number</td><td>Default consultation fee</td></tr>
+      <tr><td>availability</td><td>Enum</td><td><code>Available</code> or <code>Unavailable</code></td></tr>
+      <tr><td>schedule</td><td>Map of [String]</td><td>Date → available time slots mapping</td></tr>
+      <tr><td>recurringSlots</td><td>[String]</td><td>Recurring time slot templates</td></tr>
+      <tr><td>pricingTiers</td><td>Object</td><td><code>{video: 500, offline: 400}</code> (in BDT)</td></tr>
+      <tr><td>blackoutPeriods</td><td>[Object]</td><td><code>{startDate, endDate, reason}</code> — vacation/leave</td></tr>
+      <tr><td>blockedSlots</td><td>[Object]</td><td><code>{date, slot}</code> — individually blocked slots</td></tr>
+      <tr><td>success / patients / rating</td><td>String/Number</td><td>Gamification stats</td></tr>
+      <tr><td>certificateUrl / certificatePublicId</td><td>String</td><td>Uploaded verification certificate</td></tr>
+      <tr><td>isVerified</td><td>Boolean</td><td>Verification flag</td></tr>
+      <tr><td>verificationStatus</td><td>Enum</td><td><code>Unverified</code>, <code>Pending</code>, <code>Verified</code>, <code>Rejected</code></td></tr>
+      <tr><td>reputationPoints</td><td>Number</td><td>Gamification social trust score</td></tr>
+      <tr><td>resetOtp / resetOtpExpires</td><td>String/Date</td><td>Password reset OTP fields</td></tr>
+    </tbody>
+  </table>
+  <p><em>Indexes:</em> Text search on <code>name</code> and <code>specialization</code>.</p>
+
+  <h3>5.3 PatientProfile Model</h3>
+  <table>
+    <thead><tr><th>Field</th><th>Type</th><th>Details</th></tr></thead>
+    <tbody>
+      <tr><td>clerkUserId</td><td>String</td><td>Required, unique, indexed — primary identifier</td></tr>
+      <tr><td>email</td><td>String</td><td>Unique (sparse), lowercase, indexed</td></tr>
+      <tr><td>password</td><td>String</td><td>select: false (bcrypt hashed)</td></tr>
+      <tr><td>name / phone</td><td>String</td><td>Patient name and phone (unique, sparse)</td></tr>
+      <tr><td>isEmailVerified / isPhoneVerified</td><td>Boolean</td><td>Verification flags</td></tr>
+      <tr><td>otp / otpExpires</td><td>String/Date</td><td>OTP code for registration verification</td></tr>
+      <tr><td>nid / nidImageUrl / nidImagePublicId</td><td>String</td><td>National ID verification</td></tr>
+      <tr><td>isVerified / verificationStatus</td><td>Boolean/Enum</td><td>Identity verification status</td></tr>
+      <tr><td>imageUrl / imagePublicId</td><td>String</td><td>Profile picture (Cloudinary)</td></tr>
+      <tr><td>medicalHistory</td><td>[SubDoc]</td><td><code>{condition, date, notes, fileUrl, filePublicId}</code></td></tr>
+      <tr><td>bookmarkedArticles</td><td>[ObjectId → Article]</td><td>Saved articles references</td></tr>
+      <tr><td>latestSymptomCheck</td><td>Object</td><td><code>{symptoms[], recommendedSpecialty, checkedAt}</code></td></tr>
+      <tr><td>resetOtp / resetOtpExpires</td><td>String/Date</td><td>Password reset verification</td></tr>
+      <tr><td>isBanned / banReason / bannedAt</td><td>Boolean/String/Date</td><td>Admin moderation controls</td></tr>
+    </tbody>
+  </table>
+
+  <h3>5.4 Appointment Model</h3>
+  <table>
+    <thead><tr><th>Field</th><th>Type</th><th>Details</th></tr></thead>
+    <tbody>
+      <tr><td>owner</td><td>String</td><td>Required, indexed — owner identifier</td></tr>
+      <tr><td>createdBy</td><td>String</td><td>Indexed — patient Clerk/custom userId</td></tr>
+      <tr><td>patientName / mobile / age / gender</td><td>String/Number</td><td>Patient information</td></tr>
+      <tr><td>doctorId</td><td>ObjectId → Doctor</td><td>Required, indexed — reference to Doctor</td></tr>
+      <tr><td>doctorName / speciality</td><td>String</td><td>Denormalized doctor info</td></tr>
+      <tr><td>doctorImage</td><td>Object</td><td><code>{url, publicId}</code> — snapshot of doctor photo</td></tr>
+      <tr><td>date / time</td><td>String</td><td>Required — YYYY-MM-DD and time string</td></tr>
+      <tr><td>fees</td><td>Number</td><td>Required, min: 0</td></tr>
+      <tr><td>consultType</td><td>Enum</td><td><code>video</code>, <code>phone</code>, <code>chat</code>, <code>offline</code></td></tr>
+      <tr><td>queueState</td><td>Enum</td><td><code>Scheduled</code>, <code>CheckedIn</code>, <code>InConsultation</code>, <code>Completed</code></td></tr>
+      <tr><td>checkedInAt</td><td>Date</td><td>Self check-in timestamp</td></tr>
+      <tr><td>rescheduleRequired / rescheduleReason</td><td>Boolean/String</td><td>Auto-flagged conflict rescheduling</td></tr>
+      <tr><td>status</td><td>Enum</td><td><code>Pending</code>, <code>Confirmed</code>, <code>Completed</code>, <code>Canceled</code>, <code>Rescheduled</code></td></tr>
+      <tr><td>rescheduledTo</td><td>Object</td><td><code>{date, time}</code></td></tr>
+      <tr><td>payment</td><td>Object</td><td><code>{method (Cash/Online), status (Pending/Paid/Failed/Refunded), amount, providerId, meta}</code></td></tr>
+      <tr><td>sessionId</td><td>String</td><td>aamarPay transaction ID</td></tr>
+      <tr><td>paidAt</td><td>Date</td><td>Payment timestamp</td></tr>
+    </tbody>
+  </table>
+
+  <h3>5.5 ServiceAppointment Model</h3>
+  <p>Hospital/service-based appointments (no doctor). Fields include: <code>createdBy</code>, <code>patientName</code>, <code>mobile</code>, <code>age</code>, <code>gender</code>, <code>serviceId</code> (ref: Service), <code>serviceName</code>, <code>serviceImage</code>, <code>fees</code>, <code>date</code>, <code>hour</code>, <code>minute</code>, <code>ampm</code>, <code>status</code> (Pending/Confirmed/Rescheduled/Completed/Canceled), <code>rescheduledTo</code>, and embedded <code>payment</code> object with <code>method</code>, <code>status</code>, <code>amount</code>, <code>providerId</code>, <code>paidAt</code>, <code>sessionId</code>, <code>meta</code>.</p>
+
+  <h3>5.6 Service Model</h3>
+  <p>Hospital services with: <code>name</code>, <code>about</code>, <code>shortDescription</code>, <code>price</code>, <code>available</code>, <code>imageUrl</code>/<code>imagePublicId</code> (Cloudinary), <code>dates</code> (available dates), <code>slots</code> (Map of time slots per date), <code>instructions</code>, <code>totalAppointments</code>, <code>completed</code>, <code>canceled</code>.</p>
+
+  <h3>5.7 Post Model (Community Forum)</h3>
+  <p>Forum posts: <code>title</code>, <code>content</code>, <code>category</code>, <code>authorId</code>, <code>authorName</code>, <code>authorRole</code> (patient/doctor), <code>likes</code> [userIds], <code>comments</code> (subdocument with <code>content</code>, <code>authorId</code>, <code>authorName</code>, <code>authorRole</code>, <code>upvotes</code>, <code>isAnonymous</code>), <code>isQA</code>, <code>isAnonymous</code>, <code>circle</code> (support groups), <code>isBanned</code>, <code>bannedReason</code>, <code>isHidden</code>.</p>
+
+  <h3>5.8 Article Model</h3>
+  <p>Doctor-authored medical articles: <code>title</code>, <code>content</code>, <code>category</code>, <code>doctorId</code> (ref: Doctor), <code>doctorName</code>, <code>doctorImageUrl</code>, <code>likes</code> [userIds], <code>comments</code> (subdoc: <code>content</code>, <code>authorId</code>, <code>authorName</code>, <code>authorRole</code>).</p>
+
+  <h3>5.9 Prescription Model</h3>
+  <p>Prescriptions: <code>appointmentId</code> (unique, ref: Appointment), <code>patientId</code>, <code>patientName</code>, <code>doctorId</code> (ref: Doctor), <code>doctorName</code>, <code>date</code>, <code>symptoms</code>, <code>diagnosis</code>, <code>medicines</code> [{name, dosage, frequency, duration}], <code>advice</code>, <code>tests</code>.</p>
+
+  <h3>5.10 Journal Model (Recovery Journals)</h3>
+  <p><code>patientId</code> (unique), <code>patientName</code>, <code>title</code>, <code>condition</code>, <code>isPrivate</code>, <code>entries</code> [{content, milestone, cheers [userIds]}].</p>
+
+  <h3>5.11 HealthLog Model (Health Tracker)</h3>
+  <p><code>patientId</code> (unique), <code>logs</code> [{bloodPressure: {systolic, diastolic}, bloodSugar (mg/dL), mood, sleep (hours), notes}].</p>
+
+  <h3>5.12 Message Model</h3>
+  <p>In-app chat messages: <code>appointmentId</code> (ref: Appointment, indexed), <code>senderId</code>, <code>senderRole</code> (patient/doctor), <code>senderName</code>, <code>content</code>.</p>
+
+  <h3>5.13 MedicalFile Model</h3>
+  <p>Medical file uploads: <code>appointmentId</code> (ref: Appointment), <code>patientId</code>, <code>fileName</code>, <code>fileUrl</code>, <code>filePublicId</code>, <code>fileType</code>, <code>uploadedBy</code>, <code>uploaderRole</code> (patient/doctor).</p>
+
+  <h3>5.14 AuditLog Model</h3>
+  <p>Admin audit trail: <code>adminEmail</code>, <code>adminRole</code>, <code>action</code> (LOGIN, VERIFY_DOCTOR, DELETE_POST, etc.), <code>details</code>, <code>ipAddress</code>, <code>timestamp</code>. Indexed for efficient pagination.</p>
+</div>
+
+<!-- ===================== SECTION 6: API ENDPOINTS ===================== -->
+<div class="content page-break">
+  <h2 id="sec6">6. Backend — API Endpoints (80+ Endpoints)</h2>
+
+  <h3>6.1 Appointment Routes — <code>/api/appointments</code></h3>
+  <table>
+    <thead><tr><th>Method</th><th>Endpoint</th><th>Description</th><th>Auth</th></tr></thead>
+    <tbody>
+      <tr><td>GET</td><td>/</td><td>List all appointments (paginated, searchable)</td><td>—</td></tr>
+      <tr><td>GET</td><td>/:id</td><td>Get single appointment by ID</td><td>—</td></tr>
+      <tr><td>GET</td><td>/me</td><td>Get current patient's appointments</td><td>Patient</td></tr>
+      <tr><td>POST</td><td>/</td><td>Create appointment (+ aamarPay payment)</td><td>Patient</td></tr>
+      <tr><td>PUT</td><td>/:id</td><td>Update appointment (reschedule, status change)</td><td>—</td></tr>
+      <tr><td>DELETE</td><td>/:id</td><td>Cancel appointment</td><td>—</td></tr>
+      <tr><td>GET</td><td>/confirm-payment</td><td>Confirm payment by session_id</td><td>—</td></tr>
+      <tr><td>POST</td><td>/aamarpay/callback</td><td>aamarPay IPN callback handler</td><td>—</td></tr>
+      <tr><td>GET</td><td>/stats</td><td>Aggregated appointment statistics</td><td>—</td></tr>
+      <tr><td>GET</td><td>/doctor/:doctorId</td><td>Get appointments for a specific doctor</td><td>—</td></tr>
+      <tr><td>GET</td><td>/registered-users-count</td><td>Count of registered patients</td><td>—</td></tr>
+      <tr><td>GET</td><td>/:appointmentId/intake-summary</td><td>Pre-consult intake summary (symptoms, vitals, journal)</td><td>Patient/Doctor</td></tr>
+      <tr><td>POST</td><td>/:id/check-in</td><td>Patient self check-in on appointment day</td><td>Patient</td></tr>
+      <tr><td>PUT</td><td>/:id/queue-state</td><td>Doctor updates queue state</td><td>Doctor</td></tr>
+      <tr><td>GET</td><td>/queue-board/:doctorId</td><td>Today's queue board for a doctor</td><td>—</td></tr>
+    </tbody>
+  </table>
+
+  <h3>6.2 Doctor Routes — <code>/api/doctors</code></h3>
+  <table>
+    <thead><tr><th>Method</th><th>Endpoint</th><th>Description</th><th>Auth</th></tr></thead>
+    <tbody>
+      <tr><td>GET</td><td>/</td><td>List all doctors (with aggregated stats)</td><td>—</td></tr>
+      <tr><td>GET</td><td>/:id</td><td>Get doctor by ID</td><td>—</td></tr>
+      <tr><td>POST</td><td>/</td><td>Create doctor (admin)</td><td>Admin</td></tr>
+      <tr><td>PUT</td><td>/:id</td><td>Update doctor profile</td><td>Doctor</td></tr>
+      <tr><td>DELETE</td><td>/:id</td><td>Delete doctor</td><td>Admin</td></tr>
+      <tr><td>PUT</td><td>/:id/toggle-availability</td><td>Toggle availability status</td><td>Doctor</td></tr>
+      <tr><td>POST</td><td>/login</td><td>Doctor login (email + password)</td><td>—</td></tr>
+      <tr><td>POST</td><td>/signup</td><td>Doctor self-registration (+ BMDC verify)</td><td>—</td></tr>
+      <tr><td>POST</td><td>/:id/certificate</td><td>Upload verification certificate</td><td>Doctor</td></tr>
+      <tr><td>PUT</td><td>/:id/verify</td><td>Approve/reject doctor verification</td><td>Admin</td></tr>
+      <tr><td>POST</td><td>/:id/verify-online</td><td>Trigger automatic BMDC verification</td><td>Doctor</td></tr>
+      <tr><td>POST</td><td>/forgot-password</td><td>Send password reset OTP</td><td>—</td></tr>
+      <tr><td>POST</td><td>/reset-password</td><td>Reset password with OTP</td><td>—</td></tr>
+    </tbody>
+  </table>
+
+  <h3>6.3 Patient Routes — <code>/api/patients</code></h3>
+  <table>
+    <thead><tr><th>Method</th><th>Endpoint</th><th>Description</th><th>Auth</th></tr></thead>
+    <tbody>
+      <tr><td>GET</td><td>/profile</td><td>Get logged-in patient profile</td><td>Patient</td></tr>
+      <tr><td>PUT</td><td>/profile</td><td>Update profile (+ NID/image upload)</td><td>Patient</td></tr>
+      <tr><td>POST</td><td>/medical-history</td><td>Add medical history item</td><td>Patient</td></tr>
+      <tr><td>DELETE</td><td>/medical-history/:itemId</td><td>Delete medical history item</td><td>Patient</td></tr>
+      <tr><td>GET</td><td>/history/:clerkUserId</td><td>Doctor views patient history</td><td>Doctor</td></tr>
+      <tr><td>GET</td><td>/all</td><td>Admin: list all patient profiles</td><td>Admin</td></tr>
+      <tr><td>PUT</td><td>/verify/:clerkUserId</td><td>Admin: approve/reject patient identity</td><td>Admin</td></tr>
+      <tr><td>POST</td><td>/signup</td><td>Custom credential patient signup</td><td>—</td></tr>
+      <tr><td>POST</td><td>/verify-otp</td><td>Verify OTP after signup</td><td>—</td></tr>
+      <tr><td>POST</td><td>/login</td><td>Patient login (email/phone + password)</td><td>—</td></tr>
+      <tr><td>POST</td><td>/bookmark/:articleId</td><td>Toggle article bookmark</td><td>Patient</td></tr>
+      <tr><td>GET</td><td>/bookmarks</td><td>Get bookmarked articles</td><td>Patient</td></tr>
+      <tr><td>PUT</td><td>/symptom-check</td><td>Save symptom check results</td><td>Patient</td></tr>
+      <tr><td>POST</td><td>/forgot-password</td><td>Forgot password OTP</td><td>—</td></tr>
+      <tr><td>POST</td><td>/reset-password</td><td>Reset password with OTP</td><td>—</td></tr>
+      <tr><td>GET</td><td>/admin/users</td><td>Admin: paginated user list</td><td>Admin</td></tr>
+      <tr><td>PUT</td><td>/admin/users/:id/ban</td><td>Admin: ban/unban user</td><td>Admin</td></tr>
+      <tr><td>DELETE</td><td>/admin/users/:id</td><td>Admin: permanently delete user</td><td>Admin</td></tr>
+    </tbody>
+  </table>
+
+  <h3>6.4 Other Routes</h3>
+  <table>
+    <thead><tr><th>Base Path</th><th>Key Endpoints</th></tr></thead>
+    <tbody>
+      <tr><td><code>/api/services</code></td><td>CRUD for hospital services (add, list, update, delete)</td></tr>
+      <tr><td><code>/api/service-appointments</code></td><td>Service booking CRUD + aamarPay payment + stats</td></tr>
+      <tr><td><code>/api/posts</code></td><td>Community forum CRUD, like/unlike, comments, anonymous posting, circles</td></tr>
+      <tr><td><code>/api/prescriptions</code></td><td>Create/get/delete prescriptions, PDF generation</td></tr>
+      <tr><td><code>/api/articles</code></td><td>Doctor article CRUD, like, comment, patient bookmarks</td></tr>
+      <tr><td><code>/api/journals</code></td><td>Recovery journal CRUD, entries, cheer system</td></tr>
+      <tr><td><code>/api/health-tracker</code></td><td>Health log CRUD (BP, blood sugar, mood, sleep)</td></tr>
+      <tr><td><code>/api/messages</code></td><td>In-app messaging (per appointment chat)</td></tr>
+      <tr><td><code>/api/medical-files</code></td><td>Medical file upload/download (patient/doctor)</td></tr>
+      <tr><td><code>/api/admin</code></td><td>Admin login, dashboard stats, audit logs, admin profile</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- ===================== SECTION 7: CONTROLLERS ===================== -->
+<div class="content page-break">
+  <h2 id="sec7">7. Backend — Controllers (12 Controllers)</h2>
+
+  <table>
+    <thead><tr><th>Controller</th><th>Size</th><th>Key Functions</th></tr></thead>
+    <tbody>
+      <tr><td><strong>doctorController.js</strong></td><td>38.4 KB</td><td>createDoctor, getDoctors, getDoctorById, updateDoctor, deleteDoctor, toggleAvailability, doctorLogin, signupDoctor (BMDC verify), uploadCertificate, approveDoctorVerification, verifyCertificateOnline, forgotPassword, resetPassword, cleanupAllDoctorsSchedules</td></tr>
+      <tr><td><strong>appointmentController.js</strong></td><td>26.8 KB</td><td>getAppointments, getAppointmentById, getAppointmentsByPatient, createAppointment (aamarPay), confirmPayment, handleAamarpayCallback, updateAppointment, cancelAppointment, getStats, getAppointmentsByDoctor, getRegisteredUserCount, getIntakeSummary, checkIn, updateQueueState, getQueueBoard</td></tr>
+      <tr><td><strong>patientProfileController.js</strong></td><td>26.4 KB</td><td>getProfile, updateProfile, addMedicalHistory, deleteMedicalHistory, getPatientHistoryForDoctor, getAllProfiles, approveVerification, patientSignup, patientVerifyOtp, patientLogin, toggleBookmark, getBookmarks, updateSymptomCheck, forgotPasswordPatient, resetPasswordPatient, adminListUsers, adminBanUser, adminDeleteUser</td></tr>
+      <tr><td><strong>serviceAppointmentController.js</strong></td><td>18.7 KB</td><td>createServiceAppointment (aamarPay), confirmServicePayment, handleAamarpayServiceCallback, getServiceAppointments, getServiceAppointmentById, updateServiceAppointment, cancelServiceAppointment, getServiceAppointmentStats, getServiceAppointmentsByPatient</td></tr>
+      <tr><td><strong>postController.js</strong></td><td>14.4 KB</td><td>Forum posts CRUD, like/unlike, comment CRUD, upvote comments, circles, anonymous posting, admin ban/hide</td></tr>
+      <tr><td><strong>serviceController.js</strong></td><td>7.2 KB</td><td>Hospital service CRUD with Cloudinary image management</td></tr>
+      <tr><td><strong>articleController.js</strong></td><td>5.6 KB</td><td>Medical article CRUD, like/unlike, comments</td></tr>
+      <tr><td><strong>journalController.js</strong></td><td>5.5 KB</td><td>Recovery journal CRUD, journal entries, cheer system</td></tr>
+      <tr><td><strong>medicalFileController.js</strong></td><td>5.2 KB</td><td>Medical file upload to Cloudinary, list by appointment/patient, delete</td></tr>
+      <tr><td><strong>prescriptionController.js</strong></td><td>4.7 KB</td><td>Prescription CRUD (per appointment), PDF generation with PDFKit</td></tr>
+      <tr><td><strong>healthLogController.js</strong></td><td>3.7 KB</td><td>Health vitals logging (BP, sugar, mood, sleep), CRUD</td></tr>
+      <tr><td><strong>messageController.js</strong></td><td>3.7 KB</td><td>In-app messaging per appointment, send/receive</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- ===================== SECTION 8: MIDDLEWARE ===================== -->
+<div class="content page-break">
+  <h2 id="sec8">8. Backend — Middleware</h2>
+
+  <h3>8.1 firebaseAuth.js (Global Optional Middleware)</h3>
+  <p>Populates <code>req.auth</code> with user info. Supports <strong>dual authentication</strong>:</p>
+  <ol>
+    <li><strong>Custom JWT</strong> (Patient) — Verified with <code>JWT_SECRET</code>, sets <code>req.auth.userId</code></li>
+    <li><strong>Firebase ID Token</strong> — Verified against Google's public keys (RS256), validates <code>audience</code> and <code>issuer</code> for project <code> Medi-Unity -cumilla</code></li>
+  </ol>
+  <p>Also exports <code>requireFirebaseAuth</code> — guard middleware that blocks unauthenticated requests.</p>
+
+  <h3>8.2 adminAuth.js</h3>
+  <p>JWT-based admin authentication. Verifies token, checks role against valid roles (<code>super-admin</code>, <code>moderator</code>, <code>support</code>). Supports legacy <code>role: "admin"</code> tokens (mapped to <code>super-admin</code>). Attaches <code>req.admin</code> with <code>adminId</code>, <code>email</code>, <code>role</code>.</p>
+  <p>Exports <code>requireRole(...roles)</code> — higher-order middleware for role-specific route protection.</p>
+
+  <h3>8.3 doctorAuth.js</h3>
+  <p>JWT-based doctor authentication. Verifies doctor token and attaches <code>req.doctor</code> with full doctor object from database.</p>
+
+  <h3>8.4 multer.js</h3>
+  <p>General file upload middleware using Multer with disk storage. Configures upload directory and file naming with timestamps.</p>
+
+  <h3>8.5 lockerMulter.js</h3>
+  <p>Specialized Multer configuration for medical file locker uploads with appropriate file size limits and type restrictions.</p>
+</div>
+
+<!-- ===================== SECTION 9: UTILITIES ===================== -->
+<div class="content">
+  <h2 id="sec9">9. Backend — Utilities</h2>
+
+  <h3>9.1 bmdcScraper.js — Automatic BMDC Verification</h3>
+  <p>A sophisticated web scraper that verifies doctors against the <strong>Bangladesh Medical & Dental Council (BMDC)</strong> official portal (<code>verify.bmdc.org.bd</code>). The process:</p>
+  <ol>
+    <li><strong>Session Init:</strong> GET request to BMDC portal, extract CSRF token, cookies, and CAPTCHA image URL</li>
+    <li><strong>CAPTCHA Solving:</strong> Download CAPTCHA image → preprocess with Jimp (resize 3x, greyscale, contrast, threshold) → OCR with Tesseract.js (PSM 8: single word mode)</li>
+    <li><strong>Form Submission:</strong> POST registration number + solved CAPTCHA to <code>/regfind</code></li>
+    <li><strong>Result Parsing:</strong> Parse HTML response with Cheerio to extract registered name and status</li>
+    <li><strong>Fuzzy Name Matching:</strong> Compare input name vs BMDC registered name (normalized, stripped of "Dr." prefix)</li>
+    <li><strong>Auto-Retry:</strong> Up to 6 attempts on CAPTCHA solve failures</li>
+  </ol>
+
+  <h3>9.2 cloudinary.js</h3>
+  <p>Cloudinary v2 integration for image/file upload and deletion. Auto-removes local temp files after upload. Supports organized folders: <code>doctors</code>, <code>services</code>, <code>doctor_certificates</code>, <code>nid_cards</code>, <code>patient_avatars</code>, <code>medical_reports</code>.</p>
+
+  <h3>9.3 email.js</h3>
+  <p>Nodemailer transporter for OTP delivery via Gmail SMTP. Falls back to console-simulated emails when <code>EMAIL_USER</code>/<code>EMAIL_PASS</code> are not configured. Sends beautifully formatted HTML emails for account verification and password reset.</p>
+</div>
+
+<!-- ===================== SECTION 10: AUTH ===================== -->
+<div class="content page-break">
+  <h2 id="sec10">10. Authentication System</h2>
+
+  <h3>10.1 Dual Authentication Architecture</h3>
+  <div class="info-box">
+    <strong>Two parallel authentication systems coexist:</strong><br>
+    1. <strong>Firebase Authentication</strong> — Google SSO, email/password via Firebase<br>
+    2. <strong>Custom JWT Authentication</strong> — Email/phone + password signup with OTP verification via backend
+  </div>
+
+  <h3>10.2 Patient Authentication Flow</h3>
+  <h4>Option A: Firebase (Google SSO)</h4>
+  <ol>
+    <li>Patient clicks "Sign in with Google" → Firebase <code>signInWithPopup</code></li>
+    <li>Firebase returns ID token → stored in React state</li>
+    <li>All API requests include <code>Authorization: Bearer &lt;firebase_id_token&gt;</code></li>
+    <li>Backend <code>firebaseAuth</code> middleware verifies token against Google's public keys</li>
+    <li>Sets <code>req.auth.userId = payload.sub</code> (Firebase UID)</li>
+  </ol>
+
+  <h4>Option B: Custom Credentials (Email/Phone + Password)</h4>
+  <ol>
+    <li>Patient signs up with name, email, phone, password → <code>POST /api/patients/signup</code></li>
+    <li>Server creates profile, generates 6-digit OTP, sends via email (Nodemailer)</li>
+    <li>Patient verifies OTP → <code>POST /api/patients/verify-otp</code></li>
+    <li>Server issues JWT token (7-day expiry) → stored in <code>localStorage</code></li>
+    <li>Subsequent logins via <code>POST /api/patients/login</code></li>
+    <li>Backend <code>firebaseAuth</code> middleware checks custom JWT first, then Firebase token</li>
+  </ol>
+
+  <h3>10.3 Doctor Authentication</h3>
+  <ol>
+    <li>Doctor signs up with name, email, password, BMDC number → <code>POST /api/doctors/signup</code></li>
+    <li>Backend runs automatic BMDC verification (scraper + CAPTCHA solver)</li>
+    <li>If verified → account created with <code>isVerified: true</code></li>
+    <li>If scraper fails → account queued for manual admin review (<code>verificationStatus: "Pending"</code>)</li>
+    <li>Doctor login via <code>POST /api/doctors/login</code> → JWT token issued</li>
+    <li>Password stored as bcrypt hash (with plain-text fallback upgrade on login)</li>
+  </ol>
+
+  <h3>10.4 Admin Authentication</h3>
+  <ol>
+    <li>Admin login via <code>POST /api/admin/login</code></li>
+    <li>Credentials verified against <code>Admin</code> collection (bcrypt hashed passwords)</li>
+    <li>IP security: unknown IPs trigger security alerts, added to <code>knownIps</code></li>
+    <li>JWT with <code>{adminId, email, role}</code> issued (7-day expiry)</li>
+    <li>All admin actions logged to <code>AuditLog</code> collection</li>
+    <li>Frontend enforces 15-minute inactivity auto-logout</li>
+  </ol>
+</div>
+
+<!-- ===================== SECTION 11: PAYMENTS ===================== -->
+<div class="content page-break">
+  <h2 id="sec11">11. Payment Integration (aamarPay)</h2>
+
+  <h3>11.1 Payment Gateway</h3>
+  <p><strong>aamarPay</strong> is a Bangladeshi payment gateway supporting BDT transactions. The integration supports:</p>
+  <ul>
+    <li><strong>Doctor Appointments:</strong> Online payment via <code>/api/appointments</code></li>
+    <li><strong>Service Appointments:</strong> Online payment via <code>/api/service-appointments</code></li>
+    <li><strong>Cash Payments:</strong> Appointments can be booked as "Cash" (no online payment)</li>
+    <li><strong>Free Appointments:</strong> ₹0 fee appointments auto-confirmed</li>
+  </ul>
+
+  <h3>11.2 Payment Flow</h3>
+  <ol>
+    <li>Frontend sends appointment creation request with <code>paymentMethod: "Online"</code></li>
+    <li>Backend generates transaction ID (<code>DOC-{timestamp}</code> or <code>SVC-{timestamp}</code>)</li>
+    <li>Backend sends JSON POST to aamarPay API (<code>jsonpost.php</code>)</li>
+    <li>aamarPay returns <code>payment_url</code> → Frontend redirects user to payment page</li>
+    <li>After payment, aamarPay sends IPN callback to <code>/api/appointments/aamarpay/callback</code></li>
+    <li>Backend verifies <code>pay_status === "Successful"</code>, updates appointment status to <code>Confirmed</code></li>
+    <li>User redirected to <code>/appointment/success?session_id=...</code></li>
+  </ol>
+
+  <h3>11.3 Configuration</h3>
+  <table>
+    <thead><tr><th>Variable</th><th>Description</th></tr></thead>
+    <tbody>
+      <tr><td><code>AAMARPAY_STORE_ID</code></td><td>Store/merchant identifier</td></tr>
+      <tr><td><code>AAMARPAY_SIGNATURE_KEY</code></td><td>API signature key</td></tr>
+      <tr><td><code>AAMARPAY_IS_SANDBOX</code></td><td>Toggle sandbox/production mode</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- ===================== SECTION 12: FRONTEND ===================== -->
+<div class="content page-break">
+  <h2 id="sec12">12. Frontend — Patient Portal</h2>
+
+  <h3>12.1 Pages (16 Route Pages)</h3>
+  <table>
+    <thead><tr><th>Route</th><th>Page Component</th><th>Description</th><th>Auth Required</th></tr></thead>
+    <tbody>
+      <tr><td><code>/</code></td><td>PortalGateway</td><td>Landing page — portal selector (Patient/Doctor)</td><td>No</td></tr>
+      <tr><td><code>/patient</code></td><td>Home</td><td>Patient home page with banner, services, featured doctors</td><td>No</td></tr>
+      <tr><td><code>/patient/doctors</code></td><td>Doctors</td><td>Browse/search all doctors by specialization</td><td>No</td></tr>
+      <tr><td><code>/patient/doctors/:id</code></td><td>DoctorDetail</td><td>Doctor profile, schedule, booking form</td><td>No</td></tr>
+      <tr><td><code>/patient/appointments</code></td><td>Appointments</td><td>View/manage patient appointments</td><td>✅ Yes</td></tr>
+      <tr><td><code>/patient/login</code></td><td>Login</td><td>Patient login/signup (Firebase + Custom)</td><td>No</td></tr>
+      <tr><td><code>/patient/profile</code></td><td>Profile</td><td>Patient profile, NID verification, medical history</td><td>✅ Yes</td></tr>
+      <tr><td><code>/patient/forum</code></td><td>Forum</td><td>Community forum — posts, Q&A, circles, anonymous posting</td><td>No</td></tr>
+      <tr><td><code>/patient/articles</code></td><td>Articles</td><td>Medical articles by doctors</td><td>No</td></tr>
+      <tr><td><code>/patient/articles/:id</code></td><td>ArticleDetail</td><td>Full article with comments, likes, bookmarks</td><td>No</td></tr>
+      <tr><td><code>/patient/journals</code></td><td>Journals</td><td>Recovery journals — public/private, milestones, cheers</td><td>No</td></tr>
+      <tr><td><code>/patient/health-tracker</code></td><td>HealthTracker</td><td>Log BP, blood sugar, mood, sleep with charts</td><td>✅ Yes</td></tr>
+      <tr><td><code>/patient/symptom-checker</code></td><td>SymptomChecker</td><td>Interactive symptom checker → specialty recommendation</td><td>✅ Yes</td></tr>
+      <tr><td><code>/patient/appointment/success</code></td><td>VerifyPaymentPage</td><td>Payment success confirmation</td><td>No</td></tr>
+      <tr><td><code>/patient/appointment/cancel</code></td><td>VerifyPaymentPage</td><td>Payment failure/cancellation</td><td>No</td></tr>
+    </tbody>
+  </table>
+
+  <h3>12.2 Components (13 Reusable Components)</h3>
+  <table>
+    <thead><tr><th>Component</th><th>Purpose</th></tr></thead>
+    <tbody>
+      <tr><td>Navbar</td><td>Top navigation bar with auth-aware links</td></tr>
+      <tr><td>Footer</td><td>Site footer with links and branding</td></tr>
+      <tr><td>Banner</td><td>Homepage hero banner</td></tr>
+      <tr><td>HomeDoctors</td><td>Featured doctors carousel</td></tr>
+      <tr><td>DoctorsPage</td><td>Doctor listing with filters</td></tr>
+      <tr><td>AppointmentPage</td><td>Appointment booking form</td></tr>
+      <tr><td>LoginPage</td><td>Login/signup form component</td></tr>
+      <tr><td>AuthModal</td><td>Authentication modal dialog</td></tr>
+      <tr><td>Chat</td><td>In-app messaging component</td></tr>
+      <tr><td>VideoConsultation</td><td>Video consultation interface</td></tr>
+      <tr><td>IntakeSummary</td><td>Pre-consult summary display (symptoms, vitals)</td></tr>
+      <tr><td>Certification</td><td>Doctor certification upload/display</td></tr>
+      <tr><td>Testimonial</td><td>Patient testimonials display</td></tr>
+    </tbody>
+  </table>
+
+  <h3>12.3 Context (State Management)</h3>
+  <p><strong>AuthContext</strong> — React Context API providing:</p>
+  <ul>
+    <li><code>user</code>, <code>token</code>, <code>loading</code>, <code>isSignedIn</code>, <code>isLoaded</code></li>
+    <li><code>loginWithEmail()</code>, <code>signUpWithEmail()</code>, <code>loginWithGoogle()</code> — Firebase methods</li>
+    <li><code>signUpCustom()</code>, <code>verifyOtpCustom()</code>, <code>loginCustom()</code> — Custom JWT methods</li>
+    <li><code>logout()</code>, <code>getToken()</code>, <code>reloadUserProfile()</code></li>
+    <li><code>useUser()</code> hook — compatibility layer replicating Clerk's API shape</li>
+  </ul>
+</div>
+
+<!-- ===================== SECTION 13: DOCTOR PORTAL ===================== -->
+<div class="content page-break">
+  <h2 id="sec13">13. Frontend — Doctor Portal</h2>
+
+  <h3>13.1 Doctor Routes</h3>
+  <table>
+    <thead><tr><th>Route</th><th>Component</th><th>Description</th></tr></thead>
+    <tbody>
+      <tr><td><code>/doctor</code></td><td>Login (doctor mode)</td><td>Doctor login page</td></tr>
+      <tr><td><code>/doctor/:id</code></td><td>DHome (Dashboard)</td><td>Doctor dashboard with stats, quick actions</td></tr>
+      <tr><td><code>/doctor/:id/appointments</code></td><td>List</td><td>Doctor's appointment list with queue management</td></tr>
+      <tr><td><code>/doctor/:id/profile/edit</code></td><td>EditProfile</td><td>Edit doctor profile, schedule, pricing, blackouts</td></tr>
+    </tbody>
+  </table>
+
+  <h3>13.2 Doctor Dashboard Features</h3>
+  <ul>
+    <li><strong>Appointment Management:</strong> View, confirm, complete, cancel appointments</li>
+    <li><strong>Queue Board:</strong> Real-time queue management (Scheduled → CheckedIn → InConsultation → Completed)</li>
+    <li><strong>Schedule Management:</strong> Date-wise time slots, recurring slots, blackout periods, blocked slots</li>
+    <li><strong>Pricing Tiers:</strong> Separate fees for video and offline consultations</li>
+    <li><strong>Profile Management:</strong> Bio, qualifications, experience, image upload</li>
+    <li><strong>Certificate Upload:</strong> Upload BMDC certificate for verification</li>
+    <li><strong>Prescriptions:</strong> Create prescriptions with medicines, dosage, diagnosis, generate PDF</li>
+    <li><strong>Patient Chat:</strong> In-app messaging per appointment</li>
+    <li><strong>Intake Summary:</strong> View patient's symptom check, recent vitals, recovery journal</li>
+    <li><strong>Medical Files:</strong> Upload/view medical files per appointment</li>
+  </ul>
+
+  <h3>13.3 Automatic Schedule Cleanup</h3>
+  <p>The system automatically cleans up past time slots from doctor schedules:</p>
+  <ul>
+    <li>On startup: <code>cleanupAllDoctorsSchedules()</code> runs for all doctors</li>
+    <li>Hourly cron: <code>setInterval</code> at 60-minute intervals</li>
+    <li>On-demand: when individual doctor profiles are loaded</li>
+    <li>Blackout periods and blocked slots are filtered in real-time</li>
+  </ul>
+</div>
+
+<!-- ===================== SECTION 14: ADMIN DASHBOARD ===================== -->
+<div class="content page-break">
+  <h2 id="sec14">14. Admin Dashboard</h2>
+
+  <h3>14.1 Admin Pages (14 Page Components)</h3>
+  <table>
+    <thead><tr><th>Route</th><th>Page</th><th>Description</th><th>Allowed Roles</th></tr></thead>
+    <tbody>
+      <tr><td><code>/</code></td><td>Hero</td><td>Admin landing page</td><td>—</td></tr>
+      <tr><td><code>/admin-login</code></td><td>AdminLogin</td><td>Admin credentials login</td><td>—</td></tr>
+      <tr><td><code>/h</code></td><td>Home (Dashboard)</td><td>Analytics dashboard with stats, charts</td><td>All roles</td></tr>
+      <tr><td><code>/add</code></td><td>Add</td><td>Add new doctor (manual creation)</td><td>Super Admin only</td></tr>
+      <tr><td><code>/list</code></td><td>List</td><td>Doctor management list</td><td>Super Admin, Moderator</td></tr>
+      <tr><td><code>/appointments</code></td><td>Appointments</td><td>All appointments management</td><td>Super Admin, Moderator</td></tr>
+      <tr><td><code>/verify-identities</code></td><td>VerifyIdentities</td><td>Patient/Doctor identity verification queue</td><td>All roles</td></tr>
+      <tr><td><code>/community-posts</code></td><td>CommunityPosts</td><td>Moderate forum posts (ban, hide, delete)</td><td>Super Admin, Moderator</td></tr>
+      <tr><td><code>/audit-logs</code></td><td>AuditLogs</td><td>Security audit trail viewer</td><td>Super Admin only</td></tr>
+      <tr><td><code>/users</code></td><td>UserManagement</td><td>Patient user management (ban, delete)</td><td>Super Admin only</td></tr>
+    </tbody>
+  </table>
+
+  <h3>14.2 Dashboard Analytics (<code>/api/admin/dashboard-stats</code>)</h3>
+  <ul>
+    <li>Total appointments (doctor + service)</li>
+    <li>Completed / canceled breakdown</li>
+    <li>Total earnings (doctor + service, combined and separate)</li>
+    <li>Total registered doctors and patients</li>
+    <li>Monthly breakdown (appointments, completed, canceled, earnings per month)</li>
+    <li>Date-range filtering (<code>?from=YYYY-MM-DD&to=YYYY-MM-DD</code>)</li>
+  </ul>
+
+  <h3>14.3 Security Features</h3>
+  <ul>
+    <li><strong>Inactivity Timeout:</strong> 15-minute auto-logout (InactivityTimeout component)</li>
+    <li><strong>IP Logging:</strong> Every admin login records client IP</li>
+    <li><strong>New IP Alerts:</strong> Security warning on unrecognized IP login</li>
+    <li><strong>Audit Logging:</strong> All admin actions recorded with email, role, action, details, IP, timestamp</li>
+    <li><strong>Earnings Masking:</strong> Non-super-admin roles cannot see revenue/earnings data</li>
+    <li><strong>Role-Based Route Protection:</strong> <code>RequireAuth</code> HOC with <code>allowedRoles</code> prop</li>
+  </ul>
+</div>
+
+<!-- ===================== SECTION 15: RBAC ===================== -->
+<div class="content page-break">
+  <h2 id="sec15">15. Role-Based Access Control (RBAC)</h2>
+
+  <table>
+    <thead><tr><th>Feature</th><th>Super Admin</th><th>Moderator</th><th>Support</th></tr></thead>
+    <tbody>
+      <tr><td>Dashboard</td><td>✅ Full stats + earnings</td><td>✅ Stats only (no earnings)</td><td>✅ Basic view</td></tr>
+      <tr><td>Add Doctor</td><td>✅</td><td>❌</td><td>❌</td></tr>
+      <tr><td>List/Edit Doctors</td><td>✅</td><td>✅</td><td>❌</td></tr>
+      <tr><td>Delete Doctor</td><td>✅</td><td>❌</td><td>❌</td></tr>
+      <tr><td>View Appointments</td><td>✅</td><td>✅</td><td>❌</td></tr>
+      <tr><td>Verify Identities</td><td>✅</td><td>✅</td><td>✅</td></tr>
+      <tr><td>Community Moderation</td><td>✅</td><td>✅</td><td>❌</td></tr>
+      <tr><td>Audit Logs</td><td>✅</td><td>❌</td><td>❌</td></tr>
+      <tr><td>User Management</td><td>✅</td><td>❌</td><td>❌</td></tr>
+      <tr><td>View Revenue Data</td><td>✅</td><td>❌</td><td>❌</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- ===================== SECTION 16: ENV VARIABLES ===================== -->
+<div class="content page-break">
+  <h2 id="sec16">16. Environment Variables & Configuration</h2>
+
+  <h3>16.1 Backend (<code>backend/.env</code>)</h3>
+  <table>
+    <thead><tr><th>Variable</th><th>Description</th></tr></thead>
+    <tbody>
+      <tr><td><code>MONGODB_URI</code></td><td>MongoDB Atlas connection string</td></tr>
+      <tr><td><code>JWT_SECRET</code></td><td>Secret key for JWT token signing</td></tr>
+      <tr><td><code>PORT</code></td><td>Server port (default: 4000)</td></tr>
+      <tr><td><code>FRONTEND_URL</code></td><td>Frontend base URL (CORS + payment redirects)</td></tr>
+      <tr><td><code>ADMIN_URL</code></td><td>Admin panel URL (CORS)</td></tr>
+      <tr><td><code>FIREBASE_PROJECT_ID</code></td><td>Firebase project ID for token verification</td></tr>
+      <tr><td><code>CLOUDINARY_CLOUD_NAME</code></td><td>Cloudinary cloud name</td></tr>
+      <tr><td><code>CLOUDINARY_API_KEY</code></td><td>Cloudinary API key</td></tr>
+      <tr><td><code>CLOUDINARY_API_SECRET</code></td><td>Cloudinary API secret</td></tr>
+      <tr><td><code>AAMARPAY_STORE_ID</code></td><td>aamarPay store/merchant ID</td></tr>
+      <tr><td><code>AAMARPAY_SIGNATURE_KEY</code></td><td>aamarPay API signature key</td></tr>
+      <tr><td><code>AAMARPAY_IS_SANDBOX</code></td><td>Toggle sandbox mode (<code>true</code>/<code>false</code>)</td></tr>
+      <tr><td><code>EMAIL_HOST</code></td><td>SMTP host (default: smtp.gmail.com)</td></tr>
+      <tr><td><code>EMAIL_PORT</code></td><td>SMTP port (default: 587)</td></tr>
+      <tr><td><code>EMAIL_SECURE</code></td><td>TLS (true/false)</td></tr>
+      <tr><td><code>EMAIL_USER</code></td><td>Gmail address for OTP emails</td></tr>
+      <tr><td><code>EMAIL_PASS</code></td><td>Gmail app password</td></tr>
+    </tbody>
+  </table>
+
+  <h3>16.2 Frontend & Admin (<code>frontend/.env</code> / <code>admin/.env</code>)</h3>
+  <table>
+    <thead><tr><th>Variable</th><th>Description</th></tr></thead>
+    <tbody>
+      <tr><td><code>VITE_API_URL</code></td><td>Backend API base URL</td></tr>
+      <tr><td><code>VITE_FIREBASE_API_KEY</code></td><td>Firebase Web API key</td></tr>
+      <tr><td><code>VITE_FIREBASE_AUTH_DOMAIN</code></td><td>Firebase auth domain</td></tr>
+      <tr><td><code>VITE_FIREBASE_PROJECT_ID</code></td><td>Firebase project ID</td></tr>
+      <tr><td><code>VITE_FIREBASE_STORAGE_BUCKET</code></td><td>Firebase storage bucket</td></tr>
+      <tr><td><code>VITE_FIREBASE_MESSAGING_SENDER_ID</code></td><td>Firebase Cloud Messaging sender ID</td></tr>
+      <tr><td><code>VITE_FIREBASE_APP_ID</code></td><td>Firebase web app ID</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- ===================== SECTION 17: DEPLOYMENT ===================== -->
+<div class="content page-break">
+  <h2 id="sec17">17. Deployment (Render)</h2>
+
+  <p>The project uses <code>render.yaml</code> for deployment on <strong>Render.com</strong>:</p>
+
+  <h3>17.1 Services</h3>
+  <table>
+    <thead><tr><th>Service</th><th>Type</th><th>Build Command</th><th>Start/Publish</th></tr></thead>
+    <tbody>
+      <tr><td><strong> Medi-Unity -backend</strong></td><td>Web (Node.js)</td><td><code>npm install</code></td><td><code>node index.js</code> (Port 10000)</td></tr>
+      <tr><td><strong> Medi-Unity -frontend</strong></td><td>Static</td><td><code>npm install && npm run build</code></td><td>Publish <code>dist/</code></td></tr>
+      <tr><td><strong> Medi-Unity -admin</strong></td><td>Static</td><td><code>npm install && npm run build</code></td><td>Publish <code>dist/</code></td></tr>
+    </tbody>
+  </table>
+
+  <h3>17.2 Production URLs</h3>
+  <ul>
+    <li>Backend: <code>https:// Medi-Unity -backend-6eww.onrender.com</code></li>
+    <li>Frontend: <code>https:// Medi-Unity -frontend-idef.onrender.com</code></li>
+    <li>Admin: <code>https:// Medi-Unity -admin-jhtc.onrender.com</code></li>
+  </ul>
+
+  <h3>17.3 CORS Configuration</h3>
+  <p>The backend allows requests from: <code>localhost:5173</code>, <code>localhost:5174</code>, <code>localhost:5175</code>, <code>localhost:5176</code>, and any <code>*.onrender.com</code> domain, plus <code>FRONTEND_URL</code> and <code>ADMIN_URL</code> env vars.</p>
+</div>
+
+<!-- ===================== SECTION 18: FEATURES ===================== -->
+<div class="content page-break">
+  <h2 id="sec18">18. Key Features Summary</h2>
+
+  <h3>🏥 Patient Features</h3>
+  <ul>
+    <li>Browse doctors by specialization, name, or search</li>
+    <li>Book appointments (video/offline) with date-time slot selection</li>
+    <li>Online payment via aamarPay (BDT) or cash payment option</li>
+    <li>Self check-in on appointment day</li>
+    <li>View queue position and consultation status in real-time</li>
+    <li>In-app messaging with doctors (per appointment)</li>
+    <li>Upload and manage medical files per appointment</li>
+    <li>View and download prescriptions (PDF)</li>
+    <li>Medical history management with file uploads</li>
+    <li>Interactive symptom checker → recommended specialty</li>
+    <li>Health vitals tracker (BP, blood sugar, mood, sleep) with historical data</li>
+    <li>Recovery journals with milestone tracking and community cheers</li>
+    <li>Community forum with posts, Q&A, anonymous posting, support circles</li>
+    <li>Medical articles by doctors with likes, comments, bookmarks</li>
+    <li>Profile management with NID verification</li>
+    <li>Dual auth: Google SSO or email/phone + OTP</li>
+    <li>Password reset via OTP (email)</li>
+  </ul>
+
+  <h3>👨‍⚕️ Doctor Features</h3>
+  <ul>
+    <li>Self-registration with automatic BMDC verification (web scraper + CAPTCHA solver)</li>
+    <li>Comprehensive profile management (bio, qualifications, experience, location)</li>
+    <li>Flexible schedule management (date-wise slots, recurring slots)</li>
+    <li>Blackout periods (vacations) and individually blocked slots</li>
+    <li>Automatic conflict detection — appointments flagged for rescheduling</li>
+    <li>Pricing tiers (video vs offline)</li>
+    <li>Appointment management with queue board (Scheduled → CheckedIn → InConsultation → Completed)</li>
+    <li>Prescription creation with medicines, dosage, diagnosis, and PDF generation</li>
+    <li>Patient intake summary (symptom check, vitals, recovery journal)</li>
+    <li>Patient medical history access (authorized by appointment relationship)</li>
+    <li>In-app messaging with patients</li>
+    <li>Medical file sharing per appointment</li>
+    <li>Medical article publishing</li>
+    <li>Community forum participation</li>
+    <li>Availability toggle</li>
+    <li>Certificate upload for verification</li>
+    <li>Reputation points (gamification)</li>
+    <li>Password reset via OTP</li>
+  </ul>
+
+  <h3>🛡️ Admin Features</h3>
+  <ul>
+    <li>Role-based access (Super Admin, Moderator, Support)</li>
+    <li>Analytics dashboard with revenue, appointment, and user stats</li>
+    <li>Date-range filtering for all dashboard metrics</li>
+    <li>Monthly breakdown charts</li>
+    <li>Doctor management (add, edit, delete, verify)</li>
+    <li>Patient user management (list, search, ban/unban, delete)</li>
+    <li>Appointment management (view, update status)</li>
+    <li>Hospital service management (add, edit, delete services)</li>
+    <li>Identity verification queue (patient NID, doctor certificates)</li>
+    <li>Community post moderation (ban, hide, delete posts)</li>
+    <li>Comprehensive audit logging (every admin action tracked)</li>
+    <li>Security: IP logging, new IP alerts, inactivity auto-logout</li>
+    <li>Default admin accounts seeded on startup</li>
+  </ul>
+
+  <h3>🔧 Technical Features</h3>
+  <ul>
+    <li>BMDC web scraper with CAPTCHA solving (Tesseract.js OCR)</li>
+    <li>Automatic past-schedule cleanup (hourly cron)</li>
+    <li>Appointment conflict auto-detection on schedule changes</li>
+    <li>Duplicate booking prevention</li>
+    <li>Cloudinary CDN integration for images and files</li>
+    <li>Email OTP system via Nodemailer (Gmail SMTP)</li>
+    <li>Request logging middleware (method, path, status, duration, origin)</li>
+    <li>Render.com deployment configuration</li>
+    <li>One-click Windows launcher (LAUNCH_ Medi-Unity .bat)</li>
+  </ul>
+</div>
+
+<!-- ===================== SECTION 19: HOW TO RUN ===================== -->
+<div class="content page-break">
+  <h2 id="sec19">19. How to Run Locally</h2>
+
+  <h3>Prerequisites</h3>
+  <ul>
+    <li>Node.js (v18+) installed</li>
+    <li>MongoDB Atlas URI configured in <code>backend/.env</code></li>
+    <li>Firebase project set up (or use existing config)</li>
+  </ul>
+
+  <h3>Option A: One-Click Launch (Windows)</h3>
+  <pre>
+Double-click: LAUNCH_ Medi-Unity .bat
+  </pre>
+  <p>This opens 3 terminal windows — one for each service (backend, frontend, admin). Auto-installs dependencies if needed.</p>
+
+  <h3>Option B: Manual Start</h3>
+  <pre>
+# Terminal 1 — Backend
+cd backend
+npm install
+npm run dev          # → http://localhost:4000
+
+# Terminal 2 — Frontend
+cd frontend
+npm install
+npm run dev          # → http://localhost:5173
+
+# Terminal 3 — Admin
+cd admin
+npm install
+npm run dev          # → http://localhost:5174
+  </pre>
+
+  <h3>Ports</h3>
+  <table>
+    <thead><tr><th>Service</th><th>Port</th><th>URL</th></tr></thead>
+    <tbody>
+      <tr><td>Backend API</td><td>4000</td><td><code>http://localhost:4000</code></td></tr>
+      <tr><td>Patient Frontend</td><td>5173</td><td><code>http://localhost:5173</code></td></tr>
+      <tr><td>Admin Dashboard</td><td>5174</td><td><code>http://localhost:5174</code></td></tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- ===================== SECTION 20: DEFAULT CREDENTIALS ===================== -->
+<div class="content">
+  <h2 id="sec20">20. Default Admin Credentials</h2>
+
+  <div class="warning-box">
+    <strong>⚠️ Default Accounts (Seeded on Startup):</strong> Change these in production!
+  </div>
+
+  <table>
+    <thead><tr><th>Email</th><th>Password</th><th>Role</th></tr></thead>
+    <tbody>
+      <tr><td><code>admin@mediunity.com</code></td><td><code>admin123</code></td><td>Super Admin</td></tr>
+      <tr><td><code>moderator@mediunity.com</code></td><td><code>moderator123</code></td><td>Moderator</td></tr>
+      <tr><td><code>support@mediunity.com</code></td><td><code>support123</code></td><td>Support</td></tr>
+    </tbody>
+  </table>
+
+  <br><br>
+  <hr>
+  <p style="text-align: center; color: var(--slate-500); font-size: 12px; margin-top: 30px;">
+    <strong>MediUnity ( Medi-Unity ) — Complete Project Documentation</strong><br>
+    Generated on July 9, 2026 • All rights reserved<br>
+    Full-Stack MERN Healthcare Management Platform
+  </p>
+</div>
+
+</body>
+</html>

@@ -3,10 +3,15 @@ import jwt from "jsonwebtoken";
 import bcryptjs from "bcryptjs";
 import Doctor from "../models/Doctor.js";
 import Appointment from "../models/Appointment.js";
+import PatientProfile from "../models/PatientProfile.js";
 import { uploadToCloudinary, deleteFromCloudinary } from "../utils/cloudinary.js";
 import { sendEmail } from "../utils/email.js";
 import { verifyDoctorBMDC } from "../utils/bmdcScraper.js";
-
+import * as cache from "../utils/cache.js";
+import crypto from "crypto";
+import { isValidPassword } from "../utils/passwordPolicy.js";
+import { generateTokens } from "./tokenController.js";
+import fs from "fs";
 /* ---------------- Helpers ---------------- */
 
 function isSlotPassed(dateStr, slotTimeStr) {
@@ -241,6 +246,14 @@ function normalizeDocForClient(raw = {}) {
   doc.blockedSlots = blockedSlots;
   doc.recurringSlots = recurringSlots;
 
+  doc.defaultMaxPatientsPerDay = doc.defaultMaxPatientsPerDay ?? 0;
+  doc.repeatLimitEnabled = doc.repeatLimitEnabled ?? false;
+  doc.maxPatientsPerDay = doc.maxPatientsPerDay ?? {};
+
+  doc.defaultHospital = doc.defaultHospital ?? { name: "", address: "" };
+  doc.slotHospitals = doc.slotHospitals ?? {};
+  doc.chambers = Array.isArray(doc.chambers) ? doc.chambers : [];
+
   return doc;
 }
 
@@ -253,8 +266,8 @@ export async function createDoctor(req, res) {
       return res.status(400).json({ success: false, message: "email, password and name are required" });
     }
 
-    const emailLC = (body.email || "").toLowerCase();
-    if (await Doctor.findOne({ email: emailLC })) {
+    const emailLC = (body.email || "").toLowerCase().trim();
+    if (await Doctor.findOne({ emailHash: crypto.createHash("sha256").update(emailLC).digest("hex") })) {
       return res.status(409).json({ success: false, message: "Email already in use" });
     }
 
@@ -274,6 +287,52 @@ export async function createDoctor(req, res) {
         try { recurringSlots = JSON.parse(body.recurringSlots); } catch { recurringSlots = []; }
       } else if (Array.isArray(body.recurringSlots)) {
         recurringSlots = body.recurringSlots;
+      }
+    }
+
+    let repeatLimitEnabled = false;
+    if (body.repeatLimitEnabled !== undefined) {
+      repeatLimitEnabled = String(body.repeatLimitEnabled) === "true";
+    }
+    let defaultMaxPatientsPerDay = 0;
+    if (body.defaultMaxPatientsPerDay !== undefined) {
+      const val = Number(body.defaultMaxPatientsPerDay);
+      defaultMaxPatientsPerDay = isNaN(val) ? 0 : val;
+    }
+    let maxPatientsPerDay = {};
+    if (body.maxPatientsPerDay !== undefined) {
+      let mpd = body.maxPatientsPerDay;
+      if (typeof mpd === "string") {
+        try { mpd = JSON.parse(mpd); } catch { mpd = {}; }
+      }
+      if (mpd && typeof mpd === "object" && !Array.isArray(mpd)) {
+        const cleaned = {};
+        Object.entries(mpd).forEach(([dateStr, limitVal]) => {
+          const num = Number(limitVal);
+          cleaned[dateStr] = isNaN(num) ? 0 : num;
+        });
+        maxPatientsPerDay = cleaned;
+      }
+    }
+
+    let defaultHospital = { name: "", address: "" };
+    if (body.defaultHospital) {
+      if (typeof body.defaultHospital === "string") {
+        try { defaultHospital = JSON.parse(body.defaultHospital); } catch { defaultHospital = { name: "", address: "" }; }
+      } else if (typeof body.defaultHospital === "object") {
+        defaultHospital = {
+          name: String(body.defaultHospital.name || ""),
+          address: String(body.defaultHospital.address || "")
+        };
+      }
+    }
+
+    let slotHospitals = {};
+    if (body.slotHospitals) {
+      if (typeof body.slotHospitals === "string") {
+        try { slotHospitals = JSON.parse(body.slotHospitals); } catch { slotHospitals = {}; }
+      } else if (typeof body.slotHospitals === "object" && !Array.isArray(body.slotHospitals)) {
+        slotHospitals = body.slotHospitals;
       }
     }
 
@@ -301,6 +360,11 @@ export async function createDoctor(req, res) {
       fee,
       schedule,
       recurringSlots,
+      defaultMaxPatientsPerDay,
+      repeatLimitEnabled,
+      maxPatientsPerDay,
+      defaultHospital,
+      slotHospitals,
       success: body.success || "",
       patients: body.patients || "",
       rating,
@@ -339,7 +403,7 @@ export const getDoctors = async (req, res) => {
     const match = {};
     if (q && typeof q === "string" && q.trim()) {
       const re = new RegExp(q.trim(), "i");
-      match.$or = [{ name: re }, { specialization: re }, { speciality: re }, { email: re }];
+      match.$or = [{ name: re }, { specialization: re }, { speciality: re }, { email: re }, { location: re }];
     }
 
     const docs = await Doctor.aggregate([
@@ -415,7 +479,12 @@ export const getDoctors = async (req, res) => {
         pricingTiers: d.pricingTiers || { video: 500, offline: 400 },
         blackoutPeriods,
         blockedSlots,
-        raw: d,
+        defaultMaxPatientsPerDay: d.defaultMaxPatientsPerDay ?? 0,
+        repeatLimitEnabled: d.repeatLimitEnabled ?? false,
+        maxPatientsPerDay: d.maxPatientsPerDay ?? {},
+        defaultHospital: d.defaultHospital ?? { name: "", address: "" },
+        slotHospitals: d.slotHospitals ?? {},
+        raw: { ...d, _emailHash: d.emailHash },
       };
     });
 
@@ -439,6 +508,18 @@ export const getDoctors = async (req, res) => {
 export async function getDoctorById(req, res) {
   try {
     const { id } = req.params;
+    const cacheKey = cache.keys.doctorProfile(id);
+    
+    // Check Cache
+    const cachedData = await cache.get(cacheKey);
+    if (cachedData) {
+      const out = { ...cachedData };
+      if (req.admin && req.admin.role !== "super-admin") {
+        delete out.earnings;
+      }
+      return res.json({ success: true, data: out, fromCache: true });
+    }
+
     const doc = await Doctor.findById(id).select("-password");
     if (!doc) return res.status(404).json({ success: false, message: "Doctor not found" });
     
@@ -446,8 +527,27 @@ export async function getDoctorById(req, res) {
     
     const updatedDoc = await Doctor.findById(id).select("-password").lean();
     const out = normalizeDocForClient(updatedDoc);
+
+    // Fetch non-canceled appointment counts by date for this doctor to show availability
+    const appts = await Appointment.find({
+      doctorId: id,
+      status: { $ne: "Canceled" }
+    }).select("date");
+
+    const counts = {};
+    appts.forEach(a => {
+      if (a.date) {
+        counts[a.date] = (counts[a.date] || 0) + 1;
+      }
+    });
+
+    out.appointmentCountsByDate = counts;
+
+    // Cache doctor profile details for 1 hour (3600s)
+    await cache.set(cacheKey, out, 3600);
+
     // Mask earnings for non-super-admin admins
-    if (req.admin && req.admin.role !== 'super-admin') {
+    if (req.admin && req.admin.role !== "super-admin") {
       delete out.earnings;
     }
     return res.json({ success: true, data: out });
@@ -483,7 +583,10 @@ export async function updateDoctor(req, res) {
       existing.imageUrl = body.imageUrl;
     }
 
-    if (body.schedule) existing.schedule = parseScheduleInput(body.schedule);
+    if (body.schedule) {
+      existing.schedule = parseScheduleInput(body.schedule);
+      existing.markModified("schedule");
+    }
 
     if (body.recurringSlots !== undefined) {
       let rs = body.recurringSlots;
@@ -492,6 +595,57 @@ export async function updateDoctor(req, res) {
       }
       if (Array.isArray(rs)) {
         existing.recurringSlots = rs;
+        existing.markModified("recurringSlots");
+      }
+    }
+
+    if (body.repeatLimitEnabled !== undefined) {
+      existing.repeatLimitEnabled = String(body.repeatLimitEnabled) === "true";
+    }
+
+    if (body.defaultMaxPatientsPerDay !== undefined) {
+      const val = Number(body.defaultMaxPatientsPerDay);
+      existing.defaultMaxPatientsPerDay = isNaN(val) ? 0 : val;
+    }
+
+    if (body.defaultHospital !== undefined) {
+      let dh = body.defaultHospital;
+      if (typeof dh === "string") {
+        try { dh = JSON.parse(dh); } catch { dh = { name: "", address: "" }; }
+      }
+      if (dh && typeof dh === "object") {
+        existing.defaultHospital = {
+          name: String(dh.name || ""),
+          address: String(dh.address || "")
+        };
+        existing.markModified("defaultHospital");
+      }
+    }
+
+    if (body.slotHospitals !== undefined) {
+      let sh = body.slotHospitals;
+      if (typeof sh === "string") {
+        try { sh = JSON.parse(sh); } catch { sh = {}; }
+      }
+      if (sh && typeof sh === "object" && !Array.isArray(sh)) {
+        existing.slotHospitals = sh;
+        existing.markModified("slotHospitals");
+      }
+    }
+
+    if (body.maxPatientsPerDay !== undefined) {
+      let mpd = body.maxPatientsPerDay;
+      if (typeof mpd === "string") {
+        try { mpd = JSON.parse(mpd); } catch { mpd = {}; }
+      }
+      if (mpd && typeof mpd === "object" && !Array.isArray(mpd)) {
+        const cleaned = {};
+        Object.entries(mpd).forEach(([dateStr, limitVal]) => {
+          const num = Number(limitVal);
+          cleaned[dateStr] = isNaN(num) ? 0 : num;
+        });
+        existing.maxPatientsPerDay = cleaned;
+        existing.markModified("maxPatientsPerDay");
       }
     }
 
@@ -504,6 +658,7 @@ export async function updateDoctor(req, res) {
         video: Number(pt.video ?? existing.pricingTiers?.video ?? 500),
         offline: Number(pt.offline ?? existing.pricingTiers?.offline ?? 400)
       };
+      existing.markModified("pricingTiers");
     }
 
     let scheduleOrBlackoutChanged = false;
@@ -515,6 +670,7 @@ export async function updateDoctor(req, res) {
       }
       if (Array.isArray(bp)) {
         existing.blackoutPeriods = bp;
+        existing.markModified("blackoutPeriods");
         scheduleOrBlackoutChanged = true;
       }
     }
@@ -526,6 +682,7 @@ export async function updateDoctor(req, res) {
       }
       if (Array.isArray(bs)) {
         existing.blockedSlots = bs;
+        existing.markModified("blockedSlots");
         scheduleOrBlackoutChanged = true;
       }
     }
@@ -542,10 +699,11 @@ export async function updateDoctor(req, res) {
       existing.rating = isNaN(r) ? 0 : r;
     }
 
-    if (body.email && body.email !== existing.email) {
-      const other = await Doctor.findOne({ email: body.email.toLowerCase() });
+    if (body.email && body.email.toLowerCase().trim() !== (existing.email || "").toLowerCase().trim()) {
+      const emailLC = body.email.toLowerCase().trim();
+      const other = await Doctor.findOne({ emailHash: crypto.createHash("sha256").update(emailLC).digest("hex") });
       if (other && other._id.toString() !== id) return res.status(409).json({ success: false, message: "Email already in use" });
-      existing.email = body.email.toLowerCase();
+      existing.email = emailLC;
     }
 
     if (body.password) {
@@ -554,6 +712,10 @@ export async function updateDoctor(req, res) {
     }
 
     await existing.save();
+
+    // Invalidate Redis profile cache and slots caches
+    await cache.del(cache.keys.doctorProfile(id));
+    await cache.delPattern(`doctor:slots:${id}:*`);
 
     if (scheduleOrBlackoutChanged) {
       // Trigger appointment conflict checks asynchronously
@@ -564,8 +726,9 @@ export async function updateDoctor(req, res) {
     delete out.password;
     return res.json({ success: true, data: out });
   } catch (err) {
+    fs.appendFileSync('debug_update.txt', `updateDoctor error: ${err.stack || err}\n`);
     console.error("updateDoctor error:", err);
-    return res.status(500).json({ success: false, message: "Server error" });
+    return res.status(500).json({ success: false, message: "Server error", err: err.message });
   }
 }
 
@@ -619,32 +782,50 @@ export async function doctorLogin(req, res) {
     const { email, password } = req.body || {};
     if (!email || !password) return res.status(400).json({ success: false, message: "Email and password required" });
 
-    const doc = await Doctor.findOne({ email: email.toLowerCase() }).select("+password");
-    if (!doc) return res.status(401).json({ success: false, message: "Invalid credentials" });
+    const targetEmail = email.toLowerCase().trim();
+    fs.appendFileSync('debug_login.txt', `Login attempt for: ${targetEmail}\n`);
+    
+    // Fallback: Fetch all and find by decrypted email since seeded data might lack valid emailHash
+    const allDocs = await Doctor.find({}).select("+password");
+    const doc = allDocs.find(d => d.email && d.email.toLowerCase().trim() === targetEmail);
+    
+    if (!doc) {
+      fs.appendFileSync('debug_login.txt', `Failed: Doctor not found by email search\n`);
+      return res.status(401).json({ success: false, message: "Invalid credentials" });
+    }
 
     // Hashed comparison with plain-text fallback upgrade
     let isMatch = false;
-    if (doc.password.startsWith("$2a$") || doc.password.startsWith("$2b$")) {
-      isMatch = await bcryptjs.compare(password, doc.password);
+    const dbPassword = String(doc.password || "");
+    
+    if (dbPassword.startsWith("$2a$") || dbPassword.startsWith("$2b$")) {
+      isMatch = await bcryptjs.compare(password, dbPassword);
     } else {
-      isMatch = (doc.password === password);
+      isMatch = (dbPassword === password);
       if (isMatch) {
         // Upgrade password to hashed format in the database
         const salt = await bcryptjs.genSalt(10);
         doc.password = await bcryptjs.hash(password, salt);
-        await doc.save();
+        await doc.save().catch(e => console.error("Failed to upgrade password", e));
       }
     }
 
-    if (!isMatch) return res.status(401).json({ success: false, message: "Invalid credentials" });
+    if (!isMatch) {
+      fs.appendFileSync('debug_login.txt', `Failed: Password mismatch for ${email}\n`);
+      return res.status(401).json({ success: false, message: "Invalid credentials" });
+    }
 
     const secret = process.env.JWT_SECRET;
-    if (!secret) return res.status(500).json({ success: false, message: "JWT_SECRET not configured" });
+    if (!secret) {
+      fs.appendFileSync('debug_login.txt', `Failed: JWT_SECRET missing\n`);
+      return res.status(500).json({ success: false, message: "JWT_SECRET not configured" });
+    }
 
     const token = jwt.sign({ id: doc._id.toString(), email: doc.email, role: "doctor" }, secret, { expiresIn: "7d" });
 
     const out = doc.toObject();
     delete out.password;
+    fs.appendFileSync('debug_login.txt', `Success: Logged in ${email}\n`);
     return res.json({ success: true, token, data: out });
   } catch (err) {
     console.error("doctorLogin error:", err);
@@ -719,8 +900,13 @@ export async function signupDoctor(req, res) {
       return res.status(400).json({ success: false, message: "Name, email, password and BMDC number are required" });
     }
 
+    if (!isValidPassword(password)) {
+      return res.status(400).json({ success: false, message: "Password must be at least 8 characters long and contain at least one lowercase letter, one uppercase letter, and one number" });
+    }
+
     const emailLC = email.toLowerCase().trim();
-    if (await Doctor.findOne({ email: emailLC })) {
+    const emailHash = crypto.createHash("sha256").update(emailLC).digest("hex");
+    if (await Doctor.findOne({ emailHash })) {
       return res.status(409).json({ success: false, message: "Email already registered" });
     }
 
@@ -765,16 +951,16 @@ export async function signupDoctor(req, res) {
 
     await doc.save();
 
-    const secret = process.env.JWT_SECRET || "your_jwt_secret_here";
-    const token = jwt.sign({ id: doc._id.toString(), email: doc.email, role: "doctor" }, secret, { expiresIn: "7d" });
+    const { accessToken, refreshToken } = await generateTokens(doc._id, doc.email, "doctor");
 
-    const out = normalizeDocForClient(doc.toObject());
-    delete out.password;
+    const doctorResponse = doc.toObject();
+    delete doctorResponse.password;
 
     return res.status(201).json({ 
       success: true, 
-      data: out, 
-      token,
+      token: accessToken,
+      refreshToken,
+      doctor: doctorResponse,
       message: warningMessage || "Registered and verified successfully!"
     });
   } catch (err) {
@@ -818,7 +1004,8 @@ export async function forgotPasswordDoctor(req, res) {
     }
 
     const emailLC = email.toLowerCase().trim();
-    const doc = await Doctor.findOne({ email: emailLC });
+    const emailHash = crypto.createHash("sha256").update(emailLC).digest("hex");
+    const doc = await Doctor.findOne({ emailHash });
     if (!doc) {
       return res.status(404).json({ success: false, message: "Doctor not found" });
     }
@@ -875,8 +1062,13 @@ export async function resetPasswordDoctor(req, res) {
       return res.status(400).json({ success: false, message: "All fields are required" });
     }
 
+    if (!isValidPassword(newPassword)) {
+      return res.status(400).json({ success: false, message: "Password must be at least 8 characters long and contain at least one lowercase letter, one uppercase letter, and one number" });
+    }
+
     const emailLC = email.toLowerCase().trim();
-    const doc = await Doctor.findOne({ email: emailLC });
+    const emailHash = crypto.createHash("sha256").update(emailLC).digest("hex");
+    const doc = await Doctor.findOne({ emailHash });
     if (!doc) {
       return res.status(404).json({ success: false, message: "Doctor not found" });
     }
@@ -909,6 +1101,328 @@ export async function resetPasswordDoctor(req, res) {
   } catch (err) {
     console.error("resetPasswordDoctor error:", err);
     return res.status(500).json({ success: false, message: "Server error during password reset" });
+  }
+}
+
+export async function googleAuthDoctor(req, res) {
+  try {
+    const { email } = req.body || {};
+    if (!email) return res.status(400).json({ success: false, message: "Email required" });
+
+    const emailHash = crypto.createHash("sha256").update(email.toLowerCase().trim()).digest("hex");
+    const doc = await Doctor.findOne({ emailHash });
+    if (!doc) return res.status(404).json({ success: false, message: "Email not found" });
+
+    const { accessToken, refreshToken } = await generateTokens(doc._id, doc.email, "doctor");
+
+    const doctorResponse = doc.toObject();
+    delete doctorResponse.password;
+
+    return res.json({
+      success: true,
+      token: accessToken,
+      refreshToken,
+      doctor: doctorResponse
+    });
+  } catch (err) {
+    console.error("googleAuthDoctor error:", err);
+    return res.status(500).json({ success: false, message: "Server error" });
+  }
+}
+
+export async function googleSignupDoctor(req, res) {
+  try {
+    const { name, email, bmdcNumber } = req.body || {};
+    if (!name || !email || !bmdcNumber) return res.status(400).json({ success: false, message: "Name, email, and bmdcNumber required" });
+
+    const emailLC = email.toLowerCase().trim();
+    const emailHash = crypto.createHash("sha256").update(emailLC).digest("hex");
+    if (await Doctor.findOne({ emailHash })) return res.status(409).json({ success: false, message: "Email already registered" });
+
+    const bmdcClean = bmdcNumber.trim();
+    if (await Doctor.findOne({ bmdcNumber: bmdcClean })) return res.status(409).json({ success: false, message: "BMDC number already registered" });
+
+    const placeholderSalt = await bcryptjs.genSalt(10);
+    const placeholderPassword = await bcryptjs.hash(Math.random().toString(36), placeholderSalt);
+
+    const doc = new Doctor({
+      name,
+      email: emailLC,
+      password: placeholderPassword,
+      bmdcNumber: bmdcClean,
+      isVerified: true,
+      verificationStatus: "Verified"
+    });
+
+    await doc.save();
+
+    const { accessToken, refreshToken } = await generateTokens(doc._id, doc.email, "doctor");
+
+    const doctorResponse = doc.toObject();
+    delete doctorResponse.password;
+
+    return res.status(201).json({ 
+      success: true, 
+      token: accessToken,
+      refreshToken,
+      doctor: doctorResponse 
+    });
+  } catch (err) {
+    console.error("googleSignupDoctor error:", err);
+    return res.status(500).json({ success: false, message: "Server error" });
+  }
+}
+
+export async function toggleFollowDoctor(req, res) {
+  try {
+    const { id } = req.params; // Doctor ID
+    
+    let patient = null;
+    const userId = req.auth?.userId;
+    if (userId) {
+      patient = await PatientProfile.findOne({ clerkUserId: userId });
+    } else if (req.body.patientId) {
+      patient = await PatientProfile.findById(req.body.patientId);
+    }
+
+    if (!patient) {
+      return res.status(401).json({ success: false, message: "Unauthorized patient profile" });
+    }
+
+    const patientId = patient._id;
+
+    const doctor = await Doctor.findById(id);
+    if (!doctor) return res.status(404).json({ success: false, message: "Doctor not found" });
+
+    const isFollowing = doctor.followers.includes(patientId);
+    if (isFollowing) {
+      // Unfollow
+      doctor.followers = doctor.followers.filter(f => String(f) !== String(patientId));
+      patient.followingDoctors = patient.followingDoctors.filter(d => String(d) !== String(id));
+    } else {
+      // Follow
+      doctor.followers.push(patientId);
+      patient.followingDoctors.push(id);
+    }
+
+    doctor.followersCount = doctor.followers.length;
+    await doctor.save();
+    await patient.save();
+
+    return res.json({
+      success: true,
+      isFollowing: !isFollowing,
+      followersCount: doctor.followersCount,
+      message: isFollowing ? "Unfollowed doctor creator" : "Following doctor creator"
+    });
+  } catch (err) {
+    console.error("toggleFollowDoctor error:", err);
+    return res.status(500).json({ success: false, message: "Server error" });
+  }
+}
+
+export async function updateDoctorSchedule(req, res) {
+  try {
+    const { id } = req.params;
+    const body = req.body || {};
+
+    if (!req.doctor || String(req.doctor._id || req.doctor.id) !== String(id)) {
+      return res.status(403).json({ success: false, message: "Not authorized to update this doctor's schedule" });
+    }
+
+    const existing = await Doctor.findById(id);
+    if (!existing) return res.status(404).json({ success: false, message: "Doctor not found" });
+
+    if (body.schedule) {
+      existing.schedule = parseScheduleInput(body.schedule);
+      existing.markModified("schedule");
+    }
+
+    if (body.recurringSlots !== undefined) {
+      let rs = body.recurringSlots;
+      if (typeof rs === "string") {
+        try { rs = JSON.parse(rs); } catch { rs = []; }
+      }
+      if (Array.isArray(rs)) {
+        existing.recurringSlots = rs;
+        existing.markModified("recurringSlots");
+      }
+    }
+
+    if (body.repeatLimitEnabled !== undefined) {
+      existing.repeatLimitEnabled = String(body.repeatLimitEnabled) === "true";
+    }
+
+    if (body.defaultMaxPatientsPerDay !== undefined) {
+      const val = Number(body.defaultMaxPatientsPerDay);
+      existing.defaultMaxPatientsPerDay = isNaN(val) ? 0 : val;
+    }
+
+    if (body.defaultHospital !== undefined) {
+      let dh = body.defaultHospital;
+      if (typeof dh === "string") {
+        try { dh = JSON.parse(dh); } catch { dh = { name: "", address: "" }; }
+      }
+      if (dh && typeof dh === "object") {
+        existing.defaultHospital = {
+          name: String(dh.name || ""),
+          address: String(dh.address || "")
+        };
+        existing.markModified("defaultHospital");
+      }
+    }
+
+    if (body.about !== undefined) {
+      existing.about = String(body.about || "");
+    }
+
+    if (body.slotHospitals !== undefined) {
+      let sh = body.slotHospitals;
+      if (typeof sh === "string") {
+        try { sh = JSON.parse(sh); } catch { sh = {}; }
+      }
+      if (sh && typeof sh === "object" && !Array.isArray(sh)) {
+        existing.slotHospitals = sh;
+        existing.markModified("slotHospitals");
+      }
+    }
+
+    if (body.chambers !== undefined) {
+      let ch = body.chambers;
+      if (typeof ch === "string") {
+        try { ch = JSON.parse(ch); } catch { ch = []; }
+      }
+      if (Array.isArray(ch)) {
+        existing.chambers = ch.map(c => ({
+          name: String(c.name || ""),
+          address: String(c.address || "")
+        }));
+        existing.markModified("chambers");
+      }
+    }
+
+    if (body.maxPatientsPerDay !== undefined) {
+      let mpd = body.maxPatientsPerDay;
+      if (typeof mpd === "string") {
+        try { mpd = JSON.parse(mpd); } catch { mpd = {}; }
+      }
+      if (mpd && typeof mpd === "object" && !Array.isArray(mpd)) {
+        const cleaned = {};
+        Object.entries(mpd).forEach(([dateStr, limitVal]) => {
+          const num = Number(limitVal);
+          cleaned[dateStr] = isNaN(num) ? 0 : num;
+        });
+        existing.maxPatientsPerDay = cleaned;
+        existing.markModified("maxPatientsPerDay");
+      }
+    }
+
+    let scheduleOrBlackoutChanged = false;
+    if (body.schedule !== undefined) scheduleOrBlackoutChanged = true;
+
+    if (body.blackoutPeriods !== undefined) {
+      let bp = body.blackoutPeriods;
+      if (typeof bp === "string") {
+        try { bp = JSON.parse(bp); } catch { bp = []; }
+      }
+      if (Array.isArray(bp)) {
+        existing.blackoutPeriods = bp;
+        existing.markModified("blackoutPeriods");
+        scheduleOrBlackoutChanged = true;
+      }
+    }
+
+    if (body.blockedSlots !== undefined) {
+      let bs = body.blockedSlots;
+      if (typeof bs === "string") {
+        try { bs = JSON.parse(bs); } catch { bs = []; }
+      }
+      if (Array.isArray(bs)) {
+        existing.blockedSlots = bs;
+        existing.markModified("blockedSlots");
+        scheduleOrBlackoutChanged = true;
+      }
+    }
+
+    await existing.save();
+
+    // Invalidate Redis profile cache and slots caches
+    await cache.del(cache.keys.doctorProfile(id));
+    await cache.delPattern(`doctor:slots:${id}:*`);
+
+    if (scheduleOrBlackoutChanged) {
+      flagConflictingAppointments(existing._id, existing.blackoutPeriods, existing.blockedSlots);
+    }
+
+    const out = normalizeDocForClient(existing.toObject());
+    delete out.password;
+    return res.json({ success: true, data: out });
+  } catch (err) {
+    console.error("updateDoctorSchedule error:", err);
+    return res.status(500).json({ success: false, message: "Server error" });
+  }
+}
+
+export async function getDoctorAnalytics(req, res) {
+  try {
+    const { id } = req.params;
+
+    if (!req.doctor || String(req.doctor._id || req.doctor.id) !== String(id)) {
+      return res.status(403).json({ success: false, message: "Not authorized to view analytics" });
+    }
+
+    // 1. Total Earnings from Paid or Completed Appointments
+    const revenueAgg = await Appointment.aggregate([
+      { $match: { doctorId: req.doctor._id, "payment.status": "Paid" } },
+      { $group: { _id: null, total: { $sum: "$fees" } } }
+    ]);
+    const totalEarnings = (revenueAgg[0] && revenueAgg[0].total) || 0;
+
+    // 2. Appointment Counts by Status
+    const statusAgg = await Appointment.aggregate([
+      { $match: { doctorId: req.doctor._id } },
+      { $group: { _id: "$status", count: { $sum: 1 } } }
+    ]);
+    
+    const appointmentStats = {
+      Completed: 0,
+      Pending: 0,
+      Canceled: 0,
+      Confirmed: 0
+    };
+    let totalAppointments = 0;
+    
+    statusAgg.forEach(stat => {
+      appointmentStats[stat._id] = stat.count;
+      totalAppointments += stat.count;
+    });
+
+    // 3. Demographics (Age/Gender)
+    const appointments = await Appointment.find({ doctorId: id }).select("age gender").lean();
+    
+    let maleCount = 0;
+    let femaleCount = 0;
+    
+    appointments.forEach(a => {
+      if (a.gender?.toLowerCase() === "male") maleCount++;
+      else if (a.gender?.toLowerCase() === "female") femaleCount++;
+    });
+
+    return res.json({
+      success: true,
+      analytics: {
+        totalEarnings,
+        totalAppointments,
+        appointmentStats,
+        demographics: {
+          male: maleCount,
+          female: femaleCount
+        }
+      }
+    });
+  } catch (err) {
+    console.error("getDoctorAnalytics error:", err);
+    return res.status(500).json({ success: false, message: "Server error" });
   }
 }
 

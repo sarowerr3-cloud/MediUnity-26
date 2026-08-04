@@ -1,97 +1,74 @@
-import React, { useMemo, useState, useEffect } from "react";
+import React, { useMemo, useState, useEffect, useCallback } from "react";
 import { useAuth } from "../../context/AuthContext";
 import {
   Search,
   Users,
-  CalendarRange,
-  Banknote,
   CheckCircle,
-  XCircle,
-  UserRoundCheck,
+  Stethoscope,
+  Briefcase,
+  FileText,
+  Zap,
+  Award,
+  RefreshCw,
 } from "lucide-react";
 import { dashboardStyles as s } from "../../assets/dummyStyles";
 
-/* ----------------------
-  Config
------------------------- */
 const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:4000";
-// Endpoint that returns JSON { count: <number> }
-const PATIENT_COUNT_API = `${API_BASE}/api/appointments/patients/count`;
+const DASHBOARD_STATS_API = `${API_BASE}/api/admin/dashboard-stats`;
 
-/* ----------------------
-  Helpers
------------------------- */
-const safeNumber = (v, fallback = 0) => {
-  const n = Number(v);
-  return Number.isFinite(n) ? n : fallback;
-};
+function getAuthHeader() {
+  return { Authorization: "Bearer " + localStorage.getItem("adminToken_v1") };
+}
 
 function normalizeDoctor(doc) {
   const id = doc._id || doc.id || String(Math.random()).slice(2);
-  const name =
-    doc.name ||
-    doc.fullName ||
-    `${doc.firstName || ""} ${doc.lastName || ""}`.trim() ||
-    "Unknown";
-  const specialization =
-    doc.specialization ||
-    doc.speciality ||
-    (Array.isArray(doc.specializations)
-      ? doc.specializations.join(", ")
-      : "") ||
-    "General";
-  const fee = safeNumber(
-    doc.fee ?? doc.fees ?? doc.consultationFee ?? doc.consultation_fee ?? 0,
-    0
-  );
-  const image =
-    doc.imageUrl ||
-    doc.image ||
-    doc.avatar ||
-    `https://i.pravatar.cc/150?u=${id}`;
-
-  const appointments = {
-    total:
-      doc.appointments?.total ??
-      doc.totalAppointments ??
-      doc.appointmentsTotal ??
-      0,
-    completed:
-      doc.appointments?.completed ??
-      doc.completedAppointments ??
-      doc.appointmentsCompleted ??
-      0,
-    canceled:
-      doc.appointments?.canceled ??
-      doc.canceledAppointments ??
-      doc.appointmentsCanceled ??
-      0,
-  };
-
-  let earnings = null;
-  if (doc.earnings !== undefined && doc.earnings !== null)
-    earnings = safeNumber(doc.earnings, 0);
-  else if (doc.revenue !== undefined && doc.revenue !== null)
-    earnings = safeNumber(doc.revenue, 0);
-  else if (appointments.completed && fee)
-    earnings = fee * safeNumber(appointments.completed, 0);
-  else earnings = 0;
+  const name = doc.name || "Unknown";
+  const specialization = doc.specialization || doc.speciality || "General";
+  const image = doc.imageUrl || doc.image || doc.avatar || "/placeholder-doctor.jpg";
 
   return {
     id,
     name,
     specialization,
-    fee,
     image,
-    appointments,
-    earnings,
+    followersCount: doc.followersCount || 0,
+    articlesCount: doc.articlesCount || 0,
+    postsCount: doc.postsCount || 0,
+    reputationPoints: doc.reputationPoints || 0,
+    isVerified: doc.isVerified || false,
+    verificationStatus: doc.verificationStatus || "Unverified",
     raw: doc,
   };
 }
 
-/* ----------------------
-  Component
------------------------- */
+function StatCard({ icon, label, value, sub, accent }) {
+  return (
+    <div
+      style={{
+        background: accent
+          ? `linear-gradient(135deg, ${accent}18, ${accent}08)`
+          : undefined,
+        borderColor: accent ? `${accent}30` : undefined,
+      }}
+      className={s.statCard}
+    >
+      <div className={s.statCardContent}>
+        <div
+          className={s.statIconContainer}
+          style={{ color: accent || undefined }}
+        >
+          {icon}
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className={s.statLabel}>{label}</div>
+          <div className={s.statValue}>{value}</div>
+          {sub && <div className="text-xs text-slate-400 mt-0.5">{sub}</div>}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function DashboardPage() {
   const { user } = useAuth();
   const isSuperAdmin = user?.role === "super-admin";
@@ -99,143 +76,71 @@ export default function DashboardPage() {
   const [doctors, setDoctors] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-
-  // new: patient count from backend (total registered users)
-  const [patientCount, setPatientCount] = useState(null);
-  const [patientCountLoading, setPatientCountLoading] = useState(false);
-
+  
+  const [stats, setStats] = useState(null);
+  const [statsLoading, setStatsLoading] = useState(false);
   const [query, setQuery] = useState("");
   const [showAll, setShowAll] = useState(false);
 
-  useEffect(() => {
-    let mounted = true;
-    async function loadDoctors() {
-      setLoading(true);
-      setError(null);
-      try {
-        const url = `${API_BASE}/api/doctors?limit=200`;
-        const res = await fetch(url, {
-          headers: {
-            Authorization: "Bearer " + localStorage.getItem("adminToken_v1"),
-          },
-        });
-        if (!res.ok) {
-          const body = await res.json().catch(() => ({}));
-          throw new Error(
-            body?.message || `Failed to fetch doctors (${res.status})`
-          );
-        }
-        const body = await res.json();
-        let list = [];
-        if (Array.isArray(body)) list = body;
-        else if (Array.isArray(body.doctors)) list = body.doctors;
-        else if (Array.isArray(body.data)) list = body.data;
-        else if (Array.isArray(body.items)) list = body.items;
-        else {
-          const firstArray = Object.values(body).find((v) => Array.isArray(v));
-          if (firstArray) list = firstArray;
-        }
-        const normalized = list.map((d) => normalizeDoctor(d));
-        if (mounted) setDoctors(normalized);
-      } catch (err) {
-        console.error("Failed to load doctors:", err);
-        if (mounted) {
-          setError(err.message || "Failed to load doctors");
-          setDoctors([]);
-        }
-      } finally {
-        if (mounted) setLoading(false);
+  const fetchStats = useCallback(async () => {
+    setStatsLoading(true);
+    try {
+      const res = await fetch(DASHBOARD_STATS_API, {
+        headers: getAuthHeader(),
+      });
+      const body = await res.json();
+      if (body.success) {
+        setStats(body.stats);
       }
+    } catch (err) {
+      console.error("fetchStats error:", err);
+    } finally {
+      setStatsLoading(false);
     }
-    loadDoctors();
-    return () => {
-      mounted = false;
-    };
   }, []);
 
-  // fetch patient count (very simple)
-  useEffect(() => {
-    let mounted = true;
-    async function loadPatientCount() {
-      setPatientCountLoading(true);
-      try {
-        const res = await fetch(PATIENT_COUNT_API, {
-          headers: {
-            Authorization: "Bearer " + localStorage.getItem("adminToken_v1"),
-          },
-        });
-        if (!res.ok) {
-          console.warn("Patient count fetch failed:", res.status);
-          if (mounted) setPatientCount(0);
-          return;
-        }
-
+  const loadDoctors = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await fetch(`${API_BASE}/api/doctors?limit=200`, {
+        headers: getAuthHeader(),
+      });
+      if (!res.ok) {
         const body = await res.json().catch(() => ({}));
-        const count = Number(
-          body?.count ?? body?.totalUsers ?? body?.data ?? 0
-        );
-        if (mounted) setPatientCount(isNaN(count) ? 0 : count);
-      } catch (err) {
-        console.error("Failed to fetch patient count:", err);
-        if (mounted) setPatientCount(0);
-      } finally {
-        if (mounted) setPatientCountLoading(false);
+        throw new Error(body?.message || `Failed to fetch creators (${res.status})`);
       }
+      const body = await res.json();
+      let list = body.doctors || body.data || body.items || [];
+      setDoctors(list.map(normalizeDoctor));
+    } catch (err) {
+      console.error("Failed to load doctors:", err);
+      setError(err.message);
+      setDoctors([]);
+    } finally {
+      setLoading(false);
     }
-    loadPatientCount();
-    return () => {
-      mounted = false;
-    };
   }, []);
 
-  // derived totals
-  const totals = useMemo(() => {
-    const totalDoctors = doctors.length;
-    const totalAppointments = doctors.reduce(
-      (s, d) => s + safeNumber(d.appointments?.total, 0),
-      0
-    );
-    const totalEarnings = doctors.reduce(
-      (s, d) => s + safeNumber(d.earnings, 0),
-      0
-    );
-    const completed = doctors.reduce(
-      (s, d) => s + safeNumber(d.appointments?.completed, 0),
-      0
-    );
-    const canceled = doctors.reduce(
-      (s, d) => s + safeNumber(d.appointments?.canceled, 0),
-      0
-    );
-    const totalLoginPatients =
-      doctors.reduce((s, d) => s + (d.raw?.loginPatientsCount ?? 0), 0) || 0;
-    return {
-      totalDoctors,
-      totalAppointments,
-      totalEarnings,
-      completed,
-      canceled,
-      totalLoginPatients,
-    };
-  }, [doctors]);
+  useEffect(() => {
+    loadDoctors();
+    if (isSuperAdmin) {
+      fetchStats();
+    }
+  }, [loadDoctors, fetchStats, isSuperAdmin]);
 
   const filteredDoctors = useMemo(() => {
     if (!query) return doctors;
     const q = query.trim().toLowerCase();
-    const qNum = Number(q);
-    return doctors.filter((d) => {
-      if (d.name.toLowerCase().includes(q)) return true;
-      if ((d.specialization || "").toLowerCase().includes(q)) return true;
-      if (d.fee.toString().includes(q)) return true;
-      if (!Number.isNaN(qNum) && d.fee <= qNum) return true;
-      return false;
-    });
+    return doctors.filter(
+      (d) =>
+        d.name.toLowerCase().includes(q) ||
+        (d.specialization || "").toLowerCase().includes(q)
+    );
   }, [doctors, query]);
 
   const INITIAL_COUNT = 8;
-  const visibleDoctors = showAll
-    ? filteredDoctors
-    : filteredDoctors.slice(0, INITIAL_COUNT);
+  const visibleDoctors = showAll ? filteredDoctors : filteredDoctors.slice(0, INITIAL_COUNT);
 
   return (
     <div className={s.pageContainer}>
@@ -243,83 +148,92 @@ export default function DashboardPage() {
         {/* Header */}
         <div className={s.headerContainer}>
           <div>
-            <h1 className={s.headerTitle}>
-              DASHBOARD
-            </h1>
-            <p className={s.headerSubtitle}>
-              Overview of doctors & appointments
-            </p>
+            <h1 className={s.headerTitle}>DASHBOARD</h1>
+            <p className={s.headerSubtitle}>Overview of medical creators, user statistics and posts</p>
           </div>
+          <button
+            onClick={() => {
+              loadDoctors();
+              if (isSuperAdmin) fetchStats();
+            }}
+            className="flex items-center gap-2 px-4 py-2 bg-slate-800 text-white rounded-xl text-xs font-semibold hover:bg-slate-700 transition cursor-pointer"
+          >
+            <RefreshCw className="w-3.5 h-3.5" /> Refresh Dashboard
+          </button>
         </div>
 
-        {/* Stats Section */}
-        <div className={s.statsGrid}>
-          <StatCard
-            icon={<Users className="w-6 h-6" />}
-            label="Total Doctors"
-            value={totals.totalDoctors}
-          />
-
-          {/* Updated: show count fetched from backend, fallback to derived value */}
-          <StatCard
-            icon={<UserRoundCheck className="w-6 h-6" />}
-            label="Total Registered Users"
-            value={
-              patientCountLoading
-                ? "Loading..."
-                : patientCount ?? totals.totalLoginPatients
-            }
-          />
-
-          <StatCard
-            icon={<CalendarRange className="w-6 h-6" />}
-            label="Total Appointments"
-            value={totals.totalAppointments}
-          />
-
-          {isSuperAdmin && (
+        {/* Analytics Statistics Cards */}
+        {isSuperAdmin && stats && (
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
             <StatCard
-              icon={<Banknote className="w-6 h-6" />}
-              label="Total Earnings"
-              value={`Tk ${totals.totalEarnings.toLocaleString()}`}
+              icon={<Stethoscope className="w-6 h-6" />}
+              label="Medical Creators"
+              value={statsLoading ? "…" : stats.totalDoctors}
+              sub={`Verified: ${stats.verifiedDoctors}`}
+              accent="#6366f1"
             />
-          )}
+            <StatCard
+              icon={<Users className="w-6 h-6" />}
+              label="Registered Users"
+              value={statsLoading ? "…" : stats.totalUsers}
+              sub="Total patient profiles"
+              accent="#0ea5e9"
+            />
+            <StatCard
+              icon={<Zap className="w-6 h-6" />}
+              label="Feed Posts shared"
+              value={statsLoading ? "…" : stats.totalPosts}
+              sub="Q&A and general topics"
+              accent="#10b981"
+            />
+            <StatCard
+              icon={<FileText className="w-6 h-6" />}
+              label="Health Articles"
+              value={statsLoading ? "…" : stats.totalArticles}
+              sub="Written by creators"
+              accent="#f59e0b"
+            />
+          </div>
+        )}
 
-          <StatCard
-            icon={<CheckCircle className="w-6 h-6" />}
-            label="Completed"
-            value={totals.completed}
-          />
-
-          <StatCard
-            icon={<XCircle className="w-6 h-6" />}
-            label="Canceled"
-            value={totals.canceled}
-          />
-        </div>
+        {/* Fallback metrics for non-super admins or loading states */}
+        {(!isSuperAdmin || !stats) && (
+          <div className={s.statsGrid}>
+            <StatCard
+              icon={<Stethoscope className="w-6 h-6" />}
+              label="Total Creators"
+              value={doctors.length}
+            />
+            <StatCard
+              icon={<CheckCircle className="w-6 h-6" />}
+              label="Verified Creators"
+              value={doctors.filter(d => d.isVerified).length}
+            />
+            <StatCard
+              icon={<Users className="w-6 h-6" />}
+              label="Unverified Queue"
+              value={doctors.filter(d => !d.isVerified).length}
+            />
+          </div>
+        )}
 
         {/* Search */}
         <div className="mb-6">
-          <label className={s.searchLabel}>
-            Search doctors
-          </label>
+          <label className={s.searchLabel}>Search Creators</label>
           <div className={s.searchContainer}>
             <div className={s.searchInputContainer}>
               <input
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 className={s.searchInput}
-                placeholder="Search name / specialization / fee"
-                aria-label="Search doctors by name, specialization or fee"
+                placeholder="Search name or specialty"
+                aria-label="Search creators by name or specialty"
               />
               <Search className={s.searchIcon} />
             </div>
             <button
-              onClick={() => {
-                setQuery("");
-                setShowAll(false);
-              }}
-              className={s.clearButton + " " + s.cursorPointer}
+              onClick={() => { setQuery(""); setShowAll(false); }}
+              className={s.clearButton}
               aria-label="Clear search"
             >
               Clear
@@ -327,10 +241,10 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* Doctors Table */}
+        {/* Doctors / Creators Table */}
         <div className={s.tableContainer}>
           <div className={s.tableHeader}>
-            <h2 className={s.tableTitle}>Doctors</h2>
+            <h2 className={s.tableTitle}>Medical Creators</h2>
             <p className={s.tableCount}>
               {loading
                 ? "Loading..."
@@ -339,84 +253,108 @@ export default function DashboardPage() {
           </div>
 
           {error && (
-            <div className={s.errorContainer}>
-              Error loading doctors: {error}
-            </div>
+            <div className={s.errorContainer}>Error loading creators: {error}</div>
           )}
 
+          {/* Desktop table */}
           <div className={s.tableWrapper}>
             <table className={s.table}>
               <thead className={s.tableHead}>
                 <tr>
-                  <th className={s.tableHeaderCell}>Doctor</th>
-                  <th className={s.tableHeaderCell}>Specialization</th>
-                  <th className={s.tableHeaderCell}>Fee</th>
-                  <th className={s.tableHeaderCell}>Appointments</th>
-                  <th className={s.tableHeaderCell}>Completed</th>
-                  <th className={s.tableHeaderCell}>Canceled</th>
-                  {isSuperAdmin && <th className={s.tableHeaderCell}>Total Earnings</th>}
+                  <th className={s.tableHeaderCell}>Creator</th>
+                  <th className={s.tableHeaderCell}>Specialty</th>
+                  <th className={s.tableHeaderCell}>License Status</th>
+                  <th className={s.tableHeaderCell}>Followers</th>
+                  <th className={s.tableHeaderCell}>Articles</th>
+                  <th className={s.tableHeaderCell}>Posts</th>
+                  <th className={s.tableHeaderCell}>Reputation Score</th>
                 </tr>
               </thead>
-
               <tbody className={s.tableBody}>
                 {visibleDoctors.map((d, idx) => (
                   <tr
                     key={d.id}
-                    className={s.tableRow + " " + 
-                      (idx % 2 === 0 ? s.tableRowEven : s.tableRowOdd)}
+                    className={
+                      s.tableRow + " " + (idx % 2 === 0 ? s.tableRowEven : s.tableRowOdd)
+                    }
                   >
                     <td className={s.tableCell + " " + s.tableCellFlex}>
                       <div className={s.verticalLine} />
-                      <img
-                        src={d.image}
-                        alt={d.name}
-                        className={s.doctorImage}
-                      />
+                      <img src={d.image || "/placeholder-doctor.jpg"} alt={d.name} className={s.doctorImage} />
                       <div>
-                        <div className={s.doctorName}>
-                          {d.name}
-                        </div>
-                        <div className={s.doctorId}>
-                          ID: {d.id}
-                        </div>
+                        <div className={s.doctorName}>{d.name}</div>
+                        <div className={s.doctorId}>ID: {d.id}</div>
                       </div>
                     </td>
-
                     <td className={s.tableCell + " " + s.doctorSpecialization}>
                       {d.specialization}
                     </td>
-
-                    <td className={s.tableCell + " " + s.feeText}>
-                      Tk {d.fee}
+                    <td className={s.tableCell}>
+                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
+                        d.isVerified ? "bg-emerald-50 text-emerald-700 border border-emerald-200" : "bg-amber-50 text-amber-700 border border-amber-200"
+                      }`}>
+                        {d.verificationStatus}
+                      </span>
                     </td>
-
                     <td className={s.tableCell + " " + s.appointmentsText}>
-                      {d.appointments.total}
+                      {d.followersCount}
                     </td>
-
                     <td className={s.tableCell + " " + s.completedText}>
-                      {d.appointments.completed}
+                      {d.articlesCount}
                     </td>
-
                     <td className={s.tableCell + " " + s.canceledText}>
-                      {d.appointments.canceled}
+                      {d.postsCount}
                     </td>
-
-                    {isSuperAdmin && (
-                      <td className={s.tableCell + " " + s.earningsText}>
-                        Tk {d.earnings.toLocaleString()}
-                      </td>
-                    )}
+                    <td className={s.tableCell + " " + s.earningsText}>
+                      <span className="flex items-center gap-1 text-amber-600 font-bold">
+                        <Award className="w-3.5 h-3.5" /> {d.reputationPoints}
+                      </span>
+                    </td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
 
+          {/* Mobile cards */}
           <div className={s.mobileDoctorContainer}>
             <div className={s.mobileDoctorGrid}>
               {visibleDoctors.map((d) => (
-                <MobileDoctorCard key={d.id} d={d} showEarnings={isSuperAdmin} />
+                <div key={d.id} className={s.mobileDoctorCard}>
+                  <div className={s.mobileDoctorHeader}>
+                    <div className="flex items-center gap-3">
+                      <img src={d.image || "/placeholder-doctor.jpg"} alt={d.name} className={s.mobileDoctorImage} />
+                      <div>
+                        <div className={s.mobileDoctorName}>{d.name}</div>
+                        <div className={s.mobileDoctorSpecialization}>{d.specialization}</div>
+                      </div>
+                    </div>
+                    <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold ${
+                      d.isVerified ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"
+                    }`}>
+                      {d.verificationStatus}
+                    </span>
+                  </div>
+
+                  <div className={s.mobileStatsGrid}>
+                    <div>
+                      <div className={s.mobileStatLabel}>Followers</div>
+                      <div className={s.mobileStatValue}>{d.followersCount}</div>
+                    </div>
+                    <div>
+                      <div className={s.mobileStatLabel}>Articles</div>
+                      <div className={s.mobileStatValue + " " + s.textEmerald600}>
+                        {d.articlesCount}
+                      </div>
+                    </div>
+                    <div>
+                      <div className={s.mobileStatLabel}>Rep. Score</div>
+                      <div className={s.mobileStatValue + " " + s.textRose500}>
+                        {d.reputationPoints}
+                      </div>
+                    </div>
+                  </div>
+                </div>
               ))}
             </div>
           </div>
@@ -424,8 +362,8 @@ export default function DashboardPage() {
           {filteredDoctors.length > INITIAL_COUNT && (
             <div className={s.showMoreContainer}>
               <button
-                onClick={() => setShowAll((s) => !s)}
-                className={s.showMoreButton + " " + s.cursorPointer}
+                onClick={() => setShowAll((v) => !v)}
+                className={s.showMoreButton}
               >
                 {showAll
                   ? "Show less"
@@ -435,74 +373,6 @@ export default function DashboardPage() {
           )}
         </div>
       </div>
-    </div>
-  );
-}
-
-/* ----------------------
-  Small components
------------------------- */
-function StatCard({ icon, label, value }) {
-  return (
-    <div className={s.statCard}>
-      <div className={s.statCardContent}>
-        <div className={s.statIconContainer}>{icon}</div>
-        <div className="flex-1">
-          <div className={s.statLabel}>{label}</div>
-          <div className={s.statValue}>{value}</div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function MobileDoctorCard({ d, showEarnings }) {
-  return (
-    <div className={s.mobileDoctorCard}>
-      <div className={s.mobileDoctorHeader}>
-        <div className="flex items-center gap-3">
-          <img
-            src={d.image}
-            alt={d.name}
-            className={s.mobileDoctorImage}
-          />
-          <div>
-            <div className={s.mobileDoctorName}>{d.name}</div>
-            <div className={s.mobileDoctorSpecialization}>{d.specialization}</div>
-          </div>
-        </div>
-        <div className={s.mobileDoctorFee}>Tk {d.fee}</div>
-      </div>
-
-      <div className={s.mobileStatsGrid}>
-        <div>
-          <div className={s.mobileStatLabel}>Appts</div>
-          <div className={s.mobileStatValue}>
-            {d.appointments.total}
-          </div>
-        </div>
-
-        <div>
-          <div className={s.mobileStatLabel}>Done</div>
-          <div className={s.mobileStatValue + " " + s.textEmerald600}>
-            {d.appointments.completed}
-          </div>
-        </div>
-
-        <div>
-          <div className={s.mobileStatLabel}>Cancel</div>
-          <div className={s.mobileStatValue + " " + s.textRose500}>
-            {d.appointments.canceled}
-          </div>
-        </div>
-      </div>
-
-      {showEarnings && (
-        <div className={s.mobileEarningsContainer}>
-          <div>Earned</div>
-          <div className="font-semibold">Tk {d.earnings.toLocaleString()}</div>
-        </div>
-      )}
     </div>
   );
 }

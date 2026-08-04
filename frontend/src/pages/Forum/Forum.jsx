@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { MessageSquare, Calendar, ChevronRight, User, PlusCircle, Filter, Send, ArrowLeft, CheckCircle2, ThumbsUp } from "lucide-react";
+import { MessageSquare, Calendar, ChevronRight, User, PlusCircle, Filter, Send, ArrowLeft, CheckCircle2, ThumbsUp, Image, Video, X, Paperclip } from "lucide-react";
 import Navbar from "../../components/Navbar/Navbar";
 import Footer from "../../components/Footer/Footer";
 import { useAuth, useUser } from "../../context/AuthContext";
@@ -8,8 +8,45 @@ import toast, { Toaster } from "react-hot-toast";
 const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:4000";
 const DOCTOR_TOKEN_KEY = "doctorToken_v1";
 
-const CATEGORIES = ["All", "General Health", "Cardiology", "Pediatrics", "Neurology", "Dermatology", "Gynecology", "Orthopedics"];
-const SUPPORT_CIRCLES = ["Mental Health Support", "New Mothers Circle", "Diabetes Management", "Oncology Support", "Heart Health Advocacy"];
+const CATEGORIES = [
+  "All",
+  "General Health",
+  "Cardiology",
+  "Pediatrics",
+  "Neurology",
+  "Dermatology",
+  "Gynecology",
+  "Orthopedics",
+  "Psychiatry",
+  "Ophthalmology",
+  "Gastroenterology",
+  "Urology",
+  "Dentistry",
+  "ENT",
+  "Nephrology",
+  "Pulmonology",
+  "Oncology",
+  "Nutrition",
+  "Physiotherapy"
+];
+const SUPPORT_CIRCLES = [
+  "Mental Health Support",
+  "New Mothers Circle",
+  "Diabetes Management",
+  "Oncology Support",
+  "Heart Health Advocacy",
+  "Pediatrics Circle",
+  "Psychiatry Support",
+  "Ophthalmology Hub",
+  "Gastroenterology Group",
+  "Urology Advocacy",
+  "Dentistry & Oral Health",
+  "ENT Support Group",
+  "Nephrology Support",
+  "Pulmonology Circle",
+  "Nutrition Circle",
+  "Physiotherapy Hub"
+];
 
 export default function Forum() {
   const { isSignedIn, getToken } = useAuth();
@@ -30,11 +67,86 @@ export default function Forum() {
   const [postAnonymous, setPostAnonymous] = useState(false);
   const [submittingPost, setSubmittingPost] = useState(false);
 
+  // Post media uploads
+  const [postMedia, setPostMedia] = useState([]); // array of { url, type }
+  const [uploadingPostMedia, setUploadingPostMedia] = useState(false);
+
+  // Comment media uploads
+  const [commentMedia, setCommentMedia] = useState({}); // map of postId -> array of { url, type }
+  const [uploadingCommentMedia, setUploadingCommentMedia] = useState({}); // map of postId -> boolean
+
   // Comments state
   const [activePostCommentsId, setActivePostCommentsId] = useState(null);
   const [commentText, setCommentText] = useState({});
   const [commentAnonymous, setCommentAnonymous] = useState({});
   const [submittingComment, setSubmittingComment] = useState(false);
+
+  async function handleFileUpload(file, targetType, postId = null) {
+    const isVideo = file.type.startsWith("video/");
+    const maxSize = isVideo ? 300 * 1024 * 1024 : 10 * 1024 * 1024; // 300MB for video, 10MB for image
+
+    if (file.size > maxSize) {
+      toast.error(
+        isVideo
+          ? "Video size exceeds the 300MB limit"
+          : "Image size exceeds the 10MB limit"
+      );
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append("media", file);
+
+    let headers = {};
+    if (isSignedIn) {
+      const clerkToken = await getToken();
+      headers.Authorization = `Bearer ${clerkToken}`;
+    } else if (doctorToken) {
+      headers.Authorization = `Bearer ${doctorToken}`;
+    } else {
+      toast.error("Please log in to upload files");
+      return;
+    }
+
+    if (targetType === "post") {
+      setUploadingPostMedia(true);
+    } else {
+      setUploadingCommentMedia((prev) => ({ ...prev, [postId]: true }));
+    }
+
+    try {
+      const res = await fetch(`${API_BASE}/api/posts/upload-media`, {
+        method: "POST",
+        headers,
+        body: formData,
+      });
+
+      const json = await res.json();
+      if (json.success) {
+        const newItem = { url: json.url, type: json.type };
+        if (targetType === "post") {
+          setPostMedia((prev) => [...prev, newItem]);
+        } else {
+          setCommentMedia((prev) => ({
+            ...prev,
+            [postId]: [...(prev[postId] || []), newItem],
+          }));
+        }
+        toast.success("File uploaded successfully");
+      } else {
+        toast.error(json.message || "Failed to upload file");
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error("Network error during file upload");
+    } finally {
+      if (targetType === "post") {
+        setUploadingPostMedia(false);
+      } else {
+        setUploadingCommentMedia((prev) => ({ ...prev, [postId]: false }));
+      }
+    }
+  }
 
   // Edit post state
   const [editingPost, setEditingPost] = useState(null);
@@ -125,6 +237,7 @@ export default function Forum() {
           isQA: forumTab === "qa",
           isAnonymous: postAnonymous,
           circle: forumTab === "circles" ? activeCircle : null,
+          media: postMedia,
         }),
       });
 
@@ -133,6 +246,7 @@ export default function Forum() {
         toast.success(forumTab === "qa" ? "Medical query posted!" : "Post published successfully!");
         setNewPost({ title: "", content: "", category: "General Health" });
         setPostAnonymous(false);
+        setPostMedia([]); // Clear uploaded media
         setShowNewPostForm(false);
         fetchPosts();
       } else {
@@ -251,6 +365,7 @@ export default function Forum() {
           content: text,
           authorName: doctorInfo ? doctorInfo.name : (user?.fullName || "Patient"),
           isAnonymous: !!commentAnonymous[postId],
+          media: commentMedia[postId] || [],
         }),
       });
 
@@ -259,6 +374,7 @@ export default function Forum() {
         toast.success("Reply added!");
         setCommentText(prev => ({ ...prev, [postId]: "" }));
         setCommentAnonymous(prev => ({ ...prev, [postId]: false }));
+        setCommentMedia(prev => ({ ...prev, [postId]: [] })); // Clear uploaded media
         
         // Refresh local posts list
         setPosts(prev => prev.map(p => p._id === postId ? json.post : p));
@@ -432,6 +548,51 @@ export default function Forum() {
                   />
                 </div>
 
+                {/* Media Upload Area */}
+                <div>
+                  <label className="block text-sm font-semibold text-slate-700 mb-1.5">Attach Photo / Video (Video Max 300MB)</label>
+                  <div className="flex flex-wrap items-center gap-3">
+                    <label className="flex items-center gap-2 px-4 py-2 border border-dashed border-slate-300 rounded-xl bg-slate-50 hover:bg-slate-100 cursor-pointer text-xs font-semibold text-slate-600 transition">
+                      <Paperclip className="w-4 h-4 text-slate-500" />
+                      <span>Choose File</span>
+                      <input
+                        type="file"
+                        accept="image/*,video/*"
+                        onChange={(e) => {
+                          const file = e.target.files[0];
+                          if (file) handleFileUpload(file, "post");
+                        }}
+                        className="hidden"
+                      />
+                    </label>
+                    {uploadingPostMedia && (
+                      <span className="text-xs text-slate-500 animate-pulse font-medium">Uploading media...</span>
+                    )}
+                  </div>
+
+                  {/* Previews */}
+                  {postMedia.length > 0 && (
+                    <div className="mt-3 grid grid-cols-3 gap-2">
+                      {postMedia.map((m, idx) => (
+                        <div key={idx} className="relative group rounded-xl overflow-hidden border border-slate-200 aspect-video bg-black/5 flex items-center justify-center">
+                          {m.type === "image" ? (
+                            <img src={m.url} alt="upload preview" className="object-cover w-full h-full" />
+                          ) : (
+                            <video src={m.url} className="object-cover w-full h-full" />
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => setPostMedia(prev => prev.filter((_, i) => i !== idx))}
+                            className="absolute top-1 right-1 bg-red-600 hover:bg-red-700 text-white rounded-full p-1 shadow-md opacity-90 transition cursor-pointer"
+                          >
+                            <X className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
                 {/* Anonymous Toggle */}
                 <div className="flex items-center gap-2 pt-2">
                   <input
@@ -592,6 +753,21 @@ export default function Forum() {
                     {post.content}
                   </p>
 
+                  {/* Media rendering */}
+                  {post.media && post.media.length > 0 && (
+                    <div className="mt-4 mb-6 grid grid-cols-1 sm:grid-cols-2 gap-3 pl-4">
+                      {post.media.map((m, idx) => (
+                        <div key={idx} className="rounded-2xl overflow-hidden border border-slate-200 bg-slate-50 flex items-center justify-center max-h-[350px]">
+                          {m.type === "image" ? (
+                            <img src={m.url} alt="attached media" className="object-contain w-full h-full max-h-[350px] cursor-zoom-in" onClick={() => window.open(m.url, '_blank')} />
+                          ) : (
+                            <video src={m.url} controls className="w-full h-full max-h-[350px] bg-black" />
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
                   {/* Actions summary */}
                   <div className="flex items-center justify-between border-t border-slate-100 pt-4">
                     <div className="flex items-center gap-6">
@@ -747,6 +923,21 @@ export default function Forum() {
                                   {comment.content}
                                 </p>
 
+                                {/* Comment Media Rendering */}
+                                {comment.media && comment.media.length > 0 && (
+                                  <div className="mt-2 mb-3 grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                    {comment.media.map((m, idx) => (
+                                      <div key={idx} className="rounded-xl overflow-hidden border border-slate-200 bg-slate-50 flex items-center justify-center max-h-[250px]">
+                                        {m.type === "image" ? (
+                                          <img src={m.url} alt="comment media" className="object-contain w-full h-full max-h-[250px] cursor-zoom-in" onClick={() => window.open(m.url, '_blank')} />
+                                        ) : (
+                                          <video src={m.url} controls className="w-full h-full max-h-[250px] bg-black" />
+                                        )}
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
+
                                 {/* Answer Upvoting */}
                                 {post.isQA && (
                                   <div className="flex items-center justify-end">
@@ -774,22 +965,60 @@ export default function Forum() {
                         // Q&A reply rules
                         doctorToken ? (
                           doctorInfo?.isVerified ? (
-                            <div className="flex gap-2 mt-4 pl-2 sm:pl-4 items-end">
-                              <textarea
-                                rows={2}
-                                placeholder="Provide a professional medical answer or recommendation..."
-                                value={commentText[post._id] || ""}
-                                onChange={(e) => setCommentText(prev => ({ ...prev, [post._id]: e.target.value }))}
-                                className="flex-grow border border-slate-300 bg-slate-50 focus:bg-white rounded-2xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 max-h-24"
-                              />
-                              <button
-                                onClick={() => handleAddComment(post._id)}
-                                disabled={submittingComment}
-                                className="p-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-full transition shadow hover:shadow-md disabled:opacity-50 shrink-0 cursor-pointer"
-                                title="Send Answer"
-                              >
-                                <Send className="w-4 h-4" />
-                              </button>
+                            <div className="flex flex-col gap-2 mt-4 pl-2 sm:pl-4">
+                              {/* Uploaded comment media preview */}
+                              {(commentMedia[post._id] || []).length > 0 && (
+                                <div className="flex flex-wrap gap-2">
+                                  {(commentMedia[post._id] || []).map((m, idx) => (
+                                    <div key={idx} className="relative rounded-lg overflow-hidden border border-slate-200 w-24 h-16 bg-black/5 flex items-center justify-center">
+                                      {m.type === "image" ? (
+                                        <img src={m.url} alt="comment preview" className="object-cover w-full h-full" />
+                                      ) : (
+                                        <video src={m.url} className="object-cover w-full h-full" />
+                                      )}
+                                      <button
+                                        type="button"
+                                        onClick={() => setCommentMedia(prev => ({ ...prev, [post._id]: prev[post._id].filter((_, i) => i !== idx) }))}
+                                        className="absolute top-0.5 right-0.5 bg-red-600 hover:bg-red-700 text-white rounded-full p-0.5 shadow-md cursor-pointer"
+                                      >
+                                        <X className="w-3 h-3" />
+                                      </button>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                              <div className="flex gap-2 items-end">
+                                <textarea
+                                  rows={2}
+                                  placeholder="Provide a professional medical answer or recommendation..."
+                                  value={commentText[post._id] || ""}
+                                  onChange={(e) => setCommentText(prev => ({ ...prev, [post._id]: e.target.value }))}
+                                  className="flex-grow border border-slate-300 bg-slate-50 focus:bg-white rounded-2xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 max-h-24"
+                                />
+                                <label className="p-3 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-full transition shadow cursor-pointer shrink-0" title="Attach file">
+                                  <Paperclip className="w-4 h-4" />
+                                  <input
+                                    type="file"
+                                    accept="image/*,video/*"
+                                    onChange={(e) => {
+                                      const file = e.target.files[0];
+                                      if (file) handleFileUpload(file, "comment", post._id);
+                                    }}
+                                    className="hidden"
+                                  />
+                                </label>
+                                <button
+                                  onClick={() => handleAddComment(post._id)}
+                                  disabled={submittingComment || uploadingCommentMedia[post._id]}
+                                  className="p-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-full transition shadow hover:shadow-md disabled:opacity-50 shrink-0 cursor-pointer"
+                                  title="Send Answer"
+                                >
+                                  <Send className="w-4 h-4" />
+                                </button>
+                              </div>
+                              {uploadingCommentMedia[post._id] && (
+                                <span className="text-[10px] text-slate-500 animate-pulse font-medium">Uploading file...</span>
+                              )}
                             </div>
                           ) : (
                             <div className="mt-4 mx-2 sm:mx-4 p-4 bg-amber-50 border border-amber-200 text-amber-900 text-xs rounded-2xl font-semibold">
@@ -805,6 +1034,27 @@ export default function Forum() {
                         // Standard Discussion reply rules
                         (isSignedIn || doctorToken) ? (
                           <div className="mt-4 pl-2 sm:pl-4 space-y-2">
+                            {/* Uploaded comment media preview */}
+                            {(commentMedia[post._id] || []).length > 0 && (
+                              <div className="flex flex-wrap gap-2">
+                                {(commentMedia[post._id] || []).map((m, idx) => (
+                                  <div key={idx} className="relative rounded-lg overflow-hidden border border-slate-200 w-24 h-16 bg-black/5 flex items-center justify-center">
+                                    {m.type === "image" ? (
+                                      <img src={m.url} alt="comment preview" className="object-cover w-full h-full" />
+                                    ) : (
+                                      <video src={m.url} className="object-cover w-full h-full" />
+                                    )}
+                                    <button
+                                      type="button"
+                                      onClick={() => setCommentMedia(prev => ({ ...prev, [post._id]: prev[post._id].filter((_, i) => i !== idx) }))}
+                                      className="absolute top-0.5 right-0.5 bg-red-600 hover:bg-red-700 text-white rounded-full p-0.5 shadow-md cursor-pointer"
+                                    >
+                                      <X className="w-3 h-3" />
+                                    </button>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
                             <div className="flex gap-2 items-end">
                               <textarea
                                 rows={1}
@@ -813,15 +1063,30 @@ export default function Forum() {
                                 onChange={(e) => setCommentText(prev => ({ ...prev, [post._id]: e.target.value }))}
                                 className="flex-grow border border-slate-300 bg-slate-50 focus:bg-white rounded-2xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 max-h-24"
                               />
+                              <label className="p-2.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-full transition shadow cursor-pointer shrink-0" title="Attach file">
+                                <Paperclip className="w-4 h-4" />
+                                <input
+                                  type="file"
+                                  accept="image/*,video/*"
+                                  onChange={(e) => {
+                                    const file = e.target.files[0];
+                                    if (file) handleFileUpload(file, "comment", post._id);
+                                  }}
+                                  className="hidden"
+                                />
+                              </label>
                               <button
                                 onClick={() => handleAddComment(post._id)}
-                                disabled={submittingComment}
+                                disabled={submittingComment || uploadingCommentMedia[post._id]}
                                 className="p-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-full transition shadow hover:shadow-md disabled:opacity-50 shrink-0 cursor-pointer"
                                 title="Send reply"
                               >
                                 <Send className="w-4 h-4" />
                               </button>
                             </div>
+                            {uploadingCommentMedia[post._id] && (
+                              <span className="text-[10px] text-slate-500 animate-pulse font-medium">Uploading file...</span>
+                            )}
                             {isSignedIn && (
                               <div className="flex items-center gap-1.5 pl-1">
                                 <input

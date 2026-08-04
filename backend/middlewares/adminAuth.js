@@ -1,59 +1,42 @@
 // backend/middlewares/adminAuth.js
-import jwt from "jsonwebtoken";
+import { authMiddleware } from "./authMiddleware.js";
 
-const JWT_SECRET = process.env.JWT_SECRET || "your_jwt_secret_here";
-
-// Valid admin roles
-const VALID_ROLES = ["super-admin", "moderator", "support"];
+// Valid admin roles in claims
+const VALID_ADMIN_ROLES = ["super_admin", "moderator", "support"];
 
 export default async function adminAuth(req, res, next) {
-  const authHeader = req.headers.authorization;
+  // First verify the Firebase ID token using the authMiddleware
+  authMiddleware(req, res, (err) => {
+    if (err) return next(err);
 
-  if (!authHeader || !authHeader.startsWith("Bearer ")) {
-    return res.status(401).json({
-      success: false,
-      message: "Admin unauthorized, token missing",
-    });
-  }
-
-  const token = authHeader.split(" ")[1];
-
-  try {
-    const payload = jwt.verify(token, JWT_SECRET);
-
-    // Support both old tokens (role: "admin") and new RBAC tokens
-    if (payload.role === "admin") {
-      // Legacy token — treat as super-admin for backward compatibility
-      payload.role = "super-admin";
-    }
-
-    if (!VALID_ROLES.includes(payload.role)) {
-      return res.status(403).json({
+    if (!req.user) {
+      return res.status(401).json({
         success: false,
-        message: "Access denied: Invalid admin role",
+        message: "Admin unauthorized, authentication failed",
       });
     }
 
-    // Attach admin info to request for downstream use
+    // Verify user is registered as admin role and has a valid admin sub-role claim
+    if (req.user.role !== "admin" || !VALID_ADMIN_ROLES.includes(req.user.adminRole)) {
+      return res.status(403).json({
+        success: false,
+        message: "Access denied: Invalid or insufficient admin role",
+      });
+    }
+
+    // Attach to req.admin to maintain backward compatibility with legacy endpoints
     req.admin = {
-      adminId: payload.adminId || payload.id,
-      email: payload.email,
-      role: payload.role,
+      adminId: req.user.uid,
+      email: req.user.email,
+      role: req.user.adminRole,
     };
 
     next();
-  } catch (err) {
-    console.error("Admin JWT verification failed:", err.message);
-    return res.status(401).json({
-      success: false,
-      message: "Token invalid or expired",
-    });
-  }
+  });
 }
 
 /**
- * Higher-order middleware: require a specific role (or array of roles).
- * Usage: router.get("/secret", adminAuth, requireRole("super-admin"), handler)
+ * Require specific admin sub-role (super_admin, moderator, support)
  */
 export function requireRole(...allowedRoles) {
   const flat = allowedRoles.flat();

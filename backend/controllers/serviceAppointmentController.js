@@ -1,6 +1,7 @@
 // controllers/serviceAppointmentController.js
 import ServiceAppointment from "../models/serviceAppointment.js";
 import Service from "../models/Service.js";
+import { createAndSendNotification } from "../utils/notificationHelper.js";
 import axios from "axios";
 // Removed Clerk import
 
@@ -175,7 +176,7 @@ export const createServiceAppointment = async (req, res) => {
       currency: "BDT",
       cus_name: patientName,
       cus_email: email || "customer@example.com",
-      cus_phone: mobile,
+      cus_phone: mobile.length === 10 && !mobile.startsWith("0") ? `0${mobile}` : mobile,
       cus_add1: "Dhaka",
       cus_add2: "Dhaka",
       cus_city: "Dhaka",
@@ -261,6 +262,25 @@ export const handleAamarpayServiceCallback = async (req, res) => {
       );
       if (appt) {
         console.log("Service Appointment updated successfully:", appt._id);
+
+        // Notify patient
+        createAndSendNotification({
+          recipientId: appt.createdBy || "guest",
+          recipientRole: "patient",
+          type: "STATUS_UPDATED",
+          message: `Your booking for "${appt.serviceName}" is confirmed for ${appt.date}.`,
+          relatedBookingId: appt._id.toString()
+        });
+
+        // Notify provider/admin
+        createAndSendNotification({
+          recipientId: "admin",
+          recipientRole: "provider",
+          type: "BOOKING_CREATED",
+          message: `New service booking confirmed for "${appt.serviceName}" (Patient: ${appt.patientName}) on ${appt.date}.`,
+          relatedBookingId: appt._id.toString()
+        });
+
         return res.redirect(`${frontendBase}/service-appointment/success?session_id=${mer_txnid}`);
       } else {
         console.error("Service Appointment not found for transaction:", mer_txnid);
@@ -367,6 +387,18 @@ export const updateServiceAppointment = async (req, res) => {
 
     const updated = await ServiceAppointment.findByIdAndUpdate(id, { $set: updates }, { new: true, runValidators: true });
     if (!updated) return res.status(404).json({ success: false, message: "Not found" });
+
+    // Notify patient
+    if (updated.createdBy) {
+      createAndSendNotification({
+        recipientId: updated.createdBy,
+        recipientRole: "patient",
+        type: "STATUS_UPDATED",
+        message: `Your booking for "${updated.serviceName}" has been updated to "${updated.status}".`,
+        relatedBookingId: updated._id.toString()
+      });
+    }
+
     return res.json({ success: true, data: updated });
   } catch (err) {
     console.error("updateServiceAppointment:", err);
@@ -385,6 +417,27 @@ export const cancelServiceAppointment = async (req, res) => {
     appt.status = "Canceled";
     if (appt.payment) appt.payment.status = appt.payment.status === "Confirmed" ? "Canceled" : "Pending";
     await appt.save();
+
+    // Notify patient
+    if (appt.createdBy) {
+      createAndSendNotification({
+        recipientId: appt.createdBy,
+        recipientRole: "patient",
+        type: "STATUS_UPDATED",
+        message: `Your booking for "${appt.serviceName}" has been canceled.`,
+        relatedBookingId: appt._id.toString()
+      });
+    }
+
+    // Notify provider/admin
+    createAndSendNotification({
+      recipientId: "admin",
+      recipientRole: "provider",
+      type: "STATUS_UPDATED",
+      message: `Service booking for "${appt.serviceName}" (Patient: ${appt.patientName}) has been canceled.`,
+      relatedBookingId: appt._id.toString()
+    });
+
     return res.json({ success: true, data: appt });
   } catch (err) {
     console.error("cancelServiceAppointment:", err);

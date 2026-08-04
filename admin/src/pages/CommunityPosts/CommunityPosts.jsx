@@ -7,7 +7,27 @@ import {
 import toast, { Toaster } from "react-hot-toast";
 
 const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:4000";
-const CATEGORIES = ["All", "General Health", "Cardiology", "Pediatrics", "Neurology", "Dermatology", "Gynecology", "Orthopedics"];
+const CATEGORIES = [
+  "All",
+  "General Health",
+  "Cardiology",
+  "Pediatrics",
+  "Neurology",
+  "Dermatology",
+  "Gynecology",
+  "Orthopedics",
+  "Psychiatry",
+  "Ophthalmology",
+  "Gastroenterology",
+  "Urology",
+  "Dentistry",
+  "ENT",
+  "Nephrology",
+  "Pulmonology",
+  "Oncology",
+  "Nutrition",
+  "Physiotherapy"
+];
 
 export default function CommunityPosts() {
   const [posts, setPosts] = useState([]);
@@ -344,6 +364,21 @@ export default function CommunityPosts() {
                     <p className="text-slate-600 text-sm leading-relaxed border-l-2 border-emerald-200 pl-4 mb-6 line-clamp-4 whitespace-pre-line font-sans">
                       {post.content}
                     </p>
+
+                    {/* Media rendering for admin review */}
+                    {post.media && post.media.length > 0 && (
+                      <div className="mt-3 mb-6 grid grid-cols-1 sm:grid-cols-2 gap-2 pl-4">
+                        {post.media.map((m, idx) => (
+                          <div key={idx} className="rounded-2xl overflow-hidden border border-slate-200 bg-slate-50 flex items-center justify-center max-h-[200px]">
+                            {m.type === "image" ? (
+                              <img src={m.url} alt="attached media" className="object-contain w-full h-full max-h-[200px] cursor-zoom-in" onClick={() => window.open(m.url, '_blank')} />
+                            ) : (
+                              <video src={m.url} controls className="w-full h-full max-h-[200px] bg-black" />
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
 
                     {/* If Banned show reason */}
                     {post.isBanned && post.bannedReason && (

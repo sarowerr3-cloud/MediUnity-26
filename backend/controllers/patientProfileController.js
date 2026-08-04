@@ -1,11 +1,24 @@
 import PatientProfile from "../models/PatientProfile.js";
-import Appointment from "../models/Appointment.js";
+import Doctor from "../models/Doctor.js";
 import { uploadToCloudinary, deleteFromCloudinary } from "../utils/cloudinary.js";
 import bcryptjs from "bcryptjs";
 import jwt from "jsonwebtoken";
 import mongoose from "mongoose";
 import Article from "../models/Article.js";
+import Post from "../models/Post.js";
 import { sendEmail } from "../utils/email.js";
+import { sendSms } from "../utils/sms.js";
+import { verifyNid, verifyBirthCertificate } from "../utils/docVerifier.js";
+import crypto from "crypto";
+import { isValidPassword } from "../utils/passwordPolicy.js";
+import { generateTokens } from "./tokenController.js";
+import Appointment from "../models/Appointment.js";
+import { createAndSendNotification } from "../utils/notificationHelper.js";
+
+const hashField = (value) => {
+  if (!value) return value;
+  return crypto.createHash("sha256").update(value.toLowerCase().trim()).digest("hex");
+};
 
 // Helper to resolve Clerk UserId
 function getClerkUserId(req) {
@@ -24,6 +37,11 @@ export async function getProfile(req, res) {
     if (!profile) {
       profile = new PatientProfile({
         clerkUserId: userId,
+        email: req.auth?.email || "",
+        name: req.auth?.name || "",
+        isEmailVerified: !!req.auth?.email,
+        verificationStatus: "Verified",
+        isVerified: true,
         medicalHistory: [],
       });
       await profile.save();
@@ -89,6 +107,23 @@ export async function updateProfile(req, res) {
     }
 
     await profile.save();
+
+    // Notify doctors associated with this patient
+    try {
+      const distinctDoctors = await Appointment.distinct("doctorId", { createdBy: userId });
+      for (const docId of distinctDoctors) {
+        await createAndSendNotification({
+          recipientId: docId.toString(),
+          recipientRole: "doctor",
+          type: "GENERAL",
+          message: `Patient ${profile.name || "Unknown"} has updated their medical profile.`,
+          actionUrl: `/appointments?openPatientSummary=${userId}`
+        });
+      }
+    } catch (notifErr) {
+      console.error("Failed to notify doctors of profile update:", notifErr);
+    }
+
     return res.status(200).json({ success: true, profile });
   } catch (err) {
     console.error("updateProfile error:", err);
@@ -180,23 +215,56 @@ export async function getPatientHistoryForDoctor(req, res) {
       return res.status(403).json({ success: false, message: "Access denied: Doctors only" });
     }
 
-    // Security Check: Verify that this doctor has booked appointments with this patient
-    const hasAppointment = await Appointment.findOne({
-      doctorId: doctor._id,
-      createdBy: clerkUserId,
-    });
-
-    if (!hasAppointment) {
-      return res.status(403).json({
-        success: false,
-        message: "Unauthorized: You can only view medical records of patients who have booked appointments with you.",
-      });
+    // Security Check: Verify that this patient follows this doctor
+    const profile = await PatientProfile.findOne({ clerkUserId });
+    if (!profile) {
+      return res.status(404).json({ success: false, message: "Patient profile not found" });
     }
 
-    const profile = await PatientProfile.findOne({ clerkUserId });
+    const isFollowing = profile.followingDoctors && profile.followingDoctors.some(d => String(d) === String(doctor._id || doctor.id));
+    if (!isFollowing) {
+      return res.status(403).json({
+        success: false,
+        message: "Unauthorized: You can only view health logs of patients who follow you.",
+      });
+    }
     return res.status(200).json({ success: true, profile: profile || { medicalHistory: [], clerkUserId } });
   } catch (err) {
     console.error("getPatientHistoryForDoctor error:", err);
+    return res.status(500).json({ success: false, message: "Server error" });
+  }
+}
+
+// 5.5 Get Patient Summary for Doctor (Secure Endpoint)
+export async function getPatientSummaryForDoctor(req, res) {
+  try {
+    const { clerkUserId } = req.params;
+    const doctor = req.doctor;
+
+    if (!doctor) {
+      return res.status(403).json({ success: false, message: "Access denied: Doctors only" });
+    }
+
+    const profile = await PatientProfile.findOne({ clerkUserId });
+    if (!profile) {
+      return res.status(404).json({ success: false, message: "Patient profile not found" });
+    }
+
+    // We can also fetch prescriptions and health logs if needed, but doing it in separate calls is fine or we can aggregate here.
+    // For now we'll just return the profile which includes medicalHistory, allergies, currentMedications
+    return res.status(200).json({ 
+      success: true, 
+      profile: {
+        medicalHistory: profile.medicalHistory,
+        allergies: profile.allergies,
+        currentMedications: profile.currentMedications,
+        name: profile.name,
+        phone: profile.phone,
+        imageUrl: profile.imageUrl
+      } 
+    });
+  } catch (err) {
+    console.error("getPatientSummaryForDoctor error:", err);
     return res.status(500).json({ success: false, message: "Server error" });
   }
 }
@@ -247,16 +315,20 @@ export async function patientSignup(req, res) {
       return res.status(400).json({ success: false, message: "Name, email, phone and password are required" });
     }
 
+    if (!isValidPassword(password)) {
+      return res.status(400).json({ success: false, message: "Password must be at least 8 characters long and contain at least one lowercase letter, one uppercase letter, and one number" });
+    }
+
     const emailLC = email.toLowerCase().trim();
     const phoneTrim = phone.trim();
 
     // Check if email or phone is already registered
-    const existingEmail = await PatientProfile.findOne({ email: emailLC });
+    const existingEmail = await PatientProfile.findOne({ emailHash: hashField(emailLC) });
     if (existingEmail) {
       return res.status(409).json({ success: false, message: "Email already registered" });
     }
 
-    const existingPhone = await PatientProfile.findOne({ phone: phoneTrim });
+    const existingPhone = await PatientProfile.findOne({ phoneHash: hashField(phoneTrim) });
     if (existingPhone) {
       return res.status(409).json({ success: false, message: "Phone number already registered" });
     }
@@ -291,25 +363,30 @@ export async function patientSignup(req, res) {
     console.log(`[OTP Verification] Code: ${otpCode}`);
     console.log(`==============================================\n`);
 
-    // Send email with OTP code
-    const mailHtml = `
-      <div style="font-family: sans-serif; padding: 20px; color: #333;">
-        <h2>Verify Your Mediunity Account</h2>
-        <p>Dear ${name},</p>
-        <p>Thank you for signing up with Mediunity. Please use the following 6-digit OTP code to verify and activate your account:</p>
-        <div style="background: #e0f2fe; border: 1px solid #bae6fd; padding: 15px; text-align: center; border-radius: 8px; font-size: 24px; font-weight: bold; letter-spacing: 5px; color: #0369a1; margin: 20px 0;">
-          ${otpCode}
+    if (phoneTrim) {
+      const smsBody = `Your MediUnity account verification code is: ${otpCode}. Valid for 10 minutes.`;
+      await sendSms({ to: phoneTrim, body: smsBody });
+    } else {
+      // Fallback to email if phone is somehow not provided
+      const mailHtml = `
+        <div style="font-family: sans-serif; padding: 20px; color: #333;">
+          <h2>Verify Your MediUnity Account</h2>
+          <p>Dear ${name},</p>
+          <p>Thank you for signing up with MediUnity. Please use the following 6-digit OTP code to verify and activate your account:</p>
+          <div style="background: #e0f2fe; border: 1px solid #bae6fd; padding: 15px; text-align: center; border-radius: 8px; font-size: 24px; font-weight: bold; letter-spacing: 5px; color: #0369a1; margin: 20px 0;">
+            ${otpCode}
+          </div>
+          <p>This code is valid for 10 minutes. If you did not sign up for a MediUnity account, please ignore this email.</p>
+          <hr style="border: none; border-top: 1px solid #eee; margin-top: 30px;" />
+          <p style="font-size: 11px; color: #888;">MediUnity Portal • Safe & Secure Clinical Health Operations</p>
         </div>
-        <p>This code is valid for 10 minutes. If you did not sign up for a Mediunity account, please ignore this email.</p>
-        <hr style="border: none; border-top: 1px solid #eee; margin-top: 30px;" />
-        <p style="font-size: 11px; color: #888;">Mediunity Portal • Safe & Secure Clinical Health Operations</p>
-      </div>
-    `;
-    await sendEmail({
-      to: emailLC,
-      subject: "Mediunity Account Verification Code",
-      html: mailHtml
-    });
+      `;
+      await sendEmail({
+        to: emailLC,
+        subject: "MediUnity Account Verification Code",
+        html: mailHtml
+      });
+    }
 
     return res.status(201).json({
       success: true,
@@ -332,8 +409,8 @@ export async function patientVerifyOtp(req, res) {
     }
 
     const query = emailOrPhone.includes("@") 
-      ? { email: emailOrPhone.toLowerCase().trim() }
-      : { phone: emailOrPhone.trim() };
+      ? { emailHash: hashField(emailOrPhone) }
+      : { phoneHash: hashField(emailOrPhone) };
 
     const profile = await PatientProfile.findOne(query);
     if (!profile) {
@@ -360,24 +437,14 @@ export async function patientVerifyOtp(req, res) {
     profile.verificationStatus = "Verified";
     await profile.save();
 
-    // Issue JWT token
-    const JWT_SECRET = process.env.JWT_SECRET || "your_jwt_secret_here";
-    const token = jwt.sign(
-      {
-        id: profile.clerkUserId,
-        email: profile.email,
-        name: profile.name,
-        phone: profile.phone,
-        role: "patient"
-      },
-      JWT_SECRET,
-      { expiresIn: "7d" }
-    );
+    // Issue tokens
+    const { accessToken, refreshToken } = await generateTokens(profile._id || profile.id, profile.email || profile.phone, "patient");
 
     return res.status(200).json({
       success: true,
       message: "Account verified successfully!",
-      token,
+      token: accessToken,
+      refreshToken,
       profile
     });
   } catch (err) {
@@ -395,8 +462,8 @@ export async function patientLogin(req, res) {
     }
 
     const query = emailOrPhone.includes("@") 
-      ? { email: emailOrPhone.toLowerCase().trim() }
-      : { phone: emailOrPhone.trim() };
+      ? { emailHash: hashField(emailOrPhone) }
+      : { phoneHash: hashField(emailOrPhone) };
 
     const profile = await PatientProfile.findOne(query).select("+password");
     if (!profile) {
@@ -421,11 +488,14 @@ export async function patientLogin(req, res) {
       console.log(`[OTP Verification] Code: ${otpCode}`);
       console.log(`==============================================\n`);
 
-      // Send email with OTP code
-      if (profile.email) {
+      if (profile.phone) {
+        const smsBody = `Your MediUnity account verification code is: ${otpCode}. Valid for 10 minutes.`;
+        await sendSms({ to: profile.phone, body: smsBody });
+      } else if (profile.email) {
+        // Fallback to email if phone is not set
         const mailHtml = `
           <div style="font-family: sans-serif; padding: 20px; color: #333;">
-            <h2>Verify Your Mediunity Account</h2>
+            <h2>Verify Your MediUnity Account</h2>
             <p>Dear ${profile.name || "Patient"},</p>
             <p>You attempted to sign in, but your account is not yet verified. Please use the following 6-digit OTP code to verify and activate your account:</p>
             <div style="background: #e0f2fe; border: 1px solid #bae6fd; padding: 15px; text-align: center; border-radius: 8px; font-size: 24px; font-weight: bold; letter-spacing: 5px; color: #0369a1; margin: 20px 0;">
@@ -433,12 +503,12 @@ export async function patientLogin(req, res) {
             </div>
             <p>This code is valid for 10 minutes.</p>
             <hr style="border: none; border-top: 1px solid #eee; margin-top: 30px;" />
-            <p style="font-size: 11px; color: #888;">Mediunity Portal • Safe & Secure Clinical Health Operations</p>
+            <p style="font-size: 11px; color: #888;">MediUnity Portal • Safe & Secure Clinical Health Operations</p>
           </div>
         `;
         await sendEmail({
           to: profile.email,
-          subject: "Mediunity Account Verification Code",
+          subject: "MediUnity Account Verification Code",
           html: mailHtml
         });
       }
@@ -451,26 +521,16 @@ export async function patientLogin(req, res) {
       });
     }
 
-    // Issue JWT token
-    const JWT_SECRET = process.env.JWT_SECRET || "your_jwt_secret_here";
-    const token = jwt.sign(
-      {
-        id: profile.clerkUserId,
-        email: profile.email,
-        name: profile.name,
-        phone: profile.phone,
-        role: "patient"
-      },
-      JWT_SECRET,
-      { expiresIn: "7d" }
-    );
+    // Issue tokens
+    const { accessToken, refreshToken } = await generateTokens(profile._id || profile.id, profile.email || profile.phone, "patient");
 
     const out = profile.toObject();
     delete out.password;
 
     return res.status(200).json({
       success: true,
-      token,
+      token: accessToken,
+      refreshToken,
       profile: out
     });
   } catch (err) {
@@ -488,6 +548,14 @@ export async function toggleBookmark(req, res) {
     }
 
     const { articleId } = req.params;
+    const { reference } = req.body || {};
+    const refLabel = reference ? reference.trim() : "General";
+
+    if (!mongoose.Types.ObjectId.isValid(articleId)) {
+      return res.status(400).json({ success: false, message: "Invalid article ID format" });
+    }
+    const articleObjId = new mongoose.Types.ObjectId(articleId);
+
     let profile = await PatientProfile.findOne({ clerkUserId: userId });
     if (!profile) {
       profile = new PatientProfile({ clerkUserId: userId });
@@ -496,19 +564,46 @@ export async function toggleBookmark(req, res) {
     if (!profile.bookmarkedArticles) {
       profile.bookmarkedArticles = [];
     }
+    if (!profile.bookmarkReferences) {
+      profile.bookmarkReferences = [];
+    }
 
-    const index = profile.bookmarkedArticles.indexOf(articleId);
+    const index = profile.bookmarkedArticles.findIndex(id => id.toString() === articleId);
     if (index === -1) {
-      profile.bookmarkedArticles.push(articleId);
+      profile.bookmarkedArticles.push(articleObjId);
+      profile.bookmarkReferences.push({
+        itemId: articleObjId,
+        itemType: "Article",
+        reference: refLabel
+      });
     } else {
-      profile.bookmarkedArticles.splice(index, 1);
+      // If a reference was explicitly provided in the body, update it instead of removing!
+      if (req.body && req.body.hasOwnProperty("reference")) {
+        const refIndex = profile.bookmarkReferences.findIndex(
+          r => r.itemId.toString() === articleId
+        );
+        if (refIndex !== -1) {
+          profile.bookmarkReferences[refIndex].reference = refLabel;
+        } else {
+          profile.bookmarkReferences.push({
+            itemId: articleObjId,
+            itemType: "Article",
+            reference: refLabel
+          });
+        }
+      } else {
+        profile.bookmarkedArticles.splice(index, 1);
+        profile.bookmarkReferences = profile.bookmarkReferences.filter(
+          r => r.itemId.toString() !== articleId
+        );
+      }
     }
 
     await profile.save();
     return res.status(200).json({ success: true, profile });
   } catch (err) {
     console.error("toggleBookmark error:", err);
-    return res.status(500).json({ success: false, message: "Server error" });
+    return res.status(500).json({ success: false, message: "Server error: " + err.message });
   }
 }
 
@@ -525,10 +620,114 @@ export async function getBookmarks(req, res) {
       return res.status(200).json({ success: true, bookmarks: [] });
     }
 
-    return res.status(200).json({ success: true, bookmarks: profile.bookmarkedArticles || [] });
+    const references = profile.bookmarkReferences || [];
+    const bookmarks = (profile.bookmarkedArticles || []).map(article => {
+      const articleObj = article.toObject ? article.toObject() : article;
+      const ref = references.find(r => r.itemId.toString() === articleObj._id.toString());
+      articleObj.reference = ref ? ref.reference : "General";
+      return articleObj;
+    });
+
+    return res.status(200).json({ success: true, bookmarks });
   } catch (err) {
     console.error("getBookmarks error:", err);
-    return res.status(500).json({ success: false, message: "Server error" });
+    return res.status(500).json({ success: false, message: "Server error: " + err.message });
+  }
+}
+
+// 12.1 Toggle Bookmarked Post
+export async function toggleBookmarkPost(req, res) {
+  try {
+    const userId = getClerkUserId(req);
+    const { postId } = req.params;
+    const { reference } = req.body || {};
+    const refLabel = reference ? reference.trim() : "General";
+
+    if (!userId) {
+      return res.status(401).json({ success: false, message: "Unauthorized" });
+    }
+
+    if (!mongoose.Types.ObjectId.isValid(postId)) {
+      return res.status(400).json({ success: false, message: "Invalid post ID format" });
+    }
+    const postObjId = new mongoose.Types.ObjectId(postId);
+
+    let profile = await PatientProfile.findOne({ clerkUserId: userId });
+    if (!profile) {
+      profile = new PatientProfile({ clerkUserId: userId });
+    }
+
+    if (!profile.bookmarkedPosts) {
+      profile.bookmarkedPosts = [];
+    }
+    if (!profile.bookmarkReferences) {
+      profile.bookmarkReferences = [];
+    }
+
+    const index = profile.bookmarkedPosts.findIndex(id => id.toString() === postId);
+    if (index === -1) {
+      profile.bookmarkedPosts.push(postObjId);
+      profile.bookmarkReferences.push({
+        itemId: postObjId,
+        itemType: "Post",
+        reference: refLabel
+      });
+    } else {
+      // If a reference was explicitly provided in the body, update it instead of removing!
+      if (req.body && req.body.hasOwnProperty("reference")) {
+        const refIndex = profile.bookmarkReferences.findIndex(
+          r => r.itemId.toString() === postId
+        );
+        if (refIndex !== -1) {
+          profile.bookmarkReferences[refIndex].reference = refLabel;
+        } else {
+          profile.bookmarkReferences.push({
+            itemId: postObjId,
+            itemType: "Post",
+            reference: refLabel
+          });
+        }
+      } else {
+        profile.bookmarkedPosts.splice(index, 1);
+        profile.bookmarkReferences = profile.bookmarkReferences.filter(
+          r => r.itemId.toString() !== postId
+        );
+      }
+    }
+
+    await profile.save();
+    return res.status(200).json({ success: true, profile });
+  } catch (err) {
+    console.error("toggleBookmarkPost error:", err);
+    return res.status(500).json({ success: false, message: "Server error: " + err.message });
+  }
+}
+
+// 12.2 Get Bookmarked Posts
+export async function getBookmarkedPosts(req, res) {
+  try {
+    const userId = getClerkUserId(req);
+    if (!userId) {
+      return res.status(401).json({ success: false, message: "Unauthorized" });
+    }
+
+    const profile = await PatientProfile.findOne({ clerkUserId: userId }).populate("bookmarkedPosts");
+    if (!profile) {
+      return res.status(200).json({ success: true, bookmarks: [] });
+    }
+
+    const references = profile.bookmarkReferences || [];
+    const bookmarks = (profile.bookmarkedPosts || []).map(post => {
+      const postObj = post.toObject ? post.toObject() : post;
+      const ref = references.find(r => r.itemId.toString() === postObj._id.toString());
+      postObj.reference = ref ? ref.reference : "General";
+      return postObj;
+    });
+
+    return res.status(200).json({ success: true, bookmarks });
+  } catch (err) {
+    console.error("getBookmarkedPosts error:", err);
+    return res.status(500).json({ success: false, message: "Server error: " + err.message });
   }
 }
 
@@ -570,8 +769,8 @@ export async function forgotPasswordPatient(req, res) {
     }
 
     const query = emailOrPhone.includes("@") 
-      ? { email: emailOrPhone.toLowerCase().trim() }
-      : { phone: emailOrPhone.trim() };
+      ? { emailHash: hashField(emailOrPhone) }
+      : { phoneHash: hashField(emailOrPhone) };
 
     const profile = await PatientProfile.findOne(query);
     if (!profile) {
@@ -591,24 +790,27 @@ export async function forgotPasswordPatient(req, res) {
     console.log(`[PASSWORD RESET OTP] Code: ${otpCode}`);
     console.log(`==============================================\n`);
 
-    // Send email with OTP code
-    if (profile.email) {
+    if (profile.phone) {
+      const smsBody = `Your MediUnity password reset verification code is: ${otpCode}. Valid for 15 minutes.`;
+      await sendSms({ to: profile.phone, body: smsBody });
+    } else if (profile.email) {
+      // Fallback to email if phone is not set
       const mailHtml = `
         <div style="font-family: sans-serif; padding: 20px; color: #333;">
-          <h2>Reset Your Mediunity Password</h2>
+          <h2>Reset Your MediUnity Password</h2>
           <p>Dear ${profile.name || "Patient"},</p>
-          <p>You requested a password reset for your Mediunity account. Please use the following 6-digit verification code:</p>
+          <p>You requested a password reset for your MediUnity account. Please use the following 6-digit verification code:</p>
           <div style="background: #f0fdf4; border: 1px solid #bbf7d0; padding: 15px; text-align: center; border-radius: 8px; font-size: 24px; font-weight: bold; letter-spacing: 5px; color: #166534; margin: 20px 0;">
             ${otpCode}
           </div>
           <p>This code is valid for 15 minutes. If you did not request a password reset, please ignore this email.</p>
           <hr style="border: none; border-top: 1px solid #eee; margin-top: 30px;" />
-          <p style="font-size: 11px; color: #888;">Mediunity Portal • Safe & Secure Clinical Health Operations</p>
+          <p style="font-size: 11px; color: #888;">MediUnity Portal • Safe & Secure Clinical Health Operations</p>
         </div>
       `;
       await sendEmail({
         to: profile.email,
-        subject: "Mediunity Password Reset Verification Code",
+        subject: "MediUnity Password Reset Verification Code",
         html: mailHtml
       });
     }
@@ -632,9 +834,13 @@ export async function resetPasswordPatient(req, res) {
       return res.status(400).json({ success: false, message: "All fields are required" });
     }
 
+    if (!isValidPassword(newPassword)) {
+      return res.status(400).json({ success: false, message: "Password must be at least 8 characters long and contain at least one lowercase letter, one uppercase letter, and one number" });
+    }
+
     const query = emailOrPhone.includes("@") 
-      ? { email: emailOrPhone.toLowerCase().trim() }
-      : { phone: emailOrPhone.trim() };
+      ? { emailHash: hashField(emailOrPhone) }
+      : { phoneHash: hashField(emailOrPhone) };
 
     const profile = await PatientProfile.findOne(query);
     if (!profile) {
@@ -672,3 +878,350 @@ export async function resetPasswordPatient(req, res) {
   }
 }
 
+// 16. Admin: List All Users (paginated, searchable, filterable)
+export async function adminListUsers(req, res) {
+  try {
+    const { search = "", status = "", page: pageRaw = 1, limit: limitRaw = 20 } = req.query;
+    const page  = Math.max(1, parseInt(pageRaw, 10)  || 1);
+    const limit = Math.min(100, Math.max(1, parseInt(limitRaw, 10) || 20));
+    const skip  = (page - 1) * limit;
+
+    const filter = {};
+
+    // Status filters
+    if (status === "banned")   filter.isBanned = true;
+    if (status === "active")   filter.isBanned = { $ne: true };
+    if (status === "verified") { filter.isBanned = { $ne: true }; filter.isVerified = true; }
+    if (status === "unverified") { filter.isBanned = { $ne: true }; filter.isVerified = false; }
+
+    // Search
+    if (search.trim()) {
+      const re = new RegExp(search.trim(), "i");
+      filter.$or = [{ name: re }, { email: re }, { phone: re }];
+    }
+
+    const [users, total] = await Promise.all([
+      PatientProfile.find(filter)
+        .select("-password -otp -otpExpires -resetOtp -resetOtpExpires -medicalHistory -bookmarkedArticles -latestSymptomCheck -nidImagePublicId -imagePublicId")
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .lean(),
+      PatientProfile.countDocuments(filter),
+    ]);
+
+    return res.json({
+      success: true,
+      users,
+      pagination: { page, limit, total, totalPages: Math.ceil(total / limit) },
+    });
+  } catch (err) {
+    console.error("adminListUsers error:", err);
+    return res.status(500).json({ success: false, message: "Server error" });
+  }
+}
+
+// 17. Admin: Ban / Unban a User
+export async function adminBanUser(req, res) {
+  try {
+    const { id } = req.params;
+    const { ban, reason = "" } = req.body || {};
+
+    const update = ban
+      ? { isBanned: true,  banReason: reason, bannedAt: new Date() }
+      : { isBanned: false, banReason: "",      bannedAt: null };
+
+    const user = await PatientProfile.findByIdAndUpdate(id, update, { new: true })
+      .select("-password -otp -otpExpires -resetOtp -resetOtpExpires")
+      .lean();
+
+    if (!user) return res.status(404).json({ success: false, message: "User not found" });
+
+    return res.json({
+      success: true,
+      message: ban ? "User banned successfully" : "User unbanned successfully",
+      user,
+    });
+  } catch (err) {
+    console.error("adminBanUser error:", err);
+    return res.status(500).json({ success: false, message: "Server error" });
+  }
+}
+
+// 18. Admin: Permanently Delete a User
+export async function adminDeleteUser(req, res) {
+  try {
+    const { id } = req.params;
+
+    const user = await PatientProfile.findByIdAndDelete(id).lean();
+    if (!user) return res.status(404).json({ success: false, message: "User not found" });
+
+    return res.json({ success: true, message: "User permanently deleted", userId: id });
+  } catch (err) {
+    console.error("adminDeleteUser error:", err);
+    return res.status(500).json({ success: false, message: "Server error" });
+  }
+}
+
+// === AUTOMATED IDENTITY VERIFICATION ENDPOINTS ===
+
+// V1. Send Phone OTP
+export async function sendPhoneOtp(req, res) {
+  try {
+    const userId = getClerkUserId(req);
+    if (!userId) return res.status(401).json({ success: false, message: "Unauthorized" });
+
+    const { phone } = req.body || {};
+    if (!phone || phone.trim().length < 10) {
+      return res.status(400).json({ success: false, message: "A valid phone number is required" });
+    }
+
+    const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
+    const otpExpires = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+    const hashedOtp = await bcryptjs.hash(otpCode, 10);
+
+    const profile = await PatientProfile.findOne({ clerkUserId: userId });
+    if (!profile) return res.status(404).json({ success: false, message: "Profile not found" });
+
+    profile.phoneOtp = hashedOtp;
+    profile.phoneOtpExpires = otpExpires;
+    if (phone.trim()) profile.phone = phone.trim();
+    await profile.save();
+
+    const smsBody = `Your MediUnity identity verification code is: ${otpCode}. Valid for 10 minutes.`;
+    await sendSms({ to: phone.trim(), body: smsBody });
+
+    console.log(`[PHONE OTP] Sent to ${phone}: ${otpCode}`);
+
+    return res.json({ success: true, message: "OTP sent to your phone number" });
+  } catch (err) {
+    console.error("sendPhoneOtp error:", err);
+    return res.status(500).json({ success: false, message: "Server error" });
+  }
+}
+
+// V2. Verify Phone OTP
+export async function verifyPhoneOtp(req, res) {
+  try {
+    const userId = getClerkUserId(req);
+    if (!userId) return res.status(401).json({ success: false, message: "Unauthorized" });
+
+    const { otp } = req.body || {};
+    if (!otp) return res.status(400).json({ success: false, message: "OTP code is required" });
+
+    const profile = await PatientProfile.findOne({ clerkUserId: userId }).select("+phoneOtp");
+    if (!profile) return res.status(404).json({ success: false, message: "Profile not found" });
+
+    if (!profile.phoneOtp || !profile.phoneOtpExpires) {
+      return res.status(400).json({ success: false, message: "No pending OTP found. Please request a new one." });
+    }
+
+    if (new Date() > profile.phoneOtpExpires) {
+      profile.phoneOtp = null;
+      profile.phoneOtpExpires = null;
+      await profile.save();
+      return res.status(400).json({ success: false, message: "OTP has expired. Please request a new one." });
+    }
+
+    const isMatch = await bcryptjs.compare(otp.trim(), profile.phoneOtp);
+    if (!isMatch) {
+      return res.status(400).json({ success: false, message: "Incorrect OTP. Please try again." });
+    }
+
+    profile.isPhoneVerified = true;
+    profile.phoneOtp = null;
+    profile.phoneOtpExpires = null;
+    await profile.save();
+
+    return res.json({ success: true, message: "Phone number verified successfully!" });
+  } catch (err) {
+    console.error("verifyPhoneOtp error:", err);
+    return res.status(500).json({ success: false, message: "Server error" });
+  }
+}
+
+// V3. Submit Identity Document (NID or Birth Certificate)
+export async function submitIdentityDoc(req, res) {
+  try {
+    const userId = getClerkUserId(req);
+    if (!userId) return res.status(401).json({ success: false, message: "Unauthorized" });
+
+    const { docType, docNumber, dob } = req.body || {};
+
+    if (!docType || !["nid", "birth_certificate"].includes(docType)) {
+      return res.status(400).json({ success: false, message: "docType must be 'nid' or 'birth_certificate'" });
+    }
+    if (!docNumber || !docNumber.trim()) {
+      return res.status(400).json({ success: false, message: "Document number is required" });
+    }
+
+    const profile = await PatientProfile.findOne({ clerkUserId: userId });
+    if (!profile) return res.status(404).json({ success: false, message: "Profile not found" });
+
+    // Validate document via verifier
+    let result;
+    if (docType === "nid") {
+      result = await verifyNid(docNumber.trim(), profile.name, dob || "");
+      if (result.verified) profile.nid = docNumber.trim();
+    } else {
+      result = await verifyBirthCertificate(docNumber.trim(), profile.name, dob || "");
+      if (result.verified) profile.birthCertNumber = docNumber.trim();
+    }
+
+    profile.docType = docType;
+    profile.docVerificationResult = result.verified ? "verified" : "failed";
+    await profile.save();
+
+    if (!result.verified) {
+      return res.status(422).json({
+        success: false,
+        message: result.reason || "Document verification failed"
+      });
+    }
+
+    return res.json({
+      success: true,
+      message: result.reason || "Document verified successfully",
+      docVerificationResult: "verified"
+    });
+  } catch (err) {
+    console.error("submitIdentityDoc error:", err);
+    return res.status(500).json({ success: false, message: "Server error" });
+  }
+}
+
+// V4. Complete Verification — finalises isVerified if phone + doc both passed
+export async function completeVerification(req, res) {
+  try {
+    const userId = getClerkUserId(req);
+    if (!userId) return res.status(401).json({ success: false, message: "Unauthorized" });
+
+    const profile = await PatientProfile.findOne({ clerkUserId: userId });
+    if (!profile) return res.status(404).json({ success: false, message: "Profile not found" });
+
+    if (!profile.isPhoneVerified) {
+      return res.status(400).json({ success: false, message: "Phone number not verified yet" });
+    }
+    if (profile.docVerificationResult !== "verified") {
+      return res.status(400).json({ success: false, message: "Identity document not verified yet" });
+    }
+
+    profile.isVerified = true;
+    profile.verificationStatus = "Verified";
+    await profile.save();
+
+    return res.json({ success: true, message: "Profile verified successfully! 🎉", profile });
+  } catch (err) {
+    console.error("completeVerification error:", err);
+    return res.status(500).json({ success: false, message: "Server error" });
+  }
+}
+
+/* =========================================================
+   FAMILY MEMBERS MANAGEMENT (Multi-Patient Support)
+========================================================= */
+
+// Get all family members for the logged-in patient
+export async function getFamilyMembers(req, res) {
+  try {
+    const userId = getClerkUserId(req);
+    if (!userId) return res.status(401).json({ success: false, message: "Unauthorized" });
+
+    const profile = await PatientProfile.findOne({ clerkUserId: userId });
+    if (!profile) return res.status(404).json({ success: false, message: "Profile not found" });
+
+    return res.json({ success: true, familyMembers: profile.familyMembers || [] });
+  } catch (err) {
+    console.error("getFamilyMembers error:", err);
+    return res.status(500).json({ success: false, message: "Server error" });
+  }
+}
+
+// Add a new family member
+export async function addFamilyMember(req, res) {
+  try {
+    const userId = getClerkUserId(req);
+    if (!userId) return res.status(401).json({ success: false, message: "Unauthorized" });
+
+    const { name, relation, dateOfBirth, gender, bloodGroup, phone } = req.body;
+    if (!name || !relation) {
+      return res.status(400).json({ success: false, message: "Name and relation are required" });
+    }
+
+    const profile = await PatientProfile.findOne({ clerkUserId: userId });
+    if (!profile) return res.status(404).json({ success: false, message: "Profile not found" });
+
+    const newMember = {
+      name: name.trim(),
+      relation,
+      dateOfBirth: dateOfBirth || "",
+      gender: gender || "",
+      bloodGroup: bloodGroup || "",
+      phone: phone || "",
+      medicalHistory: [],
+      allergies: [],
+      currentMedications: [],
+    };
+
+    profile.familyMembers.push(newMember);
+    await profile.save();
+
+    const createdMember = profile.familyMembers[profile.familyMembers.length - 1];
+    return res.status(201).json({ success: true, message: "Family member added successfully", familyMember: createdMember });
+  } catch (err) {
+    console.error("addFamilyMember error:", err);
+    return res.status(500).json({ success: false, message: "Server error" });
+  }
+}
+
+// Update a family member
+export async function updateFamilyMember(req, res) {
+  try {
+    const userId = getClerkUserId(req);
+    if (!userId) return res.status(401).json({ success: false, message: "Unauthorized" });
+
+    const { memberId } = req.params;
+    const profile = await PatientProfile.findOne({ clerkUserId: userId });
+    if (!profile) return res.status(404).json({ success: false, message: "Profile not found" });
+
+    const member = profile.familyMembers.id(memberId);
+    if (!member) return res.status(404).json({ success: false, message: "Family member not found" });
+
+    const { name, relation, dateOfBirth, gender, bloodGroup, phone, allergies, currentMedications } = req.body;
+
+    if (name) member.name = name.trim();
+    if (relation) member.relation = relation;
+    if (dateOfBirth !== undefined) member.dateOfBirth = dateOfBirth;
+    if (gender !== undefined) member.gender = gender;
+    if (bloodGroup !== undefined) member.bloodGroup = bloodGroup;
+    if (phone !== undefined) member.phone = phone;
+    if (allergies !== undefined) member.allergies = allergies;
+    if (currentMedications !== undefined) member.currentMedications = currentMedications;
+
+    await profile.save();
+    return res.json({ success: true, message: "Family member updated successfully", familyMember: member });
+  } catch (err) {
+    console.error("updateFamilyMember error:", err);
+    return res.status(500).json({ success: false, message: "Server error" });
+  }
+}
+
+// Delete a family member
+export async function deleteFamilyMember(req, res) {
+  try {
+    const userId = getClerkUserId(req);
+    if (!userId) return res.status(401).json({ success: false, message: "Unauthorized" });
+
+    const { memberId } = req.params;
+    const profile = await PatientProfile.findOne({ clerkUserId: userId });
+    if (!profile) return res.status(404).json({ success: false, message: "Profile not found" });
+
+    profile.familyMembers.pull({ _id: memberId });
+    await profile.save();
+
+    return res.json({ success: true, message: "Family member removed successfully" });
+  } catch (err) {
+    console.error("deleteFamilyMember error:", err);
+    return res.status(500).json({ success: false, message: "Server error" });
+  }
+}

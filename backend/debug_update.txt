@@ -1,0 +1,16 @@
+updateDoctor error: TypeError: next is not a function
+    at model.<anonymous> (file:///F:/1.%20Final%20Medicare%20project%20-%20Copy/1.%20Final%20Medicare%20project%20-%20Copy/1.%20Final%20Medicare%20project%20-%20Copy/backend/models/Doctor.js:96:3)
+    at Kareem.execPre (F:\1. Final Medicare project - Copy\1. Final Medicare project - Copy\1. Final Medicare project - Copy\backend\node_modules\kareem\index.js:59:39)
+    at model._execDocumentPreHooks (F:\1. Final Medicare project - Copy\1. Final Medicare project - Copy\1. Final Medicare project - Copy\backend\node_modules\mongoose\lib\document.js:3226:29)
+    at model.$__save (F:\1. Final Medicare project - Copy\1. Final Medicare project - Copy\1. Final Medicare project - Copy\backend\node_modules\mongoose\lib\model.js:403:16)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async maybeTracedSave (F:\1. Final Medicare project - Copy\1. Final Medicare project - Copy\1. Final Medicare project - Copy\backend\node_modules\mongoose\lib\model.js:675:7)
+    at async updateDoctor (file:///F:/1.%20Final%20Medicare%20project%20-%20Copy/1.%20Final%20Medicare%20project%20-%20Copy/1.%20Final%20Medicare%20project%20-%20Copy/backend/controllers/doctorController.js:714:5)
+updateDoctor error: TypeError: next is not a function
+    at model.<anonymous> (file:///F:/1.%20Final%20Medicare%20project%20-%20Copy/1.%20Final%20Medicare%20project%20-%20Copy/1.%20Final%20Medicare%20project%20-%20Copy/backend/models/Doctor.js:96:3)
+    at Kareem.execPre (F:\1. Final Medicare project - Copy\1. Final Medicare project - Copy\1. Final Medicare project - Copy\backend\node_modules\kareem\index.js:59:39)
+    at model._execDocumentPreHooks (F:\1. Final Medicare project - Copy\1. Final Medicare project - Copy\1. Final Medicare project - Copy\backend\node_modules\mongoose\lib\document.js:3226:29)
+    at model.$__save (F:\1. Final Medicare project - Copy\1. Final Medicare project - Copy\1. Final Medicare project - Copy\backend\node_modules\mongoose\lib\model.js:403:16)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async maybeTracedSave (F:\1. Final Medicare project - Copy\1. Final Medicare project - Copy\1. Final Medicare project - Copy\backend\node_modules\mongoose\lib\model.js:675:7)
+    at async updateDoctor (file:///F:/1.%20Final%20Medicare%20project%20-%20Copy/1.%20Final%20Medicare%20project%20-%20Copy/1.%20Final%20Medicare%20project%20-%20Copy/backend/controllers/doctorController.js:714:5)

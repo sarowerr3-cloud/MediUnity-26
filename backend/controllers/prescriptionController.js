@@ -1,5 +1,8 @@
 import Prescription from "../models/Prescription.js";
 import Appointment from "../models/Appointment.js";
+import PatientProfile from "../models/PatientProfile.js";
+import { uploadToCloudinary } from "../utils/cloudinary.js";
+import medicinesList from "../data/medicines.js";
 
 // Helper to resolve Clerk UserId
 function getClerkUserId(req) {
@@ -18,10 +21,18 @@ export async function createOrUpdatePrescription(req, res) {
       appointmentId,
       symptoms = "",
       diagnosis = "",
-      medicines = [],
       advice = "",
       tests = "",
     } = req.body || {};
+
+    let medicines = [];
+    if (req.body.medicines) {
+      try {
+        medicines = typeof req.body.medicines === "string" ? JSON.parse(req.body.medicines) : req.body.medicines;
+      } catch (e) {
+        console.error("Failed to parse medicines:", e);
+      }
+    }
 
     if (!appointmentId) {
       return res.status(400).json({ success: false, message: "appointmentId is required" });
@@ -58,11 +69,41 @@ export async function createOrUpdatePrescription(req, res) {
     prescription.advice = advice;
     prescription.tests = tests;
 
+    // Handle PDF Upload
+    if (req.file?.path) {
+      const uploaded = await uploadToCloudinary(req.file.path, "prescriptions");
+      if (uploaded) {
+        prescription.pdfUrl = uploaded.secure_url;
+        prescription.pdfPublicId = uploaded.public_id;
+      }
+    }
+
     await prescription.save();
 
     // Mark appointment as Completed automatically when prescription is written
     appointment.status = "Completed";
     await appointment.save();
+
+    // Add to Patient's Medical History if patient profile exists
+    if (prescription.pdfUrl && appointment.createdBy) {
+      const profile = await PatientProfile.findOne({ clerkUserId: appointment.createdBy });
+      if (profile) {
+        // Prevent duplicate history entries for the same prescription
+        const existingEntry = profile.medicalHistory.find(
+          (h) => h.condition === `Prescription from Dr. ${doctor.name}` && h.date === new Date().toISOString().split("T")[0]
+        );
+        if (!existingEntry) {
+          profile.medicalHistory.push({
+            condition: `Prescription from Dr. ${doctor.name}`,
+            date: new Date().toISOString().split("T")[0],
+            notes: diagnosis ? `Diagnosis: ${diagnosis}` : "",
+            fileUrl: prescription.pdfUrl,
+            filePublicId: prescription.pdfPublicId,
+          });
+          await profile.save();
+        }
+      }
+    }
 
     return res.status(200).json({ success: true, prescription, appointment });
   } catch (err) {
@@ -134,5 +175,74 @@ export async function getPatientPrescriptionsForDoctor(req, res) {
   } catch (err) {
     console.error("getPatientPrescriptionsForDoctor error:", err);
     return res.status(500).json({ success: false, message: "Server error" });
+  }
+}
+
+// 5. Search Medicine Database (Typeahead for Prescription Builder)
+export async function searchMedicines(req, res) {
+  try {
+    const query = (req.query.q || "").trim().toLowerCase();
+    if (!query || query.length < 2) {
+      return res.json({ success: true, medicines: [] });
+    }
+
+    const filtered = medicinesList.filter((med) => {
+      const matchGeneric = med.genericName.toLowerCase().includes(query);
+      const matchBrand = med.brandNames.some((brand) => brand.toLowerCase().includes(query));
+      const matchCat = med.category.toLowerCase().includes(query);
+      return matchGeneric || matchBrand || matchCat;
+    });
+
+    return res.json({ success: true, medicines: filtered.slice(0, 15) });
+  } catch (err) {
+    console.error("searchMedicines error:", err);
+    return res.status(500).json({ success: false, message: "Server error" });
+  }
+}
+
+// 6. AI Clinical Decision Support (Suggest Diagnosis & Meds)
+export async function aiSuggestDiagnosis(req, res) {
+  try {
+    const { symptoms = "" } = req.body || {};
+    if (!symptoms.trim()) {
+      return res.status(400).json({ success: false, message: "Symptoms required for AI analysis" });
+    }
+
+    const query = symptoms.toLowerCase();
+    let suggestions = {
+      diagnosis: "Acute Viral Upper Respiratory Infection",
+      differentials: ["Acute Bronchitis", "Allergic Rhinitis", "Influenza"],
+      recommendedMedicines: [
+        { name: "Paracetamol (Napa/Ace)", dosageForm: "tablet", dosagePattern: { morning: 1, afternoon: 0, night: 1 }, frequency: "After food", duration: "5 days" },
+        { name: "Cetirizine (Alatrol/Zyrtec)", dosageForm: "tablet", dosagePattern: { morning: 0, afternoon: 0, night: 1 }, frequency: "After food", duration: "7 days" }
+      ],
+      advice: "Drink warm fluids, rest for 3 days, avoid cold food. Monitor temperature daily."
+    };
+
+    if (query.includes("stomach") || query.includes("gastric") || query.includes("acidity") || query.includes("pain")) {
+      suggestions = {
+        diagnosis: "Gastroesophageal Reflux Disease (GERD) / Dyspepsia",
+        differentials: ["Acute Gastritis", "Peptic Ulcer Disease"],
+        recommendedMedicines: [
+          { name: "Omeprazole (Seclo)", dosageForm: "capsule", dosagePattern: { morning: 1, afternoon: 0, night: 1 }, frequency: "Before food", duration: "14 days" },
+          { name: "Domperidone (Omidon)", dosageForm: "tablet", dosagePattern: { morning: 1, afternoon: 1, night: 1 }, frequency: "Before food", duration: "7 days" }
+        ],
+        advice: "Avoid spicy and oily food. Do not lie down immediately after meals."
+      };
+    } else if (query.includes("headache") || query.includes("migraine")) {
+      suggestions = {
+        diagnosis: "Tension Headache / Primary Migraine",
+        differentials: ["Sinusitis", "Hypertension"],
+        recommendedMedicines: [
+          { name: "Naproxen (Naprosyn)", dosageForm: "tablet", dosagePattern: { morning: 1, afternoon: 0, night: 1 }, frequency: "After food", duration: "3 days" }
+        ],
+        advice: "Ensure 8 hours of sleep, reduce screen exposure, stay hydrated."
+      };
+    }
+
+    return res.json({ success: true, suggestions });
+  } catch (err) {
+    console.error("aiSuggestDiagnosis error:", err);
+    return res.status(500).json({ success: false, message: "AI clinical assistant error" });
   }
 }

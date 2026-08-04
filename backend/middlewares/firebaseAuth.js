@@ -7,7 +7,7 @@ let keysExpiryTime = 0;
 const GOOGLE_KEYS_URL = "https://www.googleapis.com/robot/v1/metadata/x509/securetoken@system.gserviceaccount.com";
 const FIREBASE_PROJECT_ID = process.env.FIREBASE_PROJECT_ID || "medicare-cumilla";
 
-async function getGooglePublicKeys() {
+export async function getGooglePublicKeys() {
   const now = Date.now();
   if (publicKeysCache && now < keysExpiryTime) {
     return publicKeysCache;

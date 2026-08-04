@@ -30,11 +30,12 @@ const fileFilter = (req, file, cb) => {
     file.mimetype === "image/png" ||
     file.mimetype === "image/jpg" ||
     file.mimetype === "image/jpeg" ||
-    file.mimetype === "image/webp"
+    file.mimetype === "image/webp" ||
+    file.mimetype === "application/pdf"
   ) {
     cb(null, true);
   } else {
-    cb(new Error("Only image files are allowed"), false);
+    cb(new Error("Only image and PDF files are allowed"), false);
   }
 };
 

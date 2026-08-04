@@ -13,9 +13,9 @@ if not exist .git (
 )
 
 :: 2. Add remote origin (Force it in case it exists)
-echo [2/4] Connecting to https://github.com/sarowerr3-cloud/medicare-cumilla.git...
+echo [2/4] Connecting to https://github.com/sarowerr3-cloud/MediUnity-26.git...
 git remote remove origin >nul 2>&1
-git remote add origin https://github.com/sarowerr3-cloud/medicare-cumilla.git
+git remote add origin https://github.com/sarowerr3-cloud/MediUnity-26.git
 
 :: 3. Add and Commit
 echo [3/4] Preparing files for upload...

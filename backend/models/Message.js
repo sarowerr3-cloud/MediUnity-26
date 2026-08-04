@@ -8,6 +8,11 @@ const messageSchema = new mongoose.Schema(
       required: true,
       index: true,
     },
+    roomId: {
+      type: String,
+      default: null,
+      index: true,
+    },
     senderId: {
       type: String, // Clerk patient ID or doctor ObjectId string
       required: true,
@@ -26,9 +31,17 @@ const messageSchema = new mongoose.Schema(
       required: true,
       trim: true,
     },
+    isRead: {
+      type: Boolean,
+      default: false,
+    },
   },
   { timestamps: true }
 );
+
+// Indexes for pagination and room sorting
+messageSchema.index({ roomId: 1 });
+messageSchema.index({ roomId: 1, createdAt: -1 });
 
 const Message =
   mongoose.models.Message || mongoose.model("Message", messageSchema);

@@ -19,8 +19,12 @@ import {
   ShieldCheck,
   FileSearch,
   MessageSquare,
+  UserX,
+  Bell,
 } from "lucide-react";
+import toast from "react-hot-toast";
 import logoImg from "../../assets/logo.png";
+import logoAnim from "../../assets/logo_icon_animation.mp4";
 
 import { useAuth, useUser } from "../../context/AuthContext";
 import AuthModal from "../AuthModal/AuthModal";
@@ -39,6 +43,118 @@ export default function AnimatedNavbar() {
 
   // Role for conditional nav rendering
   const role = user?.role || "support";
+
+  const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:4000";
+  const [unreadNotifications, setUnreadNotifications] = useState([]);
+
+  useEffect(() => {
+    let active = true;
+    let eventSource = null;
+
+    const fetchNotifications = async () => {
+      try {
+        if (!isSignedIn) {
+          setUnreadNotifications([]);
+          return;
+        }
+
+        const token = await getToken();
+        const headers = {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
+        };
+
+        const res = await fetch(`${API_BASE}/api/notifications`, { headers });
+        const json = await res.json();
+        if (json.success && active) {
+          const activeNotifs = (json.notifications || []).filter(n => !n.isRead);
+          setUnreadNotifications(activeNotifs);
+        }
+
+        // SSE Real-Time connection
+        if (!eventSource) {
+          const streamUrl = `${API_BASE}/api/notifications/stream?token=${encodeURIComponent(token)}`;
+          eventSource = new EventSource(streamUrl);
+
+          eventSource.addEventListener("notification", (event) => {
+            try {
+              const newNotif = JSON.parse(event.data);
+              if (active) {
+                setUnreadNotifications((prev) => {
+                  if (prev.some((n) => n._id === newNotif._id)) return prev;
+                  return [newNotif, ...prev];
+                });
+                toast.success(newNotif.message, { position: "bottom-right", duration: 5000 });
+              }
+            } catch (e) {
+              console.error("SSE parse error:", e);
+            }
+          });
+
+          eventSource.onerror = (err) => {
+            console.warn("Admin SSE connection error, closing...", err);
+            if (eventSource) {
+              eventSource.close();
+              eventSource = null;
+            }
+          };
+        }
+      } catch (err) {
+        console.error("Admin fetchNotifications error:", err);
+      }
+    };
+
+    fetchNotifications();
+    const interval = setInterval(fetchNotifications, 15000);
+
+    return () => {
+      active = false;
+      clearInterval(interval);
+      if (eventSource) {
+        eventSource.close();
+      }
+    };
+  }, [isSignedIn]);
+
+  const handleMarkAsRead = async (notifId) => {
+    try {
+      if (!isSignedIn) return;
+      const token = await getToken();
+      const res = await fetch(`${API_BASE}/api/notifications/${notifId}/read`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
+        }
+      });
+      const json = await res.json();
+      if (json.success) {
+        setUnreadNotifications(prev => prev.filter(n => n._id !== notifId));
+      }
+    } catch (err) {
+      console.error("Failed to mark admin notification read:", err);
+    }
+  };
+
+  const handleMarkAllRead = async () => {
+    try {
+      if (!isSignedIn) return;
+      const token = await getToken();
+      const res = await fetch(`${API_BASE}/api/notifications/read-all`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
+        }
+      });
+      const json = await res.json();
+      if (json.success) {
+        setUnreadNotifications([]);
+      }
+    } catch (err) {
+      console.error("Failed to mark all admin notifications read:", err);
+    }
+  };
 
   /* ---------------- Sliding Active Indicator ---------------- */
   const moveIndicator = useCallback(() => {
@@ -175,17 +291,22 @@ export default function AnimatedNavbar() {
         <div className={ns.flexContainer}>
           {/* LEFT */}
           <div className={ns.logoContainer}>
-            <img
-              src={logoImg}
-              alt="Mediunity"
-              className={ns.logoImage}
-            />
+            <div className="w-14 h-14 overflow-hidden rounded-xl border border-white/10 shadow-lg shadow-black/20">
+              <video
+                src={logoAnim}
+                autoPlay
+                loop
+                muted
+                playsInline
+                className="w-full h-full object-cover scale-110"
+              />
+            </div>
             <Link to="/">
-              <div className={ns.logoLink}>
-                Mediunity
+              <div className="text-xl font-extrabold" style={{ color: '#51C7C5' }}>
+                MediUnity
               </div>
-              <div className={ns.logoSubtext}>
-                Your Healthcare Solution
+              <div className="text-xs font-medium" style={{ color: '#30D6D3' }}>
+                Admin Portal
               </div>
             </Link>
           </div>
@@ -219,13 +340,7 @@ export default function AnimatedNavbar() {
                       icon={<Users size={16} />}
                     />
                   )}
-                  {(role === "super-admin" || role === "moderator") && (
-                    <CenterNavItem
-                      to="/appointments"
-                      label="Appointments"
-                      icon={<Calendar size={16} />}
-                    />
-                  )}
+
                   {(role === "super-admin" || role === "moderator") && (
                     <CenterNavItem
                       to="/community-posts"
@@ -245,6 +360,13 @@ export default function AnimatedNavbar() {
                       icon={<FileSearch size={16} />}
                     />
                   )}
+                  {role === "super-admin" && (
+                    <CenterNavItem
+                      to="/users"
+                      label="Users"
+                      icon={<UserX size={16} />}
+                    />
+                  )}
                 </div>
               </div>
             </div>
@@ -254,12 +376,67 @@ export default function AnimatedNavbar() {
           <div className={ns.rightContainer}>
             {/* Auth buttons */}
             {isSignedIn ? (
-              <button
-                onClick={handleSignOut}
-                className={ns.signOutButton + " " + ns.cursorPointer}
-              >
-                Sign Out
-              </button>
+              <>
+                {/* Notification Bell */}
+                <div className="relative group mr-2">
+                  <button className="p-2 bg-slate-50 border border-slate-200 rounded-full hover:bg-slate-100 transition relative flex items-center justify-center cursor-pointer">
+                    <Bell className="w-4 h-4 text-slate-600" />
+                    {unreadNotifications.length > 0 && (
+                      <span className="absolute -top-1 -right-1 bg-rose-500 text-white font-extrabold text-[8px] w-4.5 h-4.5 rounded-full flex items-center justify-center border border-white animate-pulse">
+                        {unreadNotifications.length}
+                      </span>
+                    )}
+                  </button>
+                  
+                  <div className="absolute right-0 mt-2 w-80 bg-white rounded-xl border border-slate-200 shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition duration-200 z-50 overflow-hidden">
+                    <div className="px-4 py-3 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+                      <span className="font-bold text-slate-800 text-sm">Notifications</span>
+                      {unreadNotifications.length > 0 && (
+                        <button
+                          onClick={handleMarkAllRead}
+                          className="text-[9px] text-emerald-600 hover:text-emerald-800 hover:underline font-bold bg-transparent border-none cursor-pointer"
+                        >
+                          Mark all read
+                        </button>
+                      )}
+                    </div>
+                    
+                    <div className="p-2 flex flex-col max-h-72 overflow-y-auto divide-y divide-slate-50">
+                      {unreadNotifications.length === 0 ? (
+                        <div className="p-4 text-center">
+                          <p className="text-xs text-slate-400">You have no new notifications.</p>
+                        </div>
+                      ) : (
+                        unreadNotifications.map(notif => (
+                          <div key={notif._id} className="flex gap-3 items-start p-3 hover:bg-slate-50 rounded-lg transition text-left justify-between">
+                            <div className="flex gap-3 items-start min-w-0">
+                              <div className="w-2.5 h-2.5 bg-emerald-500 rounded-full mt-1 shrink-0"></div>
+                              <div className="min-w-0">
+                                <p className="text-xs font-semibold text-slate-700 leading-normal">{notif.message}</p>
+                                <p className="text-[8px] text-slate-400 mt-0.5">{new Date(notif.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
+                              </div>
+                            </div>
+                            <button
+                              onClick={() => handleMarkAsRead(notif._id)}
+                              className="text-slate-400 hover:text-emerald-600 transition shrink-0 cursor-pointer p-0.5"
+                              title="Mark as read"
+                            >
+                              ✕
+                            </button>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                <button
+                  onClick={handleSignOut}
+                  className={ns.signOutButton + " " + ns.cursorPointer}
+                >
+                  Sign Out
+                </button>
+              </>
             ) : (
               <div className="hidden lg:flex items-center gap-2">
                 <button
@@ -318,14 +495,7 @@ export default function AnimatedNavbar() {
                   onClick={() => setOpen(false)}
                 />
               )}
-              {(role === "super-admin" || role === "moderator") && (
-                <MobileItem
-                  to="/appointments"
-                  label="Appointments"
-                  icon={<Calendar size={16} />}
-                  onClick={() => setOpen(false)}
-                />
-              )}
+
               {(role === "super-admin" || role === "moderator") && (
                 <MobileItem
                   to="/community-posts"
@@ -345,6 +515,14 @@ export default function AnimatedNavbar() {
                   to="/audit-logs"
                   label="Audit Logs"
                   icon={<FileSearch size={16} />}
+                  onClick={() => setOpen(false)}
+                />
+              )}
+              {role === "super-admin" && (
+                <MobileItem
+                  to="/users"
+                  label="Users"
+                  icon={<UserX size={16} />}
                   onClick={() => setOpen(false)}
                 />
               )}

@@ -27,7 +27,7 @@ export default function Hero({ role = "admin", userName = "Doctor" }) {
               <div className={heroStyles.logoContainer}>
                 <img
                   src={logoImg}
-                  alt="Mediunity"
+                  alt="MediUnity"
                   className={heroStyles.logo}
                 />
               </div>

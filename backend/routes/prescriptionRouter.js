@@ -1,73 +1,100 @@
+// routes/prescriptionRouter.js
 import express from "express";
-import { requireFirebaseAuth } from "../middlewares/firebaseAuth.js";
-import jwt from "jsonwebtoken";
-import Doctor from "../models/Doctor.js";
-import doctorAuth from "../middlewares/doctorAuth.js";
+import { authMiddleware, requireRole as requireUserRole, populateReqDoctor } from "../middlewares/authMiddleware.js";
+import upload from "../middlewares/multer.js";
+import { prescriptionQueue } from "../queues/prescriptionQueue.js";
 import {
   createOrUpdatePrescription,
   getPrescriptionByAppointment,
   getPatientPrescriptions,
   getPatientPrescriptionsForDoctor,
+  searchMedicines,
+  aiSuggestDiagnosis,
 } from "../controllers/prescriptionController.js";
 
 const prescriptionRouter = express.Router();
-const JWT_SECRET = process.env.JWT_SECRET || "your_jwt_secret_here";
 
-// Hybrid authorization middleware for reading prescriptions
-async function readPrescriptionAuth(req, res, next) {
-  // 1. Firebase patient authenticated
-  if (req.auth?.userId) {
-    return next();
-  }
-
-  // 2. Doctor authenticated
-  const authHeader = req.headers.authorization;
-  if (authHeader && authHeader.startsWith("Bearer ")) {
-    const token = authHeader.split(" ")[1];
-    try {
-      const payload = jwt.verify(token, JWT_SECRET);
-      const doctor = await Doctor.findById(payload.id).select("-password");
-      if (doctor) {
-        req.doctor = doctor;
-        return next();
-      }
-    } catch (err) {
-      console.warn("readPrescriptionAuth doctor JWT verify failed:", err.message);
-    }
-  }
-
-  return res.status(401).json({
-    success: false,
-    message: "Authentication required to view prescription.",
-  });
-}
-
-// Write prescription (Doctors only)
-prescriptionRouter.post(
-  "/",
-  doctorAuth,
-  createOrUpdatePrescription
+// Search medicine database for typeahead (open to authenticated users)
+prescriptionRouter.get(
+  "/medicines/search",
+  authMiddleware,
+  searchMedicines
 );
 
-// Get prescriptions for logged-in patient (Patients only)
+// AI Clinical Decision Support (Suggest diagnosis & medicines)
+prescriptionRouter.post(
+  "/ai-assist",
+  authMiddleware,
+  aiSuggestDiagnosis
+);
+
+// --- Patient Routes ---
 prescriptionRouter.get(
   "/patient",
-  requireFirebaseAuth,
+  authMiddleware,
   getPatientPrescriptions
 );
 
-// Get all prescriptions for a patient (Doctors only)
+// --- Doctor Routes ---
+prescriptionRouter.post(
+  "/",
+  authMiddleware,
+  requireUserRole("doctor"),
+  populateReqDoctor,
+  upload.single("pdf"),
+  createOrUpdatePrescription
+);
+
 prescriptionRouter.get(
-  "/history/patient/:patientId",
-  doctorAuth,
+  "/patient/:patientId",
+  authMiddleware,
+  requireUserRole("doctor"),
+  populateReqDoctor,
   getPatientPrescriptionsForDoctor
 );
 
-// Get prescription for specific appointment (Patient or Doctor)
+// --- Shared (Patient or Doctor) ---
 prescriptionRouter.get(
   "/appointment/:appointmentId",
-  readPrescriptionAuth,
+  authMiddleware,
+  (req, res, next) => {
+    if (req.auth?.role === "doctor") {
+      return populateReqDoctor(req, res, next);
+    }
+    next();
+  },
   getPrescriptionByAppointment
 );
+
+// Keep the old pdf queue route just in case
+prescriptionRouter.post("/queue-pdf", async (req, res) => {
+  try {
+    const { patientName, doctorName, medicines, advice } = req.body || {};
+    if (!patientName || !doctorName) {
+      return res.status(400).json({ success: false, message: "Patient name and Doctor name are required" });
+    }
+
+    const prescriptionId = Math.random().toString(36).substring(7);
+
+    // Queue the job instead of blocking the main thread
+    await prescriptionQueue.add("generate-pdf", {
+      prescriptionId,
+      patientName,
+      doctorName,
+      medicines: medicines || [],
+      advice: advice || "",
+    });
+
+    return res.status(202).json({
+      success: true,
+      message: "Prescription PDF generation has been queued.",
+      prescriptionId,
+      status: "Processing"
+    });
+  } catch (err) {
+    console.error("Queue prescription error:", err);
+    return res.status(500).json({ success: false, message: "Failed to queue prescription" });
+  }
+});
 
 export default prescriptionRouter;

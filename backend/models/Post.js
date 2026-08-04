@@ -12,6 +12,12 @@ const commentSchema = new mongoose.Schema(
     },
     upvotes: [{ type: String, default: [] }], // array of patient userIds
     isAnonymous: { type: Boolean, default: false },
+    media: [
+      {
+        url: { type: String, required: true },
+        type: { type: String, enum: ["image", "video"], required: true },
+      }
+    ],
   },
   { timestamps: true }
 );
@@ -28,6 +34,12 @@ const postSchema = new mongoose.Schema(
       enum: ["patient", "doctor"],
       default: "patient",
     },
+    forumType: {
+      type: String,
+      enum: ["patient", "doctor"],
+      default: "patient",
+      index: true
+    },
     likes: [{ type: String, default: [] }],
     comments: [commentSchema],
     isQA: { type: Boolean, default: false },
@@ -36,6 +48,12 @@ const postSchema = new mongoose.Schema(
     isBanned: { type: Boolean, default: false },
     bannedReason: { type: String, default: "" },
     isHidden: { type: Boolean, default: false },
+    media: [
+      {
+        url: { type: String, required: true },
+        type: { type: String, enum: ["image", "video"], required: true },
+      }
+    ],
   },
   { timestamps: true }
 );

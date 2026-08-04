@@ -54,7 +54,58 @@ export default function AppointmentsPage() {
   const [query, setQuery] = useState("");
   const [filterDate, setFilterDate] = useState("");
   const [filterSpeciality, setFilterSpeciality] = useState("all");
+  const [groupBy, setGroupBy] = useState("none"); // "none", "date", "week"
   const [showAll, setShowAll] = useState(false);
+
+  // Grouping labels
+  function getGroupLabelByDate(dateStr) {
+    if (!dateStr) return "Unscheduled";
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+
+    const target = new Date(`${dateStr}T00:00:00`);
+    target.setHours(0, 0, 0, 0);
+
+    const diffTime = target.getTime() - today.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+    if (diffDays === 0) return "Today";
+    if (diffDays === 1) return "Tomorrow";
+    if (diffDays < 0) return "Past Appointments";
+    return `Upcoming: ${formatDateISO(dateStr)}`;
+  }
+
+  function getGroupLabelByWeek(dateStr) {
+    if (!dateStr) return "Unscheduled";
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const startOfThisWeek = new Date(today);
+    startOfThisWeek.setDate(today.getDate() - today.getDay());
+
+    const startOfNextWeek = new Date(startOfThisWeek);
+    startOfNextWeek.setDate(startOfNextWeek.getDate() + 7);
+
+    const startOfFutureWeek = new Date(startOfNextWeek);
+    startOfFutureWeek.setDate(startOfFutureWeek.getDate() + 7);
+
+    const target = new Date(`${dateStr}T00:00:00`);
+    target.setHours(0, 0, 0, 0);
+
+    if (target < startOfThisWeek) {
+      return "Past Weeks";
+    }
+    if (target >= startOfThisWeek && target < startOfNextWeek) {
+      return "This Week";
+    }
+    if (target >= startOfNextWeek && target < startOfFutureWeek) {
+      return "Next Week";
+    }
+    return "Upcoming Weeks";
+  }
 
   // fetch list from server
   useEffect(() => {
@@ -153,6 +204,36 @@ export default function AppointmentsPage() {
     () => (showAll ? sortedFiltered : sortedFiltered.slice(0, 8)),
     [sortedFiltered, showAll]
   );
+
+  const groupedAppointments = useMemo(() => {
+    if (groupBy === "none") return null;
+
+    const groups = {};
+    displayed.forEach((a) => {
+      const label = groupBy === "date" ? getGroupLabelByDate(a.slot.date) : getGroupLabelByWeek(a.slot.date);
+      if (!groups[label]) {
+        groups[label] = [];
+      }
+      groups[label].push(a);
+    });
+
+    const orderMap = groupBy === "date"
+      ? { "Today": 1, "Tomorrow": 2, "Upcoming": 3, "Past Appointments": 4, "Unscheduled": 5 }
+      : { "This Week": 1, "Next Week": 2, "Upcoming Weeks": 3, "Past Weeks": 4, "Unscheduled": 5 };
+
+    const getOrderValue = (key) => {
+      if (orderMap[key] !== undefined) return orderMap[key];
+      if (key.startsWith("Upcoming")) return 3;
+      return 99;
+    };
+
+    return Object.keys(groups)
+      .sort((a, b) => getOrderValue(a) - getOrderValue(b))
+      .map((key) => ({
+        label: key,
+        items: groups[key]
+      }));
+  }, [displayed, groupBy]);
 
   // Admin cancel (calls backend POST /api/appointments/:id/cancel)
   async function adminCancelAppointment(id) {
@@ -292,6 +373,16 @@ export default function AppointmentsPage() {
 
                 <select
                   className={pageStyles.selectFilter}
+                  value={groupBy}
+                  onChange={(e) => setGroupBy(e.target.value)}
+                >
+                  <option value="none">List View</option>
+                  <option value="date">Group by Date</option>
+                  <option value="week">Group by Week</option>
+                </select>
+
+                <select
+                  className={pageStyles.selectFilter}
                   value={filterSpeciality}
                   onChange={(e) => setFilterSpeciality(e.target.value)}
                 >
@@ -307,6 +398,7 @@ export default function AppointmentsPage() {
                     setQuery("");
                     setFilterDate("");
                     setFilterSpeciality("all");
+                    setGroupBy("none");
                     setShowAll(false);
                     setError(null);
                   }}
@@ -332,101 +424,211 @@ export default function AppointmentsPage() {
             No appointments found.
           </div>
         ) : (
-          <main className={pageStyles.gridContainer}>
-            {displayed.map((a, idx) => {
-              const statusLower = (a.status || "").toLowerCase();
-              const isCancelled =
-                statusLower === "canceled" || statusLower === "cancelled";
-              const isCompleted = statusLower === "completed";
-              const isDisabled = isCancelled || isCompleted;
+  const renderAppointmentCard = (a, idx) => {
+    const statusLower = (a.status || "").toLowerCase();
+    const isCancelled =
+      statusLower === "canceled" || statusLower === "cancelled";
+    const isCompleted = statusLower === "completed";
+    const isDisabled = isCancelled || isCompleted;
 
-              return (
-                <div
-                  key={a.id}
-                  style={{
-                    animation: `fadeUp 420ms cubic-bezier(.2,.9,.2,1) forwards`,
-                    animationDelay: `${idx * 70}ms`,
-                    opacity: 0,
-                  }}
-                  className={pageStyles.card}
-                >
-                  <div className={pageStyles.cardHeader}>
-                    <div className="min-w-0">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <h3 className={pageStyles.cardTitle}>
-                          {a.patientName}
-                        </h3>
+    return (
+      <div
+        key={a.id}
+        style={{
+          animation: `fadeUp 420ms cubic-bezier(.2,.9,.2,1) forwards`,
+          animationDelay: `${idx * 70}ms`,
+          opacity: 0,
+        }}
+        className={pageStyles.card}
+      >
+        <div className={pageStyles.cardHeader}>
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2">
+              <h3 className={pageStyles.cardTitle}>
+                {a.patientName}
+              </h3>
 
-                        <div className={pageStyles.patientInfo}>
-                          <span>{a.age ? `${a.age} yrs` : ""}</span>
-                          <span> {a.age ? ":" : ""} </span>
-                          <span>{a.gender}</span>
-                          <span className="hidden md:inline"> : </span>
-                          <span className=" max-w-[120px]">{a.mobile}</span>
-                        </div>
-                      </div>
+              <div className={pageStyles.patientInfo}>
+                <span>{a.age ? `${a.age} yrs` : ""}</span>
+                <span> {a.age ? ":" : ""} </span>
+                <span>{a.gender}</span>
+                <span className="hidden md:inline"> : </span>
+                <span className=" max-w-[120px]">{a.mobile}</span>
+              </div>
+            </div>
 
-                      <div className={pageStyles.doctorInfo}>
-                        {a.doctorName} :{" "}
-                        <span className={pageStyles.doctorSpeciality}>
-                          {a.speciality}
-                        </span>
-                      </div>
-                    </div>
+            <div className={pageStyles.doctorInfo}>
+              {a.doctorName} :{" "}
+              <span className={pageStyles.doctorSpeciality}>
+                {a.speciality}
+              </span>
+            </div>
+          </div>
 
-                    <div className="text-right">
-                      <div className={pageStyles.feeLabel}>
-                        Fees
-                      </div>
-                      <div className={pageStyles.feeAmount}>
-                        <Banknote size={16} />
-                        <span>{a.fee}</span>
-                      </div>
-                    </div>
-                  </div>
+          <div className="text-right">
+            <div className={pageStyles.feeLabel}>
+              Fees
+            </div>
+            <div className={pageStyles.feeAmount}>
+              <Banknote size={16} />
+              <span>{a.fee}</span>
+            </div>
+          </div>
+        </div>
 
-                  <div className="flex items-center justify-between gap-3 flex-wrap">
-                    <div className={pageStyles.slotContainer}>
-                      <Calendar size={14} className={pageStyles.slotIcon} />
-                      <span>
-                        {formatDateISO(a.slot.date)} — {a.slot.time}
-                      </span>
-                    </div>
+        <div className="flex items-center justify-between gap-3 flex-wrap">
+          <div className={pageStyles.slotContainer}>
+            <Calendar size={14} className={pageStyles.slotIcon} />
+            <span>
+              {formatDateISO(a.slot.date)} — {a.slot.time}
+            </span>
+          </div>
 
-                    <div
-                      className={`${pageStyles.statusBadge} ${statusClasses(a.status)}`}
-                    >
-                      {a.status ? a.status.toUpperCase() : "PENDING"}
-                    </div>
+          <div
+            className={`${pageStyles.statusBadge} ${statusClasses(a.status)}`}
+          >
+            {a.status ? a.status.toUpperCase() : "PENDING"}
+          </div>
 
-                    <div className="flex items-center gap-2">
-                      {isAdmin && (
-                        <button
-                          onClick={() => adminCancelAppointment(a.id)}
-                          title={
-                            isDisabled
-                              ? isCompleted
-                                ? "Cannot cancel a completed appointment"
-                                : "Already cancelled"
-                              : "Admin Cancel (mark as cancelled)"
-                          }
-                          disabled={isDisabled}
-                          aria-disabled={isDisabled}
-                          className={pageStyles.cancelButton(isDisabled, isCompleted)}
-                        >
-                          {isDisabled
-                            ? isCompleted
-                              ? "Completed"
-                              : "Admin Cancelled"
-                            : "Admin Cancel"}
-                        </button>
-                      )}
-                    </div>
-                  </div>
+          <div className="flex items-center gap-2">
+            {isAdmin && (
+              <button
+                onClick={() => adminCancelAppointment(a.id)}
+                title={
+                  isDisabled
+                    ? isCompleted
+                      ? "Cannot cancel a completed appointment"
+                      : "Already cancelled"
+                    : "Admin Cancel (mark as cancelled)"
+                }
+                disabled={isDisabled}
+                aria-disabled={isDisabled}
+                className={pageStyles.cancelButton(isDisabled, isCompleted)}
+              >
+                {isDisabled
+                  ? isCompleted
+                    ? "Completed"
+                    : "Admin Cancelled"
+                  : "Admin Cancel"}
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  return (
+    <div className={pageStyles.container}>
+      <style>{keyframesStyles}</style>
+
+      <div className={pageStyles.maxWidthContainer}>
+        <header className={pageStyles.headerContainer}>
+          <div className={pageStyles.headerTitleSection}>
+            <h1 className={pageStyles.headerTitle}>
+              Appointments
+            </h1>
+            <p className={pageStyles.headerSubtitle}>
+              Manage and search upcoming patient appointments
+            </p>
+          </div>
+
+          <div className={pageStyles.headerControlsSection}>
+            <div className="flex flex-col md:flex-col sm:flex-row items-center gap-3 w-full sm:w-auto">
+              <div className={pageStyles.searchContainer}>
+                <Search size={16} className={pageStyles.searchIcon} />
+                <input
+                  className={pageStyles.searchInput}
+                  placeholder="Search doctor, patient, speciality or mobile"
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                />
+              </div>
+
+              <div className={pageStyles.filterContainer}>
+                <div className={pageStyles.dateFilter}>
+                  <Calendar size={14} className={pageStyles.dateFilterIcon} />
+                  <input
+                    type="date"
+                    className={pageStyles.dateInput}
+                    value={filterDate}
+                    onChange={(e) => setFilterDate(e.target.value)}
+                  />
                 </div>
-              );
-            })}
+
+                <select
+                  className={pageStyles.selectFilter}
+                  value={groupBy}
+                  onChange={(e) => setGroupBy(e.target.value)}
+                >
+                  <option value="none">List View</option>
+                  <option value="date">Group by Date</option>
+                  <option value="week">Group by Week</option>
+                </select>
+
+                <select
+                  className={pageStyles.selectFilter}
+                  value={filterSpeciality}
+                  onChange={(e) => setFilterSpeciality(e.target.value)}
+                >
+                  {specialities.map((s) => (
+                    <option key={s} value={s}>
+                      {s === "all" ? "All specialties" : s}
+                    </option>
+                  ))}
+                </select>
+
+                <button
+                  onClick={() => {
+                    setQuery("");
+                    setFilterDate("");
+                    setFilterSpeciality("all");
+                    setGroupBy("none");
+                    setShowAll(false);
+                    setError(null);
+                  }}
+                  className={pageStyles.clearButton}
+                >
+                  Clear
+                </button>
+              </div>
+            </div>
+          </div>
+        </header>
+
+        {loading ? (
+          <div className={pageStyles.loadingErrorContainer}>
+            Loading...
+          </div>
+        ) : error ? (
+          <div className={pageStyles.errorContainer}>
+            {error}
+          </div>
+        ) : sortedFiltered.length === 0 ? (
+          <div className={pageStyles.noResultsContainer}>
+            No appointments found.
+          </div>
+        ) : groupBy === "none" ? (
+          <main className={pageStyles.gridContainer}>
+            {displayed.map((a, idx) => renderAppointmentCard(a, idx))}
           </main>
+        ) : (
+          <div className="space-y-12">
+            {groupedAppointments.map((group) => (
+              <div key={group.label} className="space-y-4">
+                <h2 className="text-sm font-bold text-slate-500 uppercase tracking-wider border-b pb-2 flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+                  {group.label}
+                  <span className="text-[10px] bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full font-bold">
+                    {group.items.length}
+                  </span>
+                </h2>
+                <main className={pageStyles.gridContainer}>
+                  {group.items.map((a, idx) => renderAppointmentCard(a, idx))}
+                </main>
+              </div>
+            ))}
+          </div>
         )}
 
         {sortedFiltered.length > 8 && (

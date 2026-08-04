@@ -1,7 +1,9 @@
-import React, { useState, useMemo } from "react";
-import { NavLink, useParams, useLocation } from "react-router-dom";
-import { Home, Calendar, Edit, Menu, X, LogOut, MessageSquare } from "lucide-react";
+import React, { useState, useMemo, useEffect } from "react";
+import { NavLink, useParams, useLocation, Link } from "react-router-dom";
+import { Home, Calendar, Edit, Menu, X, LogOut, MessageSquare, Clock, Bell } from "lucide-react";
+import toast from "react-hot-toast";
 import logo from "../../assets/logo.png";
+import logoAnim from "../../assets/logo_icon_animation.mp4";
 import { navbarStylesDr } from "../../assets/dummyStyles";
 
 const STORAGE_KEY = "doctorToken_v1";
@@ -11,22 +13,133 @@ export default function Navbar() {
   const params = useParams();
   const location = useLocation();
 
-  // Try params first, then try to extract from pathname (e.g. /doctor-admin/123/...)
+  // Try params first, then try to extract from pathname (e.g. /doctor/123/...)
   const doctorId = useMemo(() => {
     if (params?.id) return params.id;
-    const m = location.pathname.match(/\/doctor-admin\/([^/]+)/);
+    const m = location.pathname.match(/\/(?:doctor|doctor-admin)\/([^/]+)/);
     if (m) return m[1];
     return null;
   }, [params, location.pathname]);
 
   // If we don't have an id, send users to login as a safe fallback
   const basePath = doctorId
-    ? `/doctor-admin/${doctorId}`
-    : "/doctor-admin/login";
+    ? `/doctor/${doctorId}`
+    : "/doctor";
+
+  const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:4000";
+  const [unreadNotifications, setUnreadNotifications] = useState([]);
+
+  useEffect(() => {
+    let active = true;
+    let eventSource = null;
+    const token = localStorage.getItem(STORAGE_KEY);
+    if (!token) return;
+
+    const fetchNotifications = async () => {
+      try {
+        const headers = {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
+        };
+
+        const res = await fetch(`${API_BASE}/api/notifications`, { headers });
+        const json = await res.json();
+        if (json.success && active) {
+          const activeNotifs = (json.notifications || []).filter(n => !n.isRead);
+          setUnreadNotifications(activeNotifs);
+        }
+
+        // SSE Real-Time connection
+        if (!eventSource) {
+          const streamUrl = `${API_BASE}/api/notifications/stream?token=${encodeURIComponent(token)}`;
+          eventSource = new EventSource(streamUrl);
+
+          eventSource.addEventListener("notification", (event) => {
+            try {
+              const newNotif = JSON.parse(event.data);
+              if (active) {
+                setUnreadNotifications((prev) => {
+                  if (prev.some((n) => n._id === newNotif._id)) return prev;
+                  return [newNotif, ...prev];
+                });
+                toast.success(newNotif.message, { position: "bottom-right", duration: 5000 });
+              }
+            } catch (e) {
+              console.error("SSE parse error:", e);
+            }
+          });
+
+          eventSource.onerror = (err) => {
+            console.warn("Doctor SSE connection error, closing...", err);
+            if (eventSource) {
+              eventSource.close();
+              eventSource = null;
+            }
+          };
+        }
+      } catch (err) {
+        console.error("Doctor fetchNotifications error:", err);
+      }
+    };
+
+    fetchNotifications();
+    const interval = setInterval(fetchNotifications, 15000);
+
+    return () => {
+      active = false;
+      clearInterval(interval);
+      if (eventSource) {
+        eventSource.close();
+      }
+    };
+  }, []);
+
+  const handleMarkAsRead = async (notifId) => {
+    try {
+      const token = localStorage.getItem(STORAGE_KEY);
+      if (!token) return;
+
+      const res = await fetch(`${API_BASE}/api/notifications/${notifId}/read`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
+        }
+      });
+      const json = await res.json();
+      if (json.success) {
+        setUnreadNotifications(prev => prev.filter(n => n._id !== notifId));
+      }
+    } catch (err) {
+      console.error("Failed to mark doctor notification read:", err);
+    }
+  };
+
+  const handleMarkAllRead = async () => {
+    try {
+      const token = localStorage.getItem(STORAGE_KEY);
+      if (!token) return;
+
+      const res = await fetch(`${API_BASE}/api/notifications/read-all`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
+        }
+      });
+      const json = await res.json();
+      if (json.success) {
+        setUnreadNotifications([]);
+      }
+    } catch (err) {
+      console.error("Failed to mark all doctor notifications read:", err);
+    }
+  };
 
   const navItems = [
     { name: "Dashboard", to: `${basePath}`, Icon: Home },
     { name: "Appointments", to: `${basePath}/appointments`, Icon: Calendar },
+    { name: "Schedule", to: `${basePath}/schedule`, Icon: Clock },
     { name: "Edit Profile", to: `${basePath}/profile/edit`, Icon: Edit },
     { name: "Community Forum", to: "/forum", Icon: MessageSquare },
   ];
@@ -37,15 +150,18 @@ export default function Navbar() {
       <nav className={navbarStylesDr.navContainer}>
         {/* Left Brand */}
         <div className={navbarStylesDr.leftBrand}>
-          <div className={navbarStylesDr.logoContainer}>
-            <img
-              src={logo}
-              alt="App logo"
-              className={navbarStylesDr.logoImage}
+          <div className={`${navbarStylesDr.logoContainer} overflow-hidden`}>
+            <video
+              src={logoAnim}
+              autoPlay
+              loop
+              muted
+              playsInline
+              className="w-full h-full object-cover scale-110"
             />
           </div>
           <div className={navbarStylesDr.brandTextContainer}>
-            <div className={navbarStylesDr.brandTitle}>Mediunity</div>
+            <div className={navbarStylesDr.brandTitle}>MediUnity</div>
             <div className={navbarStylesDr.brandSubtitle}>
               Your Healthcare Solution
             </div>
@@ -76,12 +192,65 @@ export default function Navbar() {
 
         {/* Right side actions */}
         <div className={navbarStylesDr.rightActions}>
+          {/* Notification Bell */}
+          <div className="relative group mr-2">
+            <button aria-label="Notifications" className="p-2 bg-slate-50 border border-slate-200 rounded-full hover:bg-slate-100 transition relative flex items-center justify-center cursor-pointer">
+              <Bell className="w-4 h-4 text-slate-600" />
+              {unreadNotifications.length > 0 && (
+                <span className="absolute -top-1 -right-1 bg-rose-500 text-white font-extrabold text-[8px] w-4.5 h-4.5 rounded-full flex items-center justify-center border border-white animate-pulse">
+                  {unreadNotifications.length}
+                </span>
+              )}
+            </button>
+            
+            <div className="absolute right-0 mt-2 w-80 bg-white rounded-xl border border-slate-200 shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition duration-200 z-50 overflow-hidden">
+              <div className="px-4 py-3 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+                <span className="font-bold text-slate-800 text-sm">Notifications</span>
+                {unreadNotifications.length > 0 && (
+                  <button
+                    onClick={handleMarkAllRead}
+                    className="text-[9px] text-blue-600 hover:text-blue-800 hover:underline font-bold bg-transparent border-none cursor-pointer"
+                  >
+                    Mark all read
+                  </button>
+                )}
+              </div>
+              
+              <div className="p-2 flex flex-col max-h-72 overflow-y-auto divide-y divide-slate-50">
+                {unreadNotifications.length === 0 ? (
+                  <div className="p-4 text-center">
+                    <p className="text-xs text-slate-400">You have no new notifications.</p>
+                  </div>
+                ) : (
+                  unreadNotifications.map(notif => (
+                    <div key={notif._id} className="flex gap-3 items-start p-3 hover:bg-slate-50 rounded-lg transition text-left justify-between">
+                      <div className="flex gap-3 items-start min-w-0">
+                        <div className="w-2.5 h-2.5 bg-blue-500 rounded-full mt-1 shrink-0"></div>
+                        <div className="min-w-0">
+                          <p className="text-xs font-semibold text-slate-700 leading-normal">{notif.message}</p>
+                          <p className="text-[8px] text-slate-400 mt-0.5">{new Date(notif.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => handleMarkAsRead(notif._id)}
+                        className="text-slate-400 hover:text-blue-600 transition shrink-0 cursor-pointer p-0.5"
+                        title="Mark as read"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          </div>
+
           {/* Logout button (desktop) */}
           <button
             className={navbarStylesDr.logoutButtonDesktop}
             onClick={() => {
               localStorage.removeItem(STORAGE_KEY);
-              window.location.href = "/doctor-admin/login";
+              window.location.href = "/doctor";
             }}
           >
             <LogOut size={16} />
@@ -136,7 +305,7 @@ export default function Navbar() {
             onClick={() => {
               setOpen(false);
               localStorage.removeItem(STORAGE_KEY);
-              window.location.href = "/doctor-admin/login";
+              window.location.href = "/doctor";
             }}
           >
             <div className={navbarStylesDr.mobileLogoutContent}>

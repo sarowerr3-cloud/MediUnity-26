@@ -8,6 +8,7 @@ export default function VerifyIdentities() {
   const [activeTab, setActiveTab] = useState("doctors");
   const [doctors, setDoctors] = useState([]);
   const [patients, setPatients] = useState([]);
+  const [partners, setPartners] = useState({ hospitals: [], diagnostics: [], pharmacies: [] });
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -27,11 +28,17 @@ export default function VerifyIdentities() {
           // Keep all doctors so admin can see verified/unverified ones
           setDoctors(json.data || json.doctors || []);
         }
-      } else {
+      } else if (activeTab === "patients") {
         const res = await fetch(`${API_BASE}/api/patients/profiles`, { headers });
         const json = await res.json();
         if (json.success) {
           setPatients(json.profiles || []);
+        }
+      } else if (activeTab === "partners") {
+        const res = await fetch(`${API_BASE}/api/admin/partner-verifications`, { headers });
+        const json = await res.json();
+        if (json.success) {
+          setPartners(json.data || { hospitals: [], diagnostics: [], pharmacies: [] });
         }
       }
     } catch (err) {
@@ -85,6 +92,28 @@ export default function VerifyIdentities() {
     }
   }
 
+  async function handleVerifyPartner(type, id, approve = true) {
+    try {
+      const res = await fetch(`${API_BASE}/api/admin/partner-verifications/${type}/${id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: "Bearer " + localStorage.getItem("adminToken_v1"),
+        },
+        body: JSON.stringify({ status: approve ? "Verified" : "Rejected" }),
+      });
+      const json = await res.json();
+      if (json.success) {
+        alert(approve ? "Partner verified successfully!" : "Partner verification rejected.");
+        loadData();
+      } else {
+        alert(json.message || "Action failed");
+      }
+    } catch (err) {
+      alert("Network error updating status");
+    }
+  }
+
   return (
     <div className="min-h-screen bg-linear-to-br from-emerald-50 to-white font-serif flex flex-col">
       <Navbar />
@@ -120,6 +149,16 @@ export default function VerifyIdentities() {
               }`}
             >
               Patients Review
+            </button>
+            <button
+              onClick={() => setActiveTab("partners")}
+              className={`px-4 py-2 rounded-full text-xs sm:text-sm font-bold border transition cursor-pointer ${
+                activeTab === "partners"
+                  ? "bg-emerald-600 border-emerald-600 text-white"
+                  : "bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100"
+              }`}
+            >
+              Partners Review
             </button>
           </div>
         </div>
@@ -194,7 +233,7 @@ export default function VerifyIdentities() {
               ))}
             </div>
           )
-        ) : (
+        ) : activeTab === "patients" ? (
           /* Patients Review List */
           patients.length === 0 ? (
             <div className="bg-white p-12 rounded-3xl text-center text-slate-400 border">
@@ -251,7 +290,7 @@ export default function VerifyIdentities() {
                       <button
                         onClick={() => handleVerifyPatient(p.clerkUserId, false)}
                         className="p-2.5 bg-rose-600 hover:bg-rose-700 text-white rounded-full transition shadow cursor-pointer"
-                        title="Reject Patient Verification"
+                        title="Reject / Revoke verification"
                       >
                         <X className="w-4 h-4" />
                       </button>
@@ -261,6 +300,93 @@ export default function VerifyIdentities() {
               ))}
             </div>
           )
+        ) : (
+          /* Partners Review List */
+          <div className="space-y-8">
+            {/* Hospitals */}
+            <div>
+              <h2 className="text-xl font-bold text-slate-700 mb-4 border-b pb-2">Hospitals ({partners.hospitals?.length || 0})</h2>
+              {partners.hospitals?.length === 0 ? (
+                <p className="text-sm text-slate-400">No pending hospitals.</p>
+              ) : (
+                <div className="space-y-4">
+                  {partners.hospitals.map(h => (
+                    <div key={h._id} className="bg-white border rounded-3xl p-6 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-6">
+                      <div>
+                        <h3 className="font-bold text-slate-800 text-lg">{h.name}</h3>
+                        <p className="text-xs text-slate-400 mt-1">License: {h.licenseNumber}</p>
+                      </div>
+                      <div className="flex gap-3">
+                        {h.dghsLicenseUrl && (
+                          <a href={h.dghsLicenseUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 px-4 py-2 border rounded-full text-xs font-bold bg-slate-50 text-slate-700 hover:bg-slate-100">
+                            <FileText className="w-4 h-4" /> View DGHS
+                          </a>
+                        )}
+                        <button onClick={() => handleVerifyPartner("hospital", h._id, true)} className="p-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-full transition shadow cursor-pointer"><Check className="w-4 h-4" /></button>
+                        <button onClick={() => handleVerifyPartner("hospital", h._id, false)} className="p-2.5 bg-rose-600 hover:bg-rose-700 text-white rounded-full transition shadow cursor-pointer"><X className="w-4 h-4" /></button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Diagnostics */}
+            <div>
+              <h2 className="text-xl font-bold text-slate-700 mb-4 border-b pb-2">Diagnostic Centers ({partners.diagnostics?.length || 0})</h2>
+              {partners.diagnostics?.length === 0 ? (
+                <p className="text-sm text-slate-400">No pending diagnostic centers.</p>
+              ) : (
+                <div className="space-y-4">
+                  {partners.diagnostics.map(d => (
+                    <div key={d._id} className="bg-white border rounded-3xl p-6 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-6">
+                      <div>
+                        <h3 className="font-bold text-slate-800 text-lg">{d.name}</h3>
+                        <p className="text-xs text-slate-400 mt-1">License: {d.licenseNumber}</p>
+                      </div>
+                      <div className="flex gap-3">
+                        {d.dgdaRegistrationUrl && (
+                          <a href={d.dgdaRegistrationUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 px-4 py-2 border rounded-full text-xs font-bold bg-slate-50 text-slate-700 hover:bg-slate-100">
+                            <FileText className="w-4 h-4" /> View DGDA
+                          </a>
+                        )}
+                        <button onClick={() => handleVerifyPartner("diagnostic", d._id, true)} className="p-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-full transition shadow cursor-pointer"><Check className="w-4 h-4" /></button>
+                        <button onClick={() => handleVerifyPartner("diagnostic", d._id, false)} className="p-2.5 bg-rose-600 hover:bg-rose-700 text-white rounded-full transition shadow cursor-pointer"><X className="w-4 h-4" /></button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Pharmacies */}
+            <div>
+              <h2 className="text-xl font-bold text-slate-700 mb-4 border-b pb-2">Pharmacies ({partners.pharmacies?.length || 0})</h2>
+              {partners.pharmacies?.length === 0 ? (
+                <p className="text-sm text-slate-400">No pending pharmacies.</p>
+              ) : (
+                <div className="space-y-4">
+                  {partners.pharmacies.map(p => (
+                    <div key={p._id} className="bg-white border rounded-3xl p-6 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-6">
+                      <div>
+                        <h3 className="font-bold text-slate-800 text-lg">{p.name}</h3>
+                        <p className="text-xs text-slate-400 mt-1">License: {p.licenseNumber}</p>
+                      </div>
+                      <div className="flex gap-3">
+                        {p.drugLicenseUrl && (
+                          <a href={p.drugLicenseUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 px-4 py-2 border rounded-full text-xs font-bold bg-slate-50 text-slate-700 hover:bg-slate-100">
+                            <FileText className="w-4 h-4" /> View License
+                          </a>
+                        )}
+                        <button onClick={() => handleVerifyPartner("pharmacy", p._id, true)} className="p-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-full transition shadow cursor-pointer"><Check className="w-4 h-4" /></button>
+                        <button onClick={() => handleVerifyPartner("pharmacy", p._id, false)} className="p-2.5 bg-rose-600 hover:bg-rose-700 text-white rounded-full transition shadow cursor-pointer"><X className="w-4 h-4" /></button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
         )}
       </main>
     </div>

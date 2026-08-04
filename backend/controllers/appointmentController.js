@@ -1,10 +1,14 @@
 import axios from "axios";
 import Appointment from "../models/Appointment.js";
+import { createAndSendNotification } from "../utils/notificationHelper.js";
 import Doctor from "../models/Doctor.js";
 import dotenv from "dotenv";
 import PatientProfile from "../models/PatientProfile.js";
 import HealthLog from "../models/HealthLog.js";
 import Journal from "../models/Journal.js";
+import Prescription from "../models/Prescription.js";
+import APIFeatures from "../utils/apiFeatures.js";
+import { applyCommissionSplit } from "./earningsController.js";
 dotenv.config();
 
 const FRONTEND_URL = process.env.FRONTEND_URL;
@@ -32,28 +36,24 @@ function resolveClerkUserId(req) {
 
 export const getAppointments = async (req, res) => {
   try {
-    const { doctorId, mobile, status, search = "", limit: limitRaw = 50, page: pageRaw = 1, patientClerkId, createdBy } = req.query;
-    const limit = Math.min(200, Math.max(1, parseInt(limitRaw, 10) || 50));
-    const page = Math.max(1, parseInt(pageRaw, 10) || 1);
-    const skip = (page - 1) * limit;
-
-    const filter = {};
-    if (doctorId) filter.doctorId = doctorId;
-    if (mobile) filter.mobile = mobile;
-    if (status) filter.status = status;
-    if (patientClerkId) filter.createdBy = patientClerkId;
-    if (createdBy) filter.createdBy = createdBy;
-    if (search) {
-      const re = new RegExp(search, "i");
-      filter.$or = [{ patientName: re }, { mobile: re }, { notes: re }];
+    const queryData = { ...req.query };
+    if (req.query.search && !req.query.q) {
+      queryData.q = req.query.search;
+    }
+    if (req.query.patientClerkId) {
+      queryData.createdBy = req.query.patientClerkId;
     }
 
-    const items = await Appointment.find(filter)
-      .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(limit)
-      .populate("doctorId", "name specialization owner imageUrl image")
-      .lean();
+    const features = new APIFeatures(
+      Appointment.find().populate("doctorId", "name specialization owner imageUrl image"),
+      queryData
+    )
+      .filter()
+      .search(["patientName", "mobile", "notes"])
+      .sort()
+      .paginate();
+
+    const items = await features.query.lean();
 
     const createdByIds = items.map(item => item.createdBy).filter(Boolean);
     const profiles = await PatientProfile.find({ clerkUserId: { $in: createdByIds } }, "clerkUserId imageUrl").lean();
@@ -67,9 +67,17 @@ export const getAppointments = async (req, res) => {
       patientImage: profileMap[item.createdBy] || null
     }));
 
-    const total = await Appointment.countDocuments(filter);
+    const rawFilterObj = new APIFeatures(Appointment.find(), queryData).filter().search(["patientName", "mobile", "notes"]);
+    const total = await Appointment.countDocuments(rawFilterObj.query.getFilter());
 
-    return res.json({ success: true, appointments: enrichedItems, meta: { page, limit, total, count: items.length } });
+    const page = parseInt(req.query.page, 10) || 1;
+    const limit = parseInt(req.query.limit, 10) || 50;
+
+    return res.json({
+      success: true,
+      appointments: enrichedItems,
+      meta: { page, limit, total, count: items.length }
+    });
   } catch (err) {
     console.error("getAppointments:", err);
     return res.status(500).json({ success: false, message: "Server error" });
@@ -178,6 +186,25 @@ export const createAppointment = async (req, res) => {
     }
     if (!doctor) return res.status(404).json({ success: false, message: "Doctor not found" });
 
+    // Enforce patient limit check
+    const limit = doctor.maxPatientsPerDay?.[date] !== undefined && doctor.maxPatientsPerDay[date] !== null && doctor.maxPatientsPerDay[date] !== ""
+      ? Number(doctor.maxPatientsPerDay[date])
+      : (doctor.repeatLimitEnabled ? Number(doctor.defaultMaxPatientsPerDay) : 0);
+
+    if (limit > 0) {
+      const activeCount = await Appointment.countDocuments({
+        doctorId,
+        date: String(date),
+        status: { $ne: "Canceled" }
+      });
+      if (activeCount >= limit) {
+        return res.status(400).json({
+          success: false,
+          message: `The doctor has reached their maximum limit of ${limit} patients for ${date}. Please select another date.`,
+        });
+      }
+    }
+
     // Resolve fee from pricing tiers if no explicit fee was provided
     const validConsultTypes = ["video", "phone", "chat", "offline"];
     const resolvedConsultType = validConsultTypes.includes(consultType) ? consultType : "video";
@@ -211,7 +238,32 @@ export const createAppointment = async (req, res) => {
       (doctorImagePublicIdFromBody && String(doctorImagePublicIdFromBody).trim()) ||
       "";
 
-    const doctorImage = { url: doctorImageUrl, publicId: doctorImagePublicId };
+    let resolvedHospitalName = "";
+    let resolvedHospitalAddress = "";
+
+    const slotKey = `${date}_${time}`;
+    if (doctor.slotHospitals?.[slotKey]?.name && doctor.slotHospitals?.[slotKey]?.address) {
+      resolvedHospitalName = doctor.slotHospitals[slotKey].name;
+      resolvedHospitalAddress = doctor.slotHospitals[slotKey].address;
+    } else if (doctor.slotHospitals?.[date]?.name && doctor.slotHospitals?.[date]?.address) {
+      resolvedHospitalName = doctor.slotHospitals[date].name;
+      resolvedHospitalAddress = doctor.slotHospitals[date].address;
+    } else if (doctor.defaultHospital?.name && doctor.defaultHospital?.address) {
+      resolvedHospitalName = doctor.defaultHospital.name;
+      resolvedHospitalAddress = doctor.defaultHospital.address;
+    } else {
+      resolvedHospitalName = "Doctor's Chamber";
+      resolvedHospitalAddress = doctor.location || "Consultation location will be provided by doctor";
+    }
+
+    const resolvedHospitalMapsLink = resolvedHospitalAddress
+      ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(resolvedHospitalAddress)}`
+      : "";
+
+    const doctorImage = {
+      url: doctorImageUrl,
+      publicId: doctorImagePublicId,
+    };
 
     const base = {
       doctorId: String(doctor._id || doctorId),
@@ -225,6 +277,9 @@ export const createAppointment = async (req, res) => {
       date: String(date),
       time: String(time),
       fees: numericFee,
+      hospitalName: resolvedHospitalName,
+      hospitalAddress: resolvedHospitalAddress,
+      hospitalMapsLink: resolvedHospitalMapsLink,
       consultType: resolvedConsultType,
       status: "Pending",
       payment: { method: paymentMethod === "Cash" ? "Cash" : "Online", status: "Pending", amount: numericFee },
@@ -281,7 +336,7 @@ export const createAppointment = async (req, res) => {
       currency: "BDT",
       cus_name: patientName,
       cus_email: email || "customer@example.com",
-      cus_phone: mobile,
+      cus_phone: mobile.length === 10 && !mobile.startsWith("0") ? `0${mobile}` : mobile,
       cus_add1: "Dhaka",
       cus_add2: "Dhaka",
       cus_city: "Dhaka",
@@ -321,7 +376,7 @@ export const createAppointment = async (req, res) => {
     }
   } catch (err) {
     console.error("createAppointment unexpected:", err);
-    return res.status(500).json({ success: false, message: "Server error" });
+    return res.status(500).json({ success: false, message: err.message || "Server error" });
   }
 };
 
@@ -366,6 +421,28 @@ export const handleAamarpayCallback = async (req, res) => {
 
       if (appt) {
         console.log("Appointment updated successfully:", appt._id);
+        
+        // Notify patient
+        createAndSendNotification({
+          recipientId: appt.createdBy,
+          recipientRole: "patient",
+          type: "STATUS_UPDATED",
+          message: `Your appointment with Doctor is confirmed for ${appt.date} at ${appt.time}.`,
+          relatedBookingId: appt._id.toString()
+        });
+
+        // Notify doctor
+        createAndSendNotification({
+          recipientId: appt.doctorId.toString(),
+          recipientRole: "doctor",
+          type: "BOOKING_CREATED",
+          message: `New appointment confirmed for ${appt.patientName} on ${appt.date} at ${appt.time}.`,
+          relatedBookingId: appt._id.toString()
+        });
+
+        // Calculate and apply platform commission split
+        await applyCommissionSplit(appt._id);
+
         return res.redirect(`${frontBase}/appointment/success?session_id=${mer_txnid}`);
       } else {
         console.error("Appointment not found for transaction:", mer_txnid);
@@ -406,6 +483,52 @@ export const updateAppointment = async (req, res) => {
       if (appt.status === "Completed" || appt.status === "Canceled") {
         return res.status(400).json({ success: false, message: "Cannot reschedule completed/canceled appointment" });
       }
+
+      // If moving to a different date, check target date limit
+      if (String(body.date) !== String(appt.date)) {
+        const doctor = await Doctor.findById(appt.doctorId).lean();
+        if (doctor) {
+          const limit = doctor.maxPatientsPerDay?.[body.date] !== undefined && doctor.maxPatientsPerDay[body.date] !== null && doctor.maxPatientsPerDay[body.date] !== ""
+            ? Number(doctor.maxPatientsPerDay[body.date])
+            : (doctor.repeatLimitEnabled ? Number(doctor.defaultMaxPatientsPerDay) : 0);
+
+          if (limit > 0) {
+            const activeCount = await Appointment.countDocuments({
+              doctorId: appt.doctorId,
+              date: String(body.date),
+              status: { $ne: "Canceled" }
+            });
+            if (activeCount >= limit) {
+              return res.status(400).json({
+                success: false,
+                message: `Cannot reschedule: Doctor has reached their maximum limit of ${limit} patients for ${body.date}.`,
+              });
+            }
+          }
+
+          // Resolve target date hospital/chamber info
+          let resolvedHospitalName = "";
+          let resolvedHospitalAddress = "";
+
+          if (doctor.slotHospitals?.[body.date]?.name && doctor.slotHospitals?.[body.date]?.address) {
+            resolvedHospitalName = doctor.slotHospitals[body.date].name;
+            resolvedHospitalAddress = doctor.slotHospitals[body.date].address;
+          } else if (doctor.defaultHospital?.name && doctor.defaultHospital?.address) {
+            resolvedHospitalName = doctor.defaultHospital.name;
+            resolvedHospitalAddress = doctor.defaultHospital.address;
+          } else {
+            resolvedHospitalName = "Doctor's Chamber";
+            resolvedHospitalAddress = doctor.location || "Consultation location will be provided by doctor";
+          }
+
+          update.hospitalName = resolvedHospitalName;
+          update.hospitalAddress = resolvedHospitalAddress;
+          update.hospitalMapsLink = resolvedHospitalAddress
+            ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(resolvedHospitalAddress)}`
+            : "";
+        }
+      }
+
       update.date = body.date;
       update.time = body.time;
       update.status = "Rescheduled";
@@ -418,6 +541,16 @@ export const updateAppointment = async (req, res) => {
     const updated = await Appointment.findByIdAndUpdate(id, update, { new: true, runValidators: true })
       .populate({ path: "doctorId", select: "name imageUrl" })
       .lean();
+
+    if (updated) {
+      createAndSendNotification({
+        recipientId: updated.createdBy,
+        recipientRole: "patient",
+        type: "STATUS_UPDATED",
+        message: `Your appointment status was updated to "${updated.status}" by doctor.`,
+        relatedBookingId: updated._id.toString()
+      });
+    }
 
     return res.json({ success: true, appointment: updated });
   } catch (err) {
@@ -434,6 +567,23 @@ export const cancelAppointment = async (req, res) => {
 
     appt.status = "Canceled";
     await appt.save();
+
+    createAndSendNotification({
+      recipientId: appt.createdBy,
+      recipientRole: "patient",
+      type: "STATUS_UPDATED",
+      message: `Your appointment with the doctor has been canceled.`,
+      relatedBookingId: appt._id.toString()
+    });
+
+    createAndSendNotification({
+      recipientId: appt.doctorId.toString(),
+      recipientRole: "doctor",
+      type: "STATUS_UPDATED",
+      message: `Appointment with ${appt.patientName} on ${appt.date} has been canceled.`,
+      relatedBookingId: appt._id.toString()
+    });
+
     return res.json({ success: true, appointment: appt });
   } catch (err) {
     console.error("cancelAppointment:", err);
@@ -567,6 +717,9 @@ export const getIntakeSummary = async (req, res) => {
       }));
     }
 
+    // 4. Get Past Prescriptions
+    const pastPrescriptions = await Prescription.find({ patientId }).sort({ date: -1 }).lean();
+
     return res.status(200).json({
       success: true,
       intakeSummary: {
@@ -575,7 +728,9 @@ export const getIntakeSummary = async (req, res) => {
         gender: appointment.gender || profile?.gender || null,
         latestSymptomCheck,
         vitals,
-        recoveryJournal: journalEntries
+        recoveryJournal: journalEntries,
+        medicalHistory: profile?.medicalHistory || [],
+        pastPrescriptions: pastPrescriptions || []
       }
     });
 
@@ -709,4 +864,80 @@ export default {
   checkIn,
   updateQueueState,
   getQueueBoard,
+};
+
+// 22. Get Doctor Revenue & Analytics
+export const getDoctorRevenueAnalytics = async (req, res) => {
+  try {
+    const { doctorId } = req.params;
+    
+    // Authorization check
+    if (req.user && req.user.role === "doctor") {
+      const doc = await Doctor.findOne({ email: req.user.email });
+      if (!doc || doc._id.toString() !== doctorId) {
+        return res.status(403).json({ success: false, message: "Unauthorized access to revenue data" });
+      }
+    }
+
+    const appointments = await Appointment.find({ doctorId });
+
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const weekAgo = new Date(today);
+    weekAgo.setDate(today.getDate() - 7);
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+
+    let todayRevenue = 0;
+    let thisWeekRevenue = 0;
+    let thisMonthRevenue = 0;
+    let totalRevenue = 0;
+
+    let onlineConsults = 0;
+    let offlineConsults = 0;
+
+    const statusCounts = { pending: 0, paid: 0, completed: 0, cancelled: 0 };
+
+    appointments.forEach((appt) => {
+      const date = new Date(appt.createdAt); 
+      const amount = appt.amount || 0;
+
+      if (appt.paymentStatus === "Paid" || appt.status === "completed") {
+        totalRevenue += amount;
+        
+        if (date >= today) todayRevenue += amount;
+        if (date >= weekAgo) thisWeekRevenue += amount;
+        if (date >= monthStart) thisMonthRevenue += amount;
+      }
+
+      if (appt.consultType === "video" || appt.consultType === "chat" || appt.consultType === "phone") {
+        onlineConsults++;
+      } else {
+        offlineConsults++;
+      }
+
+      if (appt.status && statusCounts[appt.status.toLowerCase()] !== undefined) {
+        statusCounts[appt.status.toLowerCase()]++;
+      }
+    });
+
+    const analytics = {
+      revenue: {
+        today: todayRevenue,
+        thisWeek: thisWeekRevenue,
+        thisMonth: thisMonthRevenue,
+        total: totalRevenue
+      },
+      consultTypes: {
+        online: onlineConsults,
+        offline: offlineConsults
+      },
+      statusCounts,
+      totalAppointments: appointments.length
+    };
+
+    res.status(200).json({ success: true, analytics });
+  } catch (error) {
+    console.error("Error fetching doctor revenue:", error);
+    res.status(500).json({ success: false, message: "Server error" });
+  }
 };

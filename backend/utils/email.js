@@ -31,7 +31,7 @@ export async function sendEmail({ to, subject, html }) {
     });
 
     const info = await transporter.sendMail({
-      from: `"Mediunity Clinic" <${user}>`,
+      from: `"MediUnity Clinic" <${user}>`,
       to,
       subject,
       html

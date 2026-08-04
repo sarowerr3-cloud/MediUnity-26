@@ -1,0 +1,15 @@
+
+> frontend@0.0.0 dev
+> vite --port 5173
+
+[33mYou are using Node.js 20.12.2. Vite requires Node.js version 20.19+ or 22.12+. Please upgrade your Node.js version.[39m
+
+  [32m[1mVITE[22m v7.2.2[39m  [2mready in [0m[1m2274[22m[2m[0m ms[22m
+
+  [32m➜[39m  [1mLocal[22m:   [36mhttp://localhost:[1m5173[22m/[39m
+[2m  [32m➜[39m  [1mNetwork[22m[2m: use [22m[1m--host[22m[2m to expose[22m
+[2m[32m  ➜[39m[22m[2m  press [22m[1mh + enter[22m[2m to show help[22m
+[baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+[2m7:55:04 PM[22m [36m[1m[vite][22m[39m [32m.env changed, restarting server...[39m
+[2m7:55:07 PM[22m [36m[1m[vite][22m[39m server restarted.
+^C^C

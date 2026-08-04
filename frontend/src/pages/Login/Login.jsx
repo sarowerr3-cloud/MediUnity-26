@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { ArrowLeft, Mail, Lock, User, Phone, Key, ShieldCheck, Award, Eye, EyeOff, Loader2, Heart, Stethoscope, Activity, CheckCircle2, Star, Sparkles } from "lucide-react";
-import logo from "../../assets/logo.png";
+import logo from "../../assets/patient_logo.png";
 import { useAuth } from "../../context/AuthContext";
 import toast, { Toaster } from "react-hot-toast";
 
@@ -95,13 +95,13 @@ function SegmentedOTPInput({ length = 6, value, onChange, isDark, inputRing }) {
   );
 }
 
-export default function Login() {
-  const { loginCustom, signUpCustom, verifyOtpCustom, logout } = useAuth();
+export default function Login({ defaultRole }) {
+  const { loginCustom, signUpCustom, verifyOtpCustom, logout, loginWithGoogle } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
 
-  // Determine initial role (default to patient, check query params)
-  const initialRole = searchParams.get("role") === "doctor" ? "doctor" : "patient";
+  // Determine initial role (default to patient, check query params or defaultRole prop)
+  const initialRole = defaultRole || (searchParams.get("role") === "doctor" ? "doctor" : "patient");
   const [role, setRole] = useState(initialRole); // "patient" | "doctor"
   const [isSignUp, setIsSignUp] = useState(false);
 
@@ -112,6 +112,8 @@ export default function Login() {
   const [password, setPassword] = useState("");
   const [specialization, setSpecialization] = useState("");
   const [bmdcNumber, setBmdcNumber] = useState("");
+  const [googleIdToken, setGoogleIdToken] = useState("");
+  const [rememberMe, setRememberMe] = useState(false);
   
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -149,7 +151,24 @@ export default function Login() {
     setResetEmail("");
     setResetOtp("");
     setNewPassword("");
+    setGoogleIdToken("");
+    navigate(newRole === "patient" ? "/patient/login" : "/doctor");
   };
+
+  useEffect(() => {
+    if (role === "doctor") {
+      const savedEmail = localStorage.getItem("doctorRememberedEmail");
+      const savedRememberMe = localStorage.getItem("doctorRememberMe") === "true";
+      if (savedEmail && savedRememberMe) {
+        setEmail(savedEmail);
+        setRememberMe(true);
+      } else {
+        setRememberMe(false);
+      }
+    } else {
+      setRememberMe(false);
+    }
+  }, [role]);
 
   const handleRequestResetOtp = async (e) => {
     e.preventDefault();
@@ -266,7 +285,7 @@ export default function Login() {
           localStorage.removeItem(DOCTOR_STORAGE_KEY);
           window.dispatchEvent(new StorageEvent("storage", { key: DOCTOR_STORAGE_KEY, newValue: null }));
           toast.success("Welcome back!");
-          setTimeout(() => navigate("/"), 800);
+          setTimeout(() => navigate("/home"), 800);
         } else if (data.needsVerification) {
           toast.success("OTP sent to verify your account!");
           setOtpEmailOrPhone(data.emailOrPhone);
@@ -289,7 +308,36 @@ export default function Login() {
 
     try {
       if (isSignUp) {
-        // Doctor Signup
+        // Doctor Google Signup
+        if (googleIdToken) {
+          if (!bmdcNumber) {
+            toast.error("BMDC registration number is required.");
+            setLoading(false);
+            return;
+          }
+          const res = await fetch(`${API_BASE}/api/doctors/google-signup`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ idToken: googleIdToken, specialization, bmdcNumber })
+          });
+          const json = await res.json().catch(() => null);
+          if (res.ok && json?.success) {
+            localStorage.removeItem("patientToken_v1");
+            try { await logout(false); } catch (e) {}
+
+            localStorage.setItem(DOCTOR_STORAGE_KEY, json.token);
+            window.dispatchEvent(new StorageEvent("storage", { key: DOCTOR_STORAGE_KEY, newValue: json.token }));
+            
+            toast.success(json?.message || "Registered successfully!");
+            setTimeout(() => navigate(`/doctor/${json.data._id || json.data.id}/profile/edit`), 800);
+          } else {
+            toast.error(json?.message || "Google registration failed.");
+          }
+          setLoading(false);
+          return;
+        }
+
+        // Standard Doctor Signup
         if (!name || !email || !password || !bmdcNumber) {
           toast.error("Please fill in all required fields, including BMDC number.");
           setLoading(false);
@@ -310,7 +358,7 @@ export default function Login() {
           // Clear patient session completely
           localStorage.removeItem("patientToken_v1");
           try {
-            await logout();
+            await logout(false);
           } catch (e) {
             console.warn("Failed to logout patient:", e);
           }
@@ -319,7 +367,7 @@ export default function Login() {
           window.dispatchEvent(new StorageEvent("storage", { key: DOCTOR_STORAGE_KEY, newValue: token }));
           
           toast.success(json?.message || "Registered successfully!");
-          setTimeout(() => navigate(`/doctor-admin/${doctorId}/profile/edit`), 800);
+          setTimeout(() => navigate(`/doctor/${doctorId}/profile/edit`), 800);
         } else {
           toast.error(json?.message || "Doctor registration failed.");
         }
@@ -342,10 +390,19 @@ export default function Login() {
           const token = json.token;
           const doctorId = json.data?._id || json.data?.id;
 
+          // Remember Me handling
+          if (rememberMe) {
+            localStorage.setItem("doctorRememberedEmail", email);
+            localStorage.setItem("doctorRememberMe", "true");
+          } else {
+            localStorage.removeItem("doctorRememberedEmail");
+            localStorage.removeItem("doctorRememberMe");
+          }
+
           // Clear patient session completely
           localStorage.removeItem("patientToken_v1");
           try {
-            await logout();
+            await logout(false);
           } catch (e) {
             console.warn("Failed to logout patient:", e);
           }
@@ -354,7 +411,7 @@ export default function Login() {
           window.dispatchEvent(new StorageEvent("storage", { key: DOCTOR_STORAGE_KEY, newValue: token }));
 
           toast.success("Welcome back, Dr. " + json.data.name);
-          setTimeout(() => navigate(`/doctor-admin/${doctorId}`), 800);
+          setTimeout(() => navigate(`/doctor/${doctorId}`), 800);
         } else {
           toast.error(json?.message || "Invalid doctor credentials.");
         }
@@ -381,13 +438,70 @@ export default function Login() {
         localStorage.removeItem(DOCTOR_STORAGE_KEY);
         window.dispatchEvent(new StorageEvent("storage", { key: DOCTOR_STORAGE_KEY, newValue: null }));
         toast.success("Account verified and logged in!");
-        setTimeout(() => navigate("/"), 800);
+        setTimeout(() => navigate("/home"), 800);
       } else {
         toast.error(data.message || "Invalid OTP code");
       }
     } catch (err) {
       console.error(err);
       toast.error("OTP verification failed.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleGoogleAuth = async () => {
+    setLoading(true);
+    try {
+      const userCredential = await loginWithGoogle();
+      if (userCredential?.user) {
+        const idToken = await userCredential.user.getIdToken();
+
+        if (isPatient) {
+          // Patient Google Login/Signup Flow
+          // Firebase auth is already established - just clear doctor session and navigate.
+          // The backend will auto-create the patient profile on first authenticated request.
+          localStorage.removeItem(DOCTOR_STORAGE_KEY);
+          window.dispatchEvent(new StorageEvent("storage", { key: DOCTOR_STORAGE_KEY, newValue: null }));
+          const googleName = userCredential.user.displayName || userCredential.user.email?.split("@")[0] || "there";
+          toast.success(`Welcome, ${googleName}! 🎉`);
+          setTimeout(() => navigate("/home"), 800);
+        } else {
+          // Doctor Google Login/Signup Flow
+          const res = await fetch(`${API_BASE}/api/doctors/google-auth`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ idToken })
+          });
+          const json = await res.json().catch(() => null);
+
+          if (res.ok && json?.success) {
+            if (json.registered) {
+              // Doctor exists, sign them in directly
+              localStorage.removeItem("patientToken_v1");
+              try { await logout(false); } catch (e) {}
+
+              localStorage.setItem(DOCTOR_STORAGE_KEY, json.token);
+              window.dispatchEvent(new StorageEvent("storage", { key: DOCTOR_STORAGE_KEY, newValue: json.token }));
+
+              toast.success("Welcome back, Dr. " + json.data.name);
+              setTimeout(() => navigate(`/doctor/${json.data._id || json.data.id}`), 800);
+            } else {
+              // Doctor does not exist, pre-fill name/email and ask for specialization/bmdc
+              setEmail(json.email);
+              setName(json.name);
+              setGoogleIdToken(idToken);
+              setIsSignUp(true);
+              toast.success("Google account verified! Please enter specialization and BMDC number to complete your profile.");
+            }
+          } else {
+            toast.error(json?.message || "Google verification failed.");
+          }
+        }
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error("Google authentication failed: " + err.message);
     } finally {
       setLoading(false);
     }
@@ -518,7 +632,7 @@ export default function Login() {
         {/* Brand / Logo Header */}
         <div className="flex items-center gap-3 relative z-10">
           <div className="w-10 h-10 rounded-xl bg-white/10 backdrop-blur-md p-2 flex items-center justify-center border border-white/20">
-            <img src={logo} alt="Mediunity Logo" className="w-full h-full object-contain brightness-0 invert" />
+            <img src={logo} alt="MediUnity Logo" className="w-full h-full object-contain brightness-0 invert" />
           </div>
           <span className="font-extrabold text-xl tracking-wider font-sans">MEDIUNITY</span>
         </div>
@@ -561,7 +675,7 @@ export default function Login() {
               <div className="flex items-start gap-3 bg-white/10 backdrop-blur-md border border-white/10 p-4 rounded-2xl">
                 <CheckCircle2 className="w-5 h-5 text-emerald-300 shrink-0 mt-0.5" />
                 <div>
-                  <h4 className="text-sm font-bold font-sans">HIPAA Encrypted Files</h4>
+                  <h4 className="text-sm font-bold font-sans">Secure Encrypted Files</h4>
                   <p className="text-xs text-slate-200 mt-0.5 font-sans">Your health data is sealed with end-to-end security protocols.</p>
                 </div>
               </div>
@@ -608,7 +722,7 @@ export default function Login() {
               <div className="flex items-center justify-between text-[11px] font-sans font-semibold text-slate-300 bg-slate-900/40 border border-slate-800/40 px-4 py-2.5 rounded-xl">
                 <div className="flex items-center gap-1.5">
                   <ShieldCheck className="w-4 h-4 text-emerald-400" />
-                  <span>Secure HIPAA Tunnel</span>
+                  <span>Secure Data Tunnel</span>
                 </div>
                 <span className="text-[10px] text-slate-400 font-mono bg-slate-950 px-2 py-0.5 rounded border border-slate-800">
                   AES-256
@@ -638,10 +752,10 @@ export default function Login() {
           </div>
         </div>
 
-        {/* HIPAA Compliance note */}
+        {/* Privacy note */}
         <div className="text-[10.5px] text-slate-300/80 font-sans relative z-10 flex items-center gap-1.5">
           <ShieldCheck className="w-3.5 h-3.5 text-slate-300" />
-          <span>Strict HIPAA, SOC2, and medical confidentiality protocols applied.</span>
+          <span>Strict medical confidentiality protocols applied.</span>
         </div>
       </div>
 
@@ -665,7 +779,7 @@ export default function Login() {
           <div className={`lg:hidden w-12 h-12 rounded-xl flex items-center justify-center p-2 mb-4 border shadow-sm ${
             isPatient ? "bg-emerald-50 border-emerald-100" : "bg-slate-950 border-slate-800"
           }`}>
-            <img src={logo} alt="Mediunity Logo" className="w-full h-full object-contain" />
+            <img src={logo} alt="MediUnity Logo" className="w-full h-full object-contain" />
           </div>
 
           {/* Role Pill Badge */}
@@ -695,12 +809,18 @@ export default function Login() {
           </h2>
           <p className={`text-xs mt-1.5 font-sans leading-relaxed max-w-[310px] ${activeClass.labelColor}`}>
             {verificationPending 
-              ? `We emailed a verification security code to ${otpEmailOrPhone}. Please check your inbox.`
+              ? isPatient
+                ? "We sent a verification security code to your phone by SMS. Please check your messages."
+                : `We emailed a verification security code to ${otpEmailOrPhone}. Please check your inbox.`
               : isForgotPassword
                 ? resetOtpSent
-                  ? `Enter the reset code sent to your email and choose a new secure password.`
-                  : `Enter your registered email address to receive a secure password reset link.`
-                : `Select your role to access your personalized medical portal.`}
+                  ? isPatient
+                    ? "Enter the reset code sent to your phone by SMS and choose a new secure password."
+                    : "Enter the reset code sent to your email and choose a new secure password."
+                  : isPatient
+                    ? "Enter your registered phone/email to receive a secure password reset code."
+                    : "Enter your registered email address to receive a secure password reset link."
+                : "Select your role to access your personalized medical portal."}
           </p>
 
           {/* Portal Switcher Tabs */}
@@ -737,7 +857,10 @@ export default function Login() {
               <div className={`p-4 border rounded-2xl text-xs font-sans leading-relaxed ${
                 isPatient ? "bg-emerald-50 border-emerald-100 text-emerald-800" : "bg-blue-950/40 border-blue-900/30 text-blue-300"
               }`}>
-                An automatic verification code has been dispatched. Please review your email inbox.
+                {isPatient 
+                  ? "An automatic verification code has been sent to your phone by SMS."
+                  : "An automatic verification code has been dispatched. Please review your email inbox."
+                }
               </div>
 
               <div>
@@ -899,7 +1022,7 @@ export default function Login() {
               <form onSubmit={isPatient ? handlePatientSubmit : handleDoctorSubmit} className="space-y-4">
                 
                 {/* Full Name (Sign Up only) */}
-                {isSignUp && (
+                {isSignUp && !googleIdToken && (
                   <div>
                     <label className={`block text-[10px] font-bold uppercase tracking-wider mb-1.5 pl-1 font-sans ${activeClass.labelColor}`}>
                       Full Name
@@ -921,24 +1044,26 @@ export default function Login() {
                 )}
 
                 {/* Email Address */}
-                <div>
-                  <label className={`block text-[10px] font-bold uppercase tracking-wider mb-1.5 pl-1 font-sans ${activeClass.labelColor}`}>
-                    Email Address
-                  </label>
-                  <div className="relative">
-                    <span className="absolute inset-y-0 left-0 flex items-center pl-3.5 text-slate-400 pointer-events-none">
-                      <Mail className="w-4 h-4" />
-                    </span>
-                    <input
-                      type="email"
-                      placeholder="you@domain.com"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      className={`w-full pl-10 pr-4 py-2.5 font-sans rounded-2xl text-sm focus:outline-none transition ${activeClass.input}`}
-                      required
-                    />
+                {!googleIdToken && (
+                  <div>
+                    <label className={`block text-[10px] font-bold uppercase tracking-wider mb-1.5 pl-1 font-sans ${activeClass.labelColor}`}>
+                      Email Address
+                    </label>
+                    <div className="relative">
+                      <span className="absolute inset-y-0 left-0 flex items-center pl-3.5 text-slate-400 pointer-events-none">
+                        <Mail className="w-4 h-4" />
+                      </span>
+                      <input
+                        type="email"
+                        placeholder="you@domain.com"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        className={`w-full pl-10 pr-4 py-2.5 font-sans rounded-2xl text-sm focus:outline-none transition ${activeClass.input}`}
+                        required
+                      />
+                    </div>
                   </div>
-                </div>
+                )}
 
                 {/* Phone Number (Patients signup only) */}
                 {isPatient && isSignUp && (
@@ -1006,35 +1131,50 @@ export default function Login() {
                 )}
 
                 {/* Password Field */}
-                <div>
-                  <label className={`block text-[10px] font-bold uppercase tracking-wider mb-1.5 pl-1 font-sans ${activeClass.labelColor}`}>
-                    Password Key
-                  </label>
-                  <div className="relative">
-                    <span className="absolute inset-y-0 left-0 flex items-center pl-3.5 text-slate-400 pointer-events-none">
-                      <Lock className="w-4 h-4" />
-                    </span>
-                    <input
-                      type={showPassword ? "text" : "password"}
-                      placeholder="••••••••"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      className={`w-full pl-10 pr-10 py-2.5 font-sans rounded-2xl text-sm focus:outline-none transition ${activeClass.input}`}
-                      required
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="absolute inset-y-0 right-0 flex items-center pr-3 text-slate-400 hover:text-slate-600 transition cursor-pointer"
-                    >
-                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                    </button>
+                {!googleIdToken && (
+                  <div>
+                    <label className={`block text-[10px] font-bold uppercase tracking-wider mb-1.5 pl-1 font-sans ${activeClass.labelColor}`}>
+                      Password Key
+                    </label>
+                    <div className="relative">
+                      <span className="absolute inset-y-0 left-0 flex items-center pl-3.5 text-slate-400 pointer-events-none">
+                        <Lock className="w-4 h-4" />
+                      </span>
+                      <input
+                        type={showPassword ? "text" : "password"}
+                        placeholder="••••••••"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        className={`w-full pl-10 pr-10 py-2.5 font-sans rounded-2xl text-sm focus:outline-none transition ${activeClass.input}`}
+                        required
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute inset-y-0 right-0 flex items-center pr-3 text-slate-400 hover:text-slate-600 transition cursor-pointer"
+                      >
+                        {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
+                    </div>
                   </div>
-                </div>
+                )}
 
-                {/* Forgot Password trigger */}
+                {/* Remember Me and Forgot Password Container */}
                 {!isSignUp && (
-                  <div className="flex justify-end pr-1 text-right">
+                  <div className="flex items-center justify-between px-1 text-xs">
+                    {!isPatient ? (
+                      <label className="flex items-center gap-2 cursor-pointer font-sans select-none">
+                        <input
+                          type="checkbox"
+                          checked={rememberMe}
+                          onChange={(e) => setRememberMe(e.target.checked)}
+                          className="w-4 h-4 rounded border-slate-850 text-blue-600 bg-slate-950/50 focus:ring-blue-500/20 focus:ring-offset-0 focus:outline-none"
+                        />
+                        <span className={activeClass.labelColor}>Remember Me</span>
+                      </label>
+                    ) : (
+                      <div />
+                    )}
                     <button
                       type="button"
                       onClick={() => {
@@ -1057,6 +1197,66 @@ export default function Login() {
                   {loading && <Loader2 className="w-4 h-4 animate-spin" />}
                   {isSignUp ? "Register Portal Profile" : "Access Workspace Account"}
                 </button>
+
+                {/* Google Sign-In / Sign-Up Button */}
+                {!googleIdToken && (
+                  <>
+                    <div className="flex items-center my-4">
+                      <div className="flex-grow border-t border-slate-200/50 dark:border-slate-800"></div>
+                      <span className="mx-4 text-xs text-slate-400 font-sans">OR</span>
+                      <div className="flex-grow border-t border-slate-200/50 dark:border-slate-800"></div>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={handleGoogleAuth}
+                      disabled={loading}
+                      className={`w-full py-3 px-4 font-sans font-bold text-sm rounded-2xl border transition cursor-pointer flex items-center justify-center gap-2 ${
+                        isPatient 
+                          ? "border-slate-200 bg-white text-slate-700 hover:bg-slate-50" 
+                          : "border-slate-800 bg-slate-900/40 text-white hover:bg-slate-850"
+                      }`}
+                    >
+                      <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24">
+                        <path
+                          fill="#4285F4"
+                          d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+                        />
+                        <path
+                          fill="#34A853"
+                          d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+                        />
+                        <path
+                          fill="#FBBC05"
+                          d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"
+                        />
+                        <path
+                          fill="#EA4335"
+                          d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
+                        />
+                      </svg>
+                      Continue with Google
+                    </button>
+                  </>
+                )}
+
+                {/* Cancel Google Signup Button */}
+                {googleIdToken && (
+                  <div className="text-center mt-3">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setGoogleIdToken("");
+                        setIsSignUp(false);
+                        setName("");
+                        setEmail("");
+                      }}
+                      className="text-xs text-rose-500 font-sans font-bold hover:underline"
+                    >
+                      Cancel Google Registration
+                    </button>
+                  </div>
+                )}
               </form>
 
               {/* Portal Swap Trigger */}
@@ -1089,7 +1289,7 @@ export default function Login() {
 
         {/* Global Hospital Footer note */}
         <div className={`text-center text-[10px] mt-8 relative z-10 font-sans ${activeClass.labelColor}`}>
-          © 2026 Mediunity Clinic System. Licensed under HIPAA privacy regulations and medical workspace compliance codes.
+          © 2026 MediUnity Clinic System. Operated under secure medical privacy protocols.
         </div>
       </div>
     </div>

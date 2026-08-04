@@ -148,74 +148,74 @@ export const keyframesStyles = `
 // Add to the existing dummyStyles.js file
 export const dashboardStyles = {
   // Layout styles
-  pageContainer: "min-h-screen font-serif p-4 sm:p-6 bg-linear-to-br from-med-lightest via-med-light to-white",
+  pageContainer: "min-h-screen font-serif p-4 sm:p-6 bg-gradient-to-br from-[#f0f7ff] via-white to-[#f0f7ff]",
   maxWidthContainer: "max-w-7xl mx-auto",
   
   // Header styles
   headerContainer: "flex items-center justify-between mb-6",
-  headerTitle: "text-2xl md:text-3xl font-bold text-gray-800",
-  headerSubtitle: "text-sm text-slate-600 mt-1",
+  headerTitle: "text-2xl md:text-3xl font-bold text-[#1e3a5f]",
+  headerSubtitle: "text-sm text-[#3b82f6] mt-1",
   
   // Stats section styles
   statsGrid: "grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 mb-6",
-  statCard: "p-4 rounded-full bg-linear-to-br from-med-light to-med-lightest shadow-sm border border-med-light",
+  statCard: "p-4 rounded-2xl bg-gradient-to-br from-[#f0f7ff] to-white shadow-sm border border-[#bfdbfe]",
   statCardContent: "flex items-center gap-3",
-  statIconContainer: "p-2 bg-white/80 rounded-full shadow-inner",
+  statIconContainer: "p-2 bg-white/80 rounded-full shadow-inner text-[#3b82f6]",
   statLabel: "text-sm text-slate-600",
-  statValue: "text-xl font-semibold text-slate-800",
+  statValue: "text-xl font-semibold text-[#1e3a5f]",
   
   // Search section styles
   searchLabel: "block text-lg text-slate-600 mb-2",
   searchContainer: "flex items-center gap-3 max-w-md",
   searchInputContainer: "relative flex-1",
-  searchInput: "pl-10 pr-4 py-2 rounded-full shadow-sm border border-med-soft bg-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-med-soft w-full",
-  searchIcon: "absolute left-3 top-2.5 w-5 h-5 text-med-vibrant",
-  clearButton: "px-3 py-2 bg-med-vibrant text-white rounded-full shadow hover:bg-med-vibrant",
+  searchInput: "pl-10 pr-4 py-2 rounded-full shadow-sm border border-[#bfdbfe] bg-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#bfdbfe] w-full",
+  searchIcon: "absolute left-3 top-2.5 w-5 h-5 text-[#3b82f6]",
+  clearButton: "px-3 py-2 bg-[#3b82f6] text-white rounded-full shadow hover:bg-[#2563eb]",
   
   // Doctors table styles
-  tableContainer: "bg-white rounded-2xl shadow overflow-hidden",
-  tableHeader: "px-6 py-4 border-b border-med-lightest flex items-center justify-between",
-  tableTitle: "text-lg font-semibold text-slate-800",
+  tableContainer: "bg-white rounded-2xl shadow overflow-hidden border border-[#bfdbfe]/40",
+  tableHeader: "px-6 py-4 border-b border-[#f0f7ff] flex items-center justify-between",
+  tableTitle: "text-lg font-semibold text-[#1e3a5f]",
   tableCount: "text-sm text-slate-500",
-  errorContainer: "px-6 py-4 border-b border-med-lightest text-sm text-rose-600",
+  errorContainer: "px-6 py-4 border-b border-[#f0f7ff] text-sm text-rose-600",
   tableWrapper: "hidden md:block overflow-x-auto",
-  table: "min-w-full divide-y divide-med-lightest",
-  tableHead: "bg-med-lightest",
-  tableHeaderCell: "px-6 py-3 text-left text-xs font-medium text-slate-600 uppercase tracking-wider",
-  tableBody: "bg-white divide-y divide-med-lightest",
+  table: "min-w-full divide-y divide-[#f0f7ff]",
+  tableHead: "bg-[#f0f7ff]",
+  tableHeaderCell: "px-6 py-3 text-left text-xs font-medium text-[#3b82f6] uppercase tracking-wider",
+  tableBody: "bg-white divide-y divide-[#f0f7ff]",
   tableRow: "group transform transition-all duration-200 hover:shadow-lg hover:-translate-y-1",
   tableRowEven: "bg-white",
-  tableRowOdd: "bg-med-lightest/40",
+  tableRowOdd: "bg-[#f0f7ff]/40",
   tableCell: "px-6 py-4 whitespace-nowrap",
   tableCellFlex: "flex items-center gap-4",
-  verticalLine: "w-1 h-12 rounded-md mr-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-linear-to-b from-med-vibrant to-med-soft",
-  doctorImage: "w-12 h-12 rounded-full object-cover border-2 border-med-light",
-  doctorName: "text-sm font-medium text-slate-800",
+  verticalLine: "w-1 h-12 rounded-md mr-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-gradient-to-b from-[#3b82f6] to-[#60a5fa]",
+  doctorImage: "w-12 h-12 rounded-full object-cover border-2 border-[#bfdbfe]",
+  doctorName: "text-sm font-medium text-[#1e3a5f]",
   doctorId: "text-xs text-slate-500 mt-0.5",
   doctorSpecialization: "text-sm text-slate-600",
   feeText: "text-sm text-right text-slate-700",
   appointmentsText: "text-sm text-center text-slate-700",
-  completedText: "text-sm text-center text-med-vibrant",
+  completedText: "text-sm text-center text-[#3b82f6]",
   canceledText: "text-sm text-center text-rose-500",
-  earningsText: "text-sm text-right font-semibold text-slate-800",
+  earningsText: "text-sm text-right font-semibold text-[#1e3a5f]",
   
   // Mobile view styles
   mobileDoctorContainer: "md:hidden px-4 py-4",
   mobileDoctorGrid: "space-y-3",
-  mobileDoctorCard: "bg-white rounded-xl shadow p-3 border border-med-lightest",
+  mobileDoctorCard: "bg-white rounded-xl shadow p-3 border border-[#bfdbfe]/50",
   mobileDoctorHeader: "flex items-center justify-between",
   mobileDoctorImage: "w-12 h-12 rounded-full object-cover",
-  mobileDoctorName: "text-sm font-medium text-slate-800",
+  mobileDoctorName: "text-sm font-medium text-[#1e3a5f]",
   mobileDoctorSpecialization: "text-xs text-slate-500",
   mobileDoctorFee: "text-sm text-slate-700 font-semibold",
   mobileStatsGrid: "mt-3 grid grid-cols-3 gap-3 text-center",
   mobileStatLabel: "text-xs text-slate-500",
-  mobileStatValue: "text-sm font-semibold text-slate-800",
+  mobileStatValue: "text-sm font-semibold text-[#1e3a5f]",
   mobileEarningsContainer: "mt-3 flex items-center justify-between text-sm text-slate-700",
   
   // Show more button styles
-  showMoreContainer: "px-6 py-4 border-t border-med-lightest flex justify-center",
-  showMoreButton: "px-4 py-2 rounded-full bg-white border border-med-soft shadow-sm hover:bg-med-lightest transition",
+  showMoreContainer: "px-6 py-4 border-t border-[#f0f7ff] flex justify-center",
+  showMoreButton: "px-4 py-2 rounded-full bg-white border border-[#bfdbfe] shadow-sm hover:bg-[#f0f7ff] transition",
   
   // Cursor utilities
   cursorPointer: "cursor-pointer",
@@ -224,8 +224,8 @@ export const dashboardStyles = {
   // Text colors (for reuse)
   textSlate600: "text-slate-600",
   textSlate700: "text-slate-700",
-  textSlate800: "text-slate-800",
-  textEmerald600: "text-med-vibrant",
+  textSlate800: "text-[#1e3a5f]",
+  textEmerald600: "text-[#3b82f6]",
   textRose500: "text-rose-500",
   textRose600: "text-rose-600",
 };
@@ -491,75 +491,75 @@ export const doctorListStyles = {
 export const navbarStyles = {
   // Layout styles
   header: "relative font-serif",
-  navContainer: "mx-auto max-w-7xl lg:px-7 xl:px-2 px-4 py-5",
+  navContainer: "mx-auto max-w-7xl lg:px-7 xl:px-2 px-4 py-4 bg-white/95 backdrop-blur border-b border-[#f0f7ff] shadow-sm",
   flexContainer: "flex items-center justify-between",
   
   // Logo section styles
-  logoContainer: "flex items-center gap-2",
-  logoImage: "w-18 h-18 rounded-full",
-  logoLink: "text-3xl xl:block lg:text-xs xl:text-xl font-bold text-med-dark",
-  logoSubtext: "text-xs xl:block text-gray-500",
+  logoContainer: "flex items-center gap-2.5",
+  logoImage: "w-10 h-10 object-contain rounded-xl",
+  logoLink: "text-xl font-extrabold text-[#3b82f6]",
+  logoSubtext: "text-xs text-[#60a5fa] font-medium",
   
   // Center navigation (desktop)
   centerNavContainer: "hidden lg:flex items-center justify-center relative",
-  glowEffect: "glow relative rounded-3xl p-1 bg-linear-to-r from-med-light via-med-soft to-med-light",
+  glowEffect: "glow relative rounded-3xl p-1 bg-gradient-to-r from-[#f0f7ff] via-[#bfdbfe] to-[#f0f7ff]",
   centerNavInner: "relative flex items-center",
-  centerNavScrollContainer: "center-inner relative whitespace-nowrap rounded-3xl bg-white/95 lg:px-2 px-4 py-2 flex items-center gap-2 shadow-lg border border-gray-100 overflow-x-auto",
+  centerNavScrollContainer: "center-inner relative whitespace-nowrap rounded-3xl bg-white/95 lg:px-2 px-4 py-2 flex items-center gap-1 shadow-lg border border-[#f0f7ff] overflow-x-auto",
   
   // Center nav items
-  centerNavItemBase: "relative flex flex-col lg:text-xs lg:-mx-2 xl:text-md items-center gap-1 px-3 py-2 rounded-lg transition-all text-sm",
-  centerNavItemActive: "text-med-vibrant font-semibold",
-  centerNavItemInactive: "text-gray-700 hover:text-med-vibrant",
+  centerNavItemBase: "relative flex flex-col lg:text-xs lg:-mx-1 xl:text-sm items-center gap-1 px-3 py-2 rounded-xl transition-all text-sm",
+  centerNavItemActive: "text-[#3b82f6] font-semibold bg-[#f0f7ff]",
+  centerNavItemInactive: "text-slate-600 hover:text-[#3b82f6] hover:bg-[#f0f7ff]/60",
   
   // Right section styles
   rightContainer: "flex items-center gap-3",
-  signOutButton: "hidden lg:mx-1 lg:text-xs whitespace-nowrap xl:mx-1 lg:-mr-6 xl:mr-5 lg:flex px-4 py-2 cursor-pointer rounded-full bg-amber-500 text-white text-sm items-center gap-2 shadow-sm",
-  loginButton: "px-3 py-2 cursor-pointer rounded-full border bg-white text-med-vibrant text-sm shadow-sm",
+  signOutButton: "hidden lg:flex items-center gap-2 px-4 py-2 cursor-pointer rounded-full bg-med-soft text-red-600 text-sm shadow-sm hover:bg-med-soft/90 transition whitespace-nowrap",
+  loginButton: "px-3 py-2 cursor-pointer rounded-full border border-[#bfdbfe] bg-white text-[#3b82f6] text-sm shadow-sm hover:bg-[#f0f7ff] transition",
   
   // Mobile menu button
-  mobileMenuButton: "lg:hidden p-2 rounded-full bg-white shadow",
+  mobileMenuButton: "lg:hidden p-2 rounded-full bg-[#f0f7ff] shadow border border-[#bfdbfe]",
   
   // Mobile menu overlay
   mobileOverlay: "fixed inset-0 z-10 lg:hidden",
   
   // Mobile menu container
   mobileMenuContainer: "mt-3 lg:hidden z-20 relative",
-  mobileMenuInner: "rounded-xl bg-white shadow-md p-3 space-y-2 border",
+  mobileMenuInner: "rounded-2xl bg-white shadow-xl p-3 space-y-1 border border-[#bfdbfe]/40",
   
   // Mobile menu items
-  mobileItemBase: "flex items-center gap-3 px-2 py-2 rounded-md",
-  mobileItemActive: "bg-med-lightest text-med-vibrant",
-  mobileItemInactive: "hover:bg-gray-50",
+  mobileItemBase: "flex items-center gap-3 px-3 py-2.5 rounded-xl transition",
+  mobileItemActive: "bg-[#f0f7ff] text-[#3b82f6] font-semibold",
+  mobileItemInactive: "hover:bg-[#f0f7ff]/60 text-slate-700",
   
   // Mobile auth section
-  mobileAuthContainer: "pt-2 border-t mt-2",
-  mobileSignOutButton: "w-full py-2 rounded-full border bg-amber-500 text-white font-medium",
-  mobileLoginButton: "w-full cursor-pointer py-2 rounded-full border bg-white text-med-vibrant font-medium",
+  mobileAuthContainer: "pt-2 border-t border-[#f0f7ff] mt-2",
+  mobileSignOutButton: "w-full py-2 rounded-full bg-med-soft text-red-600 font-medium hover:bg-med-soft/90 transition",
+  mobileLoginButton: "w-full cursor-pointer py-2 rounded-full border border-[#bfdbfe] bg-white text-[#3b82f6] font-medium hover:bg-[#f0f7ff] transition",
   
   // Indicator (for active navigation)
-  indicator: "absolute bottom-0 left-0 h-0.5 bg-med-vibrant transition-all duration-300 ease-out rounded-full",
+  indicator: "absolute bottom-0 left-0 h-0.5 bg-[#3b82f6] transition-all duration-300 ease-out rounded-full",
   
   // Cursor utilities
   cursorPointer: "cursor-pointer",
   
   // Text colors
-  textGreen700: "text-med-dark",
-  textGray500: "text-gray-500",
-  textGray700: "text-gray-700",
-  textEmerald600: "text-med-vibrant",
-  textEmerald400: "text-med-vibrant",
+  textGreen700: "text-[#1e3a5f]",
+  textGray500: "text-slate-500",
+  textGray700: "text-slate-700",
+  textEmerald600: "text-[#3b82f6]",
+  textEmerald400: "text-[#60a5fa]",
   textWhite: "text-white",
   
   // Background colors
   bgWhite: "bg-white",
-  bgAmber500: "bg-amber-500",
-  bgEmerald50: "bg-med-lightest",
-  bgEmerald100: "bg-med-light",
-  bgEmerald200: "bg-med-soft",
+  bgAmber500: "bg-[#3b82f6]",
+  bgEmerald50: "bg-[#f0f7ff]",
+  bgEmerald100: "bg-[#f0f7ff]",
+  bgEmerald200: "bg-[#bfdbfe]",
   
   // Border colors
-  borderGray100: "border-gray-100",
-  borderEmerald100: "border-med-light",
+  borderGray100: "border-slate-100",
+  borderEmerald100: "border-[#bfdbfe]",
   
   // Shadow
   shadow: "shadow",

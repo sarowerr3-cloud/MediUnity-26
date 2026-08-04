@@ -1,0 +1,73 @@
+======================================== 
+  DIAGNOSTIC TEST RUN LOG 
+======================================== 
+ 
+[*] Checking Node version... 
+v20.12.2
+[*] Checking NPM version... 
+10.5.0
+ 
+======================================== 
+  TESTING BACKEND 
+======================================== 
+[*] Testing backend startup... 
+npm WARN EBADENGINE Unsupported engine {
+npm WARN EBADENGINE   package: 'bson@7.3.1',
+npm WARN EBADENGINE   required: { node: '>=20.19.0' },
+npm WARN EBADENGINE   current: { node: 'v20.12.2', npm: '10.5.0' }
+npm WARN EBADENGINE }
+npm WARN EBADENGINE Unsupported engine {
+npm WARN EBADENGINE   package: 'cheerio@1.2.0',
+npm WARN EBADENGINE   required: { node: '>=20.18.1' },
+npm WARN EBADENGINE   current: { node: 'v20.12.2', npm: '10.5.0' }
+npm WARN EBADENGINE }
+npm WARN EBADENGINE Unsupported engine {
+npm WARN EBADENGINE   package: 'mongodb@7.5.0',
+npm WARN EBADENGINE   required: { node: '>=20.19.0' },
+npm WARN EBADENGINE   current: { node: 'v20.12.2', npm: '10.5.0' }
+npm WARN EBADENGINE }
+npm WARN EBADENGINE Unsupported engine {
+npm WARN EBADENGINE   package: 'mongodb-connection-string-url@7.0.2',
+npm WARN EBADENGINE   required: { node: '>=20.19.0' },
+npm WARN EBADENGINE   current: { node: 'v20.12.2', npm: '10.5.0' }
+npm WARN EBADENGINE }
+npm WARN EBADENGINE Unsupported engine {
+npm WARN EBADENGINE   package: 'mongoose@9.8.0',
+npm WARN EBADENGINE   required: { node: '>=20.19.0' },
+npm WARN EBADENGINE   current: { node: 'v20.12.2', npm: '10.5.0' }
+npm WARN EBADENGINE }
+npm WARN EBADENGINE Unsupported engine {
+npm WARN EBADENGINE   package: 'mquery@6.0.0',
+npm WARN EBADENGINE   required: { node: '>=20.19.0' },
+npm WARN EBADENGINE   current: { node: 'v20.12.2', npm: '10.5.0' }
+npm WARN EBADENGINE }
+npm WARN EBADENGINE Unsupported engine {
+npm WARN EBADENGINE   package: 'pdf-parse@2.4.5',
+npm WARN EBADENGINE   required: { node: '>=20.16.0 <21 || >=22.3.0' },
+npm WARN EBADENGINE   current: { node: 'v20.12.2', npm: '10.5.0' }
+npm WARN EBADENGINE }
+npm WARN EBADENGINE Unsupported engine {
+npm WARN EBADENGINE   package: 'pdfjs-dist@5.4.296',
+npm WARN EBADENGINE   required: { node: '>=20.16.0 || >=22.3.0' },
+npm WARN EBADENGINE   current: { node: 'v20.12.2', npm: '10.5.0' }
+npm WARN EBADENGINE }
+npm WARN EBADENGINE Unsupported engine {
+npm WARN EBADENGINE   package: 'undici@7.29.0',
+npm WARN EBADENGINE   required: { node: '>=20.18.1' },
+npm WARN EBADENGINE   current: { node: 'v20.12.2', npm: '10.5.0' }
+npm WARN EBADENGINE }
+
+up to date, audited 454 packages in 14s
+
+87 packages are looking for funding
+  run `npm fund` for details
+
+9 vulnerabilities (8 moderate, 1 high)
+
+To address issues that do not require attention, run:
+  npm audit fix
+
+To address all issues (including breaking changes), run:
+  npm audit fix --force
+
+Run `npm audit` for details.

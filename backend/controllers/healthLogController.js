@@ -1,5 +1,5 @@
 import HealthLog from "../models/HealthLog.js";
-import Appointment from "../models/Appointment.js";
+import PatientProfile from "../models/PatientProfile.js";
 
 // Helper to resolve Clerk UserId
 function getClerkUserId(req) {
@@ -91,17 +91,17 @@ export async function getPatientLogsForDoctor(req, res) {
 
     const { patientId } = req.params;
 
-    // Verify doctor-patient relationship through appointments
-    const appointment = await Appointment.findOne({
-      doctorId: req.doctor._id,
-      owner: patientId,
-      status: { $ne: "Canceled" } // Enforce that the appointment is not canceled
-    });
+    // Verify doctor-patient relationship through follow status
+    const profile = await PatientProfile.findOne({ clerkUserId: patientId });
+    if (!profile) {
+      return res.status(404).json({ success: false, message: "Patient profile not found" });
+    }
 
-    if (!appointment) {
+    const isFollowing = profile.followingDoctors && profile.followingDoctors.some(d => String(d) === String(req.doctor._id || req.doctor.id));
+    if (!isFollowing) {
       return res.status(403).json({
         success: false,
-        message: "Forbidden: You must have an active or completed appointment with this patient to view their health logs.",
+        message: "Forbidden: You must be followed by this patient to view their health logs.",
       });
     }
 

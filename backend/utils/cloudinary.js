@@ -22,11 +22,58 @@ export async function uploadToCloudinary(filePath, folder = "Doctor") {
     });
 
     // remove local file after upload
-    fs.unlinkSync(filePath);
+    if (fs.existsSync(filePath)) {
+      fs.unlinkSync(filePath);
+    }
+
+    // Inject Cloudinary delivery optimization parameters
+    if (result.secure_url) {
+      result.secure_url = result.secure_url.replace("/upload/", "/upload/f_auto,q_auto/");
+    }
 
     return result;  // contains { secure_url, public_id, ... }
   } catch (err) {
+    if (fs.existsSync(filePath)) {
+      fs.unlinkSync(filePath);
+    }
     console.error("Cloudinary upload error:", err);
+    throw err;
+  }
+}
+
+export async function uploadLargeToCloudinary(filePath, folder = "Posts") {
+  try {
+    const result = await new Promise((resolve, reject) => {
+      cloudinary.uploader.upload_large(
+        filePath,
+        {
+          folder,
+          resource_type: "auto",
+          chunk_size: 6000000, // 6MB chunk size
+        },
+        (error, res) => {
+          if (error) return reject(error);
+          resolve(res);
+        }
+      );
+    });
+
+    // remove local file after upload
+    if (fs.existsSync(filePath)) {
+      fs.unlinkSync(filePath);
+    }
+
+    // Inject Cloudinary delivery optimization parameters
+    if (result.secure_url) {
+      result.secure_url = result.secure_url.replace("/upload/", "/upload/f_auto,q_auto/");
+    }
+
+    return result;  // contains { secure_url, public_id, ... }
+  } catch (err) {
+    if (fs.existsSync(filePath)) {
+      fs.unlinkSync(filePath);
+    }
+    console.error("Cloudinary upload_large error:", err);
     throw err;
   }
 }

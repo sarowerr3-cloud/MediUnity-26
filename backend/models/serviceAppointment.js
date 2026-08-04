@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import { generateSerialNumber } from "../utils/serialGenerator.js";
 
 /**
  * ServiceAppointment model
@@ -13,6 +14,13 @@ const serviceAppointmentSchema = new mongoose.Schema(
     /* =========================
        Patient Info
        ========================= */
+    serialNumber: {
+      type: String,
+      unique: true,
+      sparse: true,
+      index: true,
+    },
+
     createdBy: {
       type: String,
       default: null, // optional patient user id
@@ -163,6 +171,12 @@ const serviceAppointmentSchema = new mongoose.Schema(
    ========================= */
 serviceAppointmentSchema.index({ date: 1, status: 1 });
 serviceAppointmentSchema.index({ serviceId: 1 });
+
+serviceAppointmentSchema.pre("save", async function () {
+  if (!this.serialNumber) {
+    this.serialNumber = generateSerialNumber("SVC");
+  }
+});
 
 const ServiceAppointment =
   mongoose.models.ServiceAppointment ||

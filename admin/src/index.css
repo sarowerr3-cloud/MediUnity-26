@@ -1,10 +1,62 @@
 @import "tailwindcss";
 
 @theme {
-  /* Med Theme Custom Variables mapped to Green and White */
-  --color-med-lightest: #ecfdf5; /* Light mint/emerald background */
-  --color-med-light: #a7f3d0;    /* Soft emerald green border/accent */
-  --color-med-soft: #10b981;     /* Emerald green brand accent */
-  --color-med-vibrant: #059669;  /* Vibrant emerald green (buttons, links, active headers) */
-  --color-med-dark: #0f172a;     /* Slate-900 for solid dark text */
+  --variant-dark: class;
+
+  /* ── MediUnity Admin — Doctor Portal Brand Theme ── */
+  --color-med-lightest: #F7FCFD;  /* Background (Lighter Sky White)                  */
+  --color-med-light:    #E1F7F6;  /* Soft light-turquoise — borders, card outlines    */
+  --color-med-soft:     #30D6D3;  /* Accent/Interactive — hover states, secondary     */
+  --color-med-vibrant:  #30D6D3;  /* Accent/Interactive — primary buttons, links      */
+  --color-med-dark:     #51C7C5;  /* Main Theme Color — headings, primary navigation  */
+
+  /* Global Font */
+  --font-sans: 'Rubik', sans-serif;
+  --font-serif: 'Rubik', sans-serif;
+  --font-mono: 'Rubik', sans-serif;
 }
+
+/* Apply Rubik universally across the entire admin panel */
+*, *::before, *::after {
+  font-family: 'Rubik', sans-serif !important;
+}
+
+html, body, #root {
+  font-family: 'Rubik', sans-serif !important;
+}
+
+
+/* ── Global scrollbar tint ── */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: #F7FCFD; }
+::-webkit-scrollbar-thumb { background: #E1F7F6; border-radius: 999px; }
+::-webkit-scrollbar-thumb:hover { background: #30D6D3; }
+
+/* ── Smooth focus rings using brand color ── */
+*:focus-visible {
+  outline: 2px solid #30D6D3;
+  outline-offset: 2px;
+}
+
+/* ── Navbar glow animation ── */
+@keyframes glowPulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(81, 199, 197, 0.12); }
+  50%       { box-shadow: 0 0 16px 4px rgba(81, 199, 197, 0.16); }
+}
+.glow { animation: glowPulse 3s ease-in-out infinite; }
+
+/* ── Animated border for service cards ── */
+@keyframes borderSpin {
+  from { --angle: 0deg; }
+  to   { --angle: 360deg; }
+}
+@property --angle {
+  syntax: "<angle>";
+  initial-value: 0deg;
+  inherits: false;
+}
+.animated-border {
+  background: conic-gradient(from var(--angle), #30D6D3, #51C7C5, #F7FCFD, #30D6D3);
+  animation: borderSpin 4s linear infinite;
+}
+.card-inner { background: white; }

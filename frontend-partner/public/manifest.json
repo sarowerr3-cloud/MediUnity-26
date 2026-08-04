@@ -1,0 +1,16 @@
+{
+  "short_name": "MediUnity",
+  "name": "MediUnity Healthcare Bangladesh",
+  "icons": [
+    {
+      "src": "/vite.svg",
+      "type": "image/svg+xml",
+      "sizes": "any"
+    }
+  ],
+  "start_url": "/",
+  "background_color": "#0f172a",
+  "theme_color": "#022c22",
+  "display": "standalone",
+  "orientation": "portrait"
+}

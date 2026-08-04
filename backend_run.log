@@ -1,0 +1,63 @@
+
+> backend@1.0.0 dev
+> nodemon index.js
+
+[33m[nodemon] 3.1.11[39m
+[33m[nodemon] to restart at any time, enter `rs`[39m
+[33m[nodemon] watching path(s): *.*[39m
+[33m[nodemon] watching extensions: js,mjs,cjs,json[39m
+[32m[nodemon] starting `node index.js`[39m
+[dotenv@17.2.3] injecting env (0) from .env -- tip: 👥 sync secrets across teammates & machines: https://dotenvx.com/ops
+[MOCK WORKER] In-memory BMDC verification background listener initialized.
+[MOCK WORKER] In-memory prescription PDF background listener initialized.
+Server Started on http://localhost:4000
+[REDIS] Redis is offline. Utilizing in-memory queue fallback.
+Cloud DB Connected: ac-zvrjsxm-shard-00-00.n0k8wab.mongodb.net
+[SCHEDULE CRON] Auto-reset of passed schedules completed successfully.
+[STARTUP] Doctor schedules initial cleanup completed.
+[SEED] Mock partners (Diagnostic, Pharmacy, Hospital) already exist. Skipping.
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `node index.js`[39m
+[dotenv@17.2.3] injecting env (0) from .env -- tip: 👥 sync secrets across teammates & machines: https://dotenvx.com/ops
+[MOCK WORKER] In-memory BMDC verification background listener initialized.
+[MOCK WORKER] In-memory prescription PDF background listener initialized.
+Server Started on http://localhost:4000
+[REDIS] Redis is offline. Utilizing in-memory queue fallback.
+Cloud DB Connected: ac-zvrjsxm-shard-00-00.n0k8wab.mongodb.net
+[SCHEDULE CRON] Auto-reset of passed schedules completed successfully.
+[STARTUP] Doctor schedules initial cleanup completed.
+[SEED] Mock partners (Diagnostic, Pharmacy, Hospital) already exist. Skipping.
+[REQUEST] GET /api/doctors?limit=3 - Status: 200 (590ms) - Origin: http://localhost:5173 - Auth: undefined
+[REQUEST] GET /api/patients/ads/active - Status: 200 (177ms) - Origin: http://localhost:5173 - Auth: undefined
+[REQUEST] GET /api/doctors?limit=3 - Status: 304 (222ms) - Origin: http://localhost:5173 - Auth: undefined
+[REQUEST] GET /api/posts - Status: 200 (466ms) - Origin: http://localhost:5173 - Auth: Bearer eyJhbGciOiJSUzI1NiIsImtpZCI6IjY1Y2IzZjAyMGNhZjdiMmE5ZTg2ZWFkOTAxZDg5ZjQ4MTJjYmFjYmMiLCJ0eXAiOiJKV1QifQ.eyJuYW1lIjoiU2Fyb3dlciBSYWhtYW4gKFJhc2tleSkiLCJwaWN0dXJlIjoiaHR0cHM6Ly9saDMuZ29vZ2xldXNlcmNvbnRlbnQuY29tL2EvQUNnOG9jSmdsN3R1RjZUUWtwZ0hFOF9CLXkxLVlXVk9DbVI0Zm9WZ1JWdU5LaENoVXlOdjcwajUxZz1zOTYtYyIsImlzcyI6Imh0dHBzOi8vc2VjdXJldG9rZW4uZ29vZ2xlLmNvbS9tZWRpLXVuaXR5IiwiYXVkIjoibWVkaS11bml0eSIsImF1dGhfdGltZSI6MTc4NDI5NjA1NiwidXNlcl9pZCI6IjRwWkJ3UmJMc1hPNVpFb2RmYk41TFNra0VnYzIiLCJzdWIiOiI0cFpCd1JiTHNYTzVaRW9kZmJONUxTa2tFZ2MyIiwiaWF0IjoxNzg0Mjk2MDU2LCJleHAiOjE3ODQyOTk2NTYsImVtYWlsIjoic2Fyb3dlcnIzQGdtYWlsLmNvbSIsImVtYWlsX3ZlcmlmaWVkIjp0cnVlLCJmaXJlYmFzZSI6eyJpZGVudGl0aWVzIjp7Imdvb2dsZS5jb20iOlsiMTA4MzgzNDg4ODExNDcwMDExMzQ3Il0sImVtYWlsIjpbInNhcm93ZXJyM0BnbWFpbC5jb20iXX0sInNpZ25faW5fcHJvdmlkZXIiOiJnb29nbGUuY29tIn19.sdGWeCM4SBIkfiom8SjarmAMSt-LhmjPlLsUeTx1DNXP1zAPfwA1RKT7wLemzVfIfcM_7uZr7ZQ3Ztgo0R6aCaygSTlg2HLiAr1gC_pQYhIaniYxxCKzkvH9lsoYrfH4CdMJ3MI4XaYqi1nLs9M0ciIg_jAWB8UFkpuOfzRT17swS6pGtmYwHrhWg5byzSORC9i76vNZXjucKvMNLTlFaIUR4pKIi5SXItq6P72z23sk__dWtP0pYzqVtRrXpP4uQC1ObUvLEKqKJKSNnSUkDt28MT50b10CG4eaW4lxjOVPRoNwIrCUdfzYcvtyf-f0jCteDxX1nM25Qc_1r0WieA
+[REQUEST] GET /api/appointments?limit=5 - Status: 200 (449ms) - Origin: http://localhost:5173 - Auth: Bearer eyJhbGciOiJSUzI1NiIsImtpZCI6IjY1Y2IzZjAyMGNhZjdiMmE5ZTg2ZWFkOTAxZDg5ZjQ4MTJjYmFjYmMiLCJ0eXAiOiJKV1QifQ.eyJuYW1lIjoiU2Fyb3dlciBSYWhtYW4gKFJhc2tleSkiLCJwaWN0dXJlIjoiaHR0cHM6Ly9saDMuZ29vZ2xldXNlcmNvbnRlbnQuY29tL2EvQUNnOG9jSmdsN3R1RjZUUWtwZ0hFOF9CLXkxLVlXVk9DbVI0Zm9WZ1JWdU5LaENoVXlOdjcwajUxZz1zOTYtYyIsImlzcyI6Imh0dHBzOi8vc2VjdXJldG9rZW4uZ29vZ2xlLmNvbS9tZWRpLXVuaXR5IiwiYXVkIjoibWVkaS11bml0eSIsImF1dGhfdGltZSI6MTc4NDI5NjA1NiwidXNlcl9pZCI6IjRwWkJ3UmJMc1hPNVpFb2RmYk41TFNra0VnYzIiLCJzdWIiOiI0cFpCd1JiTHNYTzVaRW9kZmJONUxTa2tFZ2MyIiwiaWF0IjoxNzg0Mjk2MDU2LCJleHAiOjE3ODQyOTk2NTYsImVtYWlsIjoic2Fyb3dlcnIzQGdtYWlsLmNvbSIsImVtYWlsX3ZlcmlmaWVkIjp0cnVlLCJmaXJlYmFzZSI6eyJpZGVudGl0aWVzIjp7Imdvb2dsZS5jb20iOlsiMTA4MzgzNDg4ODExNDcwMDExMzQ3Il0sImVtYWlsIjpbInNhcm93ZXJyM0BnbWFpbC5jb20iXX0sInNpZ25faW5fcHJvdmlkZXIiOiJnb29nbGUuY29tIn19.sdGWeCM4SBIkfiom8SjarmAMSt-LhmjPlLsUeTx1DNXP1zAPfwA1RKT7wLemzVfIfcM_7uZr7ZQ3Ztgo0R6aCaygSTlg2HLiAr1gC_pQYhIaniYxxCKzkvH9lsoYrfH4CdMJ3MI4XaYqi1nLs9M0ciIg_jAWB8UFkpuOfzRT17swS6pGtmYwHrhWg5byzSORC9i76vNZXjucKvMNLTlFaIUR4pKIi5SXItq6P72z23sk__dWtP0pYzqVtRrXpP4uQC1ObUvLEKqKJKSNnSUkDt28MT50b10CG4eaW4lxjOVPRoNwIrCUdfzYcvtyf-f0jCteDxX1nM25Qc_1r0WieA
+[REQUEST] POST /api/admin/login - Status: 401 (1956ms) - Origin: http://localhost:5174 - Auth: undefined
+[REQUEST] POST /api/admin/login - Status: 401 (680ms) - Origin: http://localhost:5174 - Auth: undefined
+
+🚨 [SECURITY ALERT] New/unrecognized IP login detected!
+   Admin: admin@mediunity.com (super-admin)
+   IP: ::ffff:127.0.0.1
+   Time: 2026-07-17T13:57:00.983Z
+
+[REQUEST] POST /api/admin/login - Status: 200 (1335ms) - Origin: http://localhost:5174 - Auth: undefined
+[REQUEST] GET /api/admin/dashboard-stats - Status: 200 (90ms) - Origin: http://localhost:5174 - Auth: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhZG1pbklkIjoiNmExOTE2YTA2M2JmMDM3MjhmYmIxZjJmIiwiZW1haWwiOiJhZG1pbkBtZWRpdW5pdHkuY29tIiwicm9sZSI6InN1cGVyLWFkbWluIiwiaWF0IjoxNzg0Mjk2NjIwLCJleHAiOjE3ODQ5MDE0MjB9.aIsgxMBvMAJH-M51aRXAhJ6dmcRTQ-qJ8KIezZwIAhs
+[REQUEST] GET /api/doctors?limit=200 - Status: 200 (121ms) - Origin: http://localhost:5174 - Auth: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhZG1pbklkIjoiNmExOTE2YTA2M2JmMDM3MjhmYmIxZjJmIiwiZW1haWwiOiJhZG1pbkBtZWRpdW5pdHkuY29tIiwicm9sZSI6InN1cGVyLWFkbWluIiwiaWF0IjoxNzg0Mjk2NjIwLCJleHAiOjE3ODQ5MDE0MjB9.aIsgxMBvMAJH-M51aRXAhJ6dmcRTQ-qJ8KIezZwIAhs
+[REQUEST] POST /api/admin/login - Status: 200 (1299ms) - Origin: http://localhost:5174 - Auth: undefined
+[REQUEST] GET /api/admin/dashboard-stats - Status: 200 (103ms) - Origin: http://localhost:5174 - Auth: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhZG1pbklkIjoiNmExOTE2YTA2M2JmMDM3MjhmYmIxZjJmIiwiZW1haWwiOiJhZG1pbkBtZWRpdW5pdHkuY29tIiwicm9sZSI6InN1cGVyLWFkbWluIiwiaWF0IjoxNzg0Mjk2NjMyLCJleHAiOjE3ODQ5MDE0MzJ9.T-mzStiXAEsAlR6vVgbRihq-9pJWpSAccH8EZDO4320
+[REQUEST] GET /api/doctors?limit=200 - Status: 200 (140ms) - Origin: http://localhost:5174 - Auth: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhZG1pbklkIjoiNmExOTE2YTA2M2JmMDM3MjhmYmIxZjJmIiwiZW1haWwiOiJhZG1pbkBtZWRpdW5pdHkuY29tIiwicm9sZSI6InN1cGVyLWFkbWluIiwiaWF0IjoxNzg0Mjk2NjMyLCJleHAiOjE3ODQ5MDE0MzJ9.T-mzStiXAEsAlR6vVgbRihq-9pJWpSAccH8EZDO4320
+[REQUEST] GET /api/doctors?limit=200 - Status: 304 (154ms) - Origin: http://localhost:5174 - Auth: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhZG1pbklkIjoiNmExOTE2YTA2M2JmMDM3MjhmYmIxZjJmIiwiZW1haWwiOiJhZG1pbkBtZWRpdW5pdHkuY29tIiwicm9sZSI6InN1cGVyLWFkbWluIiwiaWF0IjoxNzg0Mjk2NjMyLCJleHAiOjE3ODQ5MDE0MzJ9.T-mzStiXAEsAlR6vVgbRihq-9pJWpSAccH8EZDO4320
+[REQUEST] GET /api/admin/dashboard-stats - Status: 304 (650ms) - Origin: http://localhost:5174 - Auth: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhZG1pbklkIjoiNmExOTE2YTA2M2JmMDM3MjhmYmIxZjJmIiwiZW1haWwiOiJhZG1pbkBtZWRpdW5pdHkuY29tIiwicm9sZSI6InN1cGVyLWFkbWluIiwiaWF0IjoxNzg0Mjk2NjMyLCJleHAiOjE3ODQ5MDE0MzJ9.T-mzStiXAEsAlR6vVgbRihq-9pJWpSAccH8EZDO4320
+[REQUEST] GET /api/admin/dashboard-stats - Status: 304 (236ms) - Origin: http://localhost:5174 - Auth: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhZG1pbklkIjoiNmExOTE2YTA2M2JmMDM3MjhmYmIxZjJmIiwiZW1haWwiOiJhZG1pbkBtZWRpdW5pdHkuY29tIiwicm9sZSI6InN1cGVyLWFkbWluIiwiaWF0IjoxNzg0Mjk2NjMyLCJleHAiOjE3ODQ5MDE0MzJ9.T-mzStiXAEsAlR6vVgbRihq-9pJWpSAccH8EZDO4320
+[REQUEST] GET /api/doctors?limit=200 - Status: 304 (408ms) - Origin: http://localhost:5174 - Auth: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhZG1pbklkIjoiNmExOTE2YTA2M2JmMDM3MjhmYmIxZjJmIiwiZW1haWwiOiJhZG1pbkBtZWRpdW5pdHkuY29tIiwicm9sZSI6InN1cGVyLWFkbWluIiwiaWF0IjoxNzg0Mjk2NjMyLCJleHAiOjE3ODQ5MDE0MzJ9.T-mzStiXAEsAlR6vVgbRihq-9pJWpSAccH8EZDO4320
+[REQUEST] GET /api/doctors - Status: 200 (182ms) - Origin: http://localhost:5174 - Auth: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhZG1pbklkIjoiNmExOTE2YTA2M2JmMDM3MjhmYmIxZjJmIiwiZW1haWwiOiJhZG1pbkBtZWRpdW5pdHkuY29tIiwicm9sZSI6InN1cGVyLWFkbWluIiwiaWF0IjoxNzg0Mjk2NjMyLCJleHAiOjE3ODQ5MDE0MzJ9.T-mzStiXAEsAlR6vVgbRihq-9pJWpSAccH8EZDO4320
+[REQUEST] GET /api/posts?adminView=true - Status: 200 (202ms) - Origin: http://localhost:5174 - Auth: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhZG1pbklkIjoiNmExOTE2YTA2M2JmMDM3MjhmYmIxZjJmIiwiZW1haWwiOiJhZG1pbkBtZWRpdW5pdHkuY29tIiwicm9sZSI6InN1cGVyLWFkbWluIiwiaWF0IjoxNzg0Mjk2NjMyLCJleHAiOjE3ODQ5MDE0MzJ9.T-mzStiXAEsAlR6vVgbRihq-9pJWpSAccH8EZDO4320
+[REQUEST] GET /api/doctors?limit=200 - Status: 304 (331ms) - Origin: http://localhost:5174 - Auth: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhZG1pbklkIjoiNmExOTE2YTA2M2JmMDM3MjhmYmIxZjJmIiwiZW1haWwiOiJhZG1pbkBtZWRpdW5pdHkuY29tIiwicm9sZSI6InN1cGVyLWFkbWluIiwiaWF0IjoxNzg0Mjk2NjMyLCJleHAiOjE3ODQ5MDE0MzJ9.T-mzStiXAEsAlR6vVgbRihq-9pJWpSAccH8EZDO4320
+[REQUEST] GET /api/admin/audit-logs?page=1&limit=30 - Status: 200 (756ms) - Origin: http://localhost:5174 - Auth: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhZG1pbklkIjoiNmExOTE2YTA2M2JmMDM3MjhmYmIxZjJmIiwiZW1haWwiOiJhZG1pbkBtZWRpdW5pdHkuY29tIiwicm9sZSI6InN1cGVyLWFkbWluIiwiaWF0IjoxNzg0Mjk2NjMyLCJleHAiOjE3ODQ5MDE0MzJ9.T-mzStiXAEsAlR6vVgbRihq-9pJWpSAccH8EZDO4320
+[REQUEST] GET /api/patients/admin/users?page=1&limit=15 - Status: 200 (184ms) - Origin: http://localhost:5174 - Auth: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhZG1pbklkIjoiNmExOTE2YTA2M2JmMDM3MjhmYmIxZjJmIiwiZW1haWwiOiJhZG1pbkBtZWRpdW5pdHkuY29tIiwicm9sZSI6InN1cGVyLWFkbWluIiwiaWF0IjoxNzg0Mjk2NjMyLCJleHAiOjE3ODQ5MDE0MzJ9.T-mzStiXAEsAlR6vVgbRihq-9pJWpSAccH8EZDO4320
+[REQUEST] GET /api/doctors?limit=200 - Status: 304 (581ms) - Origin: http://localhost:5174 - Auth: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhZG1pbklkIjoiNmExOTE2YTA2M2JmMDM3MjhmYmIxZjJmIiwiZW1haWwiOiJhZG1pbkBtZWRpdW5pdHkuY29tIiwicm9sZSI6InN1cGVyLWFkbWluIiwiaWF0IjoxNzg0Mjk2NjMyLCJleHAiOjE3ODQ5MDE0MzJ9.T-mzStiXAEsAlR6vVgbRihq-9pJWpSAccH8EZDO4320
+[32m[nodemon] restarting child process[39m
+[32m[nodemon] starting `node index.js`[39m
+[dotenv@17.2.3] injecting env (0) from .env -- tip: ⚙️  override existing env vars with { override: true }
+^C^C

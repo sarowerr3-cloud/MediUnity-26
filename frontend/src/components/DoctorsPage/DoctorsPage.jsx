@@ -8,17 +8,83 @@ import {
   CircleChevronUp,
   CircleChevronDown,
   X,
+  MapPin,
 } from "lucide-react";
 import { doctorsPageStyles } from "../../assets/dummyStyles";
+import DoctorTrustBadge from "../DoctorTrustBadge/DoctorTrustBadge";
+import { useDataSaver } from "../../hooks/useDataSaver";
+import { calculateDistance } from "../../utils/distance";
 
 const DoctorsPage = ({ apiBase }) => {
+  const { isDataSaver } = useDataSaver();
   const API_BASE = apiBase || import.meta.env.VITE_API_URL || "http://localhost:4000";
 
   const [allDoctors, setAllDoctors] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
+  const [selectedDivision, setSelectedDivision] = useState("All");
+  const [selectedDistrict, setSelectedDistrict] = useState("All");
+  const [selectedCity, setSelectedCity] = useState("");
   const [showAll, setShowAll] = useState(false);
+  const [userLocation, setUserLocation] = useState(null);
+  const [locationLoading, setLocationLoading] = useState(false);
+
+  const BANGLADESH_LOCATIONS = {
+    Dhaka: ["Dhaka", "Faridpur", "Gazipur", "Gopalganj", "Kishoreganj", "Madaripur", "Manikganj", "Munshiganj", "Narayanganj", "Narsingdi", "Rajbari", "Shariatpur", "Tangail"],
+    Chattogram: ["Bandarban", "Brahmanbaria", "Chandpur", "Chattogram", "Cumilla", "Cox's Bazar", "Feni", "Khagrachari", "Lakshmipur", "Noakhali", "Rangamati"],
+    Rajshahi: ["Bogura", "Chapainawabganj", "Joypurhat", "Naogaon", "Natore", "Pabna", "Rajshahi", "Sirajganj"],
+    Khulna: ["Bagerhat", "Chuadanga", "Jashore", "Jhenaidah", "Khulna", "Kushtia", "Magura", "Meherpur", "Narail", "Satkhira"],
+    Sylhet: ["Habiganj", "Moulvibazar", "Sunamganj", "Sylhet"],
+    Barishal: ["Barguna", "Barishal", "Bhola", "Jhalokati", "Patuakhali", "Pirojpur"],
+    Rangpur: ["Dinajpur", "Gaibandha", "Kurigram", "Lalmonirhat", "Nilphamari", "Panchagarh", "Rangpur", "Thakurgaon"],
+    Mymensingh: ["Jamalpur", "Mymensingh", "Netrokona", "Sherpur"]
+  };
+
+  // Derive districts based on division
+  const availableDistricts = useMemo(() => {
+    if (selectedDivision === "All") {
+      return Object.values(BANGLADESH_LOCATIONS).flat().sort();
+    }
+    return BANGLADESH_LOCATIONS[selectedDivision] || [];
+  }, [selectedDivision]);
+
+  // When division changes, reset district
+  useEffect(() => {
+    setSelectedDistrict("All");
+  }, [selectedDivision]);
+
+
+  // Sync search term from URL query parameter on mount
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const q = params.get("search");
+    if (q) {
+      setSearchTerm(q);
+    }
+  }, []);
+
+  const handleFindNearest = () => {
+    if (!navigator.geolocation) {
+      alert("Geolocation is not supported by your browser");
+      return;
+    }
+    setLocationLoading(true);
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        setUserLocation({
+          lat: position.coords.latitude,
+          lng: position.coords.longitude,
+        });
+        setLocationLoading(false);
+      },
+      (err) => {
+        console.error(err);
+        alert("Unable to retrieve your location. Please allow location access.");
+        setLocationLoading(false);
+      }
+    );
+  };
 
   // Load doctors once
   useEffect(() => {
@@ -27,7 +93,7 @@ const DoctorsPage = ({ apiBase }) => {
       setLoading(true);
       setError("");
       try {
-        const res = await fetch(`${API_BASE}/api/doctors`);
+        const res = await fetch(`${API_BASE}/api/doctors${isDataSaver ? "?fields=minimal" : ""}`);
         const json = await res.json().catch(() => null);
 
         if (!res.ok) {
@@ -93,13 +159,40 @@ const DoctorsPage = ({ apiBase }) => {
   // Derived filtered list (memoized)
   const filteredDoctors = useMemo(() => {
     const q = searchTerm.trim().toLowerCase();
-    if (!q) return allDoctors;
-    return allDoctors.filter(
-      (doctor) =>
+    let filtered = allDoctors.filter((doctor) => {
+      const matchesSearch = !q || 
         (doctor.name || "").toLowerCase().includes(q) ||
-        (doctor.specialization || "").toLowerCase().includes(q),
-    );
-  }, [allDoctors, searchTerm]);
+        (doctor.specialization || "").toLowerCase().includes(q) ||
+        (doctor.raw?.qualifications || "").toLowerCase().includes(q) ||
+        (doctor.raw?.about || "").toLowerCase().includes(q) ||
+        (doctor.raw?.location || "").toLowerCase().includes(q);
+
+      const locationStr = (doctor.raw?.location || "").toLowerCase();
+      const matchesDivision = selectedDivision === "All" || locationStr.includes(selectedDivision.toLowerCase());
+      const matchesDistrict = selectedDistrict === "All" || locationStr.includes(selectedDistrict.toLowerCase());
+      const matchesCity = !selectedCity || locationStr.includes(selectedCity.toLowerCase());
+
+      return matchesSearch && matchesDivision && matchesDistrict && matchesCity;
+    });
+
+    if (userLocation) {
+      filtered = filtered.map(doc => {
+        let distance = null;
+        if (doc.raw?.locationGeo?.coordinates?.length === 2 && doc.raw.locationGeo.coordinates[0] !== 0) {
+          const docLng = doc.raw.locationGeo.coordinates[0];
+          const docLat = doc.raw.locationGeo.coordinates[1];
+          distance = calculateDistance(userLocation.lat, userLocation.lng, docLat, docLng);
+        }
+        return { ...doc, distance };
+      }).sort((a, b) => {
+        if (a.distance === null) return 1;
+        if (b.distance === null) return -1;
+        return a.distance - b.distance;
+      });
+    }
+
+    return filtered;
+  }, [allDoctors, searchTerm, selectedDivision, selectedDistrict, selectedCity, userLocation]);
 
   const displayedDoctors = showAll
     ? filteredDoctors
@@ -110,7 +203,7 @@ const DoctorsPage = ({ apiBase }) => {
     setLoading(true);
     setError("");
     try {
-      const res = await fetch(`${API_BASE}/api/doctors`);
+      const res = await fetch(`${API_BASE}/api/doctors${isDataSaver ? "?fields=minimal" : ""}`);
       const json = await res.json().catch(() => null);
       if (!res.ok) {
         setError((json && json.message) || `Failed to load (${res.status})`);
@@ -151,6 +244,40 @@ const DoctorsPage = ({ apiBase }) => {
     }
   };
 
+  const getMedicalCollege = (qualifications) => {
+    if (!qualifications) return null;
+    const lower = qualifications.toLowerCase();
+    
+    if (lower.includes("dhaka medical college") || lower.includes("dmc")) {
+      return "Dhaka Medical College (DMC)";
+    }
+    if (lower.includes("chittagong medical college") || lower.includes("cmc")) {
+      return "Chittagong Medical College (CMC)";
+    }
+    if (lower.includes("mymensingh medical college") || lower.includes("mmc")) {
+      return "Mymensingh Medical College (MMC)";
+    }
+    if (lower.includes("suhrawardy medical college") || lower.includes("shsmc")) {
+      return "Shaheed Suhrawardy Medical College";
+    }
+    if (lower.includes("sir salimullah") || lower.includes("ssmc")) {
+      return "Sir Salimullah Medical College (SSMC)";
+    }
+    if (lower.includes("rajshahi medical college") || lower.includes("rmc")) {
+      return "Rajshahi Medical College (RMC)";
+    }
+    if (lower.includes("sylhet mag osmani") || lower.includes("somc")) {
+      return "Sylhet MAG Osmani Medical College";
+    }
+    if (lower.includes("sher-e-bangla") || lower.includes("sbmch")) {
+      return "Sher-e-Bangla Medical College (SBMC)";
+    }
+    if (lower.includes("bangabandhu sheikh mujib medical university") || lower.includes("bsmmu")) {
+      return "BSMMU";
+    }
+    return null;
+  };
+
   return (
     <div className={doctorsPageStyles.mainContainer}>
       {/* Background shapes */}
@@ -171,7 +298,7 @@ const DoctorsPage = ({ apiBase }) => {
           <div className={doctorsPageStyles.searchWrapper}>
             <input
               type="text"
-              placeholder=" Search doctors by name or specialization..."
+              placeholder=" Search doctors by name, specialization, or location..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className={doctorsPageStyles.searchInput}
@@ -189,6 +316,78 @@ const DoctorsPage = ({ apiBase }) => {
                 <X size={20} strokeWidth={2.5} />
               </button>
             )}
+          </div>
+          
+          <button 
+            onClick={handleFindNearest}
+            disabled={locationLoading}
+            className="hidden sm:flex ml-4 px-4 py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-full items-center gap-2 font-bold whitespace-nowrap transition-all shadow-md disabled:opacity-50"
+          >
+            <MapPin size={20} />
+            {locationLoading ? "Finding..." : "Find Nearest"}
+          </button>
+        </div>
+        
+        {/* Mobile Find Nearest Button */}
+        <div className="sm:hidden flex justify-center mb-6">
+          <button 
+            onClick={handleFindNearest}
+            disabled={locationLoading}
+            className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-full flex items-center gap-2 font-bold transition-all shadow-md disabled:opacity-50"
+          >
+            <MapPin size={18} />
+            {locationLoading ? "Finding..." : "Find Nearest to Me"}
+          </button>
+        </div>
+
+        {/* Division & Location Filters */}
+        <div className="max-w-4xl mx-auto mb-8 px-4 flex flex-col items-center gap-4">
+          <div className="flex flex-col items-center gap-2 w-full">
+            <div className="flex items-center gap-1.5 text-slate-500 text-xs font-bold uppercase tracking-wider">
+              <span>📍</span>
+              <span>Filter by Division:</span>
+            </div>
+            <div className="flex flex-wrap gap-2 justify-center">
+              {["All", "Dhaka", "Chattogram", "Rajshahi", "Khulna", "Sylhet", "Barishal", "Rangpur", "Mymensingh"].map((divName) => (
+                <button
+                  key={divName}
+                  onClick={() => setSelectedDivision(divName)}
+                  className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all border duration-200 cursor-pointer shadow-xs ${
+                    selectedDivision === divName
+                      ? "bg-emerald-600 hover:bg-emerald-700 text-white border-emerald-500"
+                      : "bg-white hover:bg-slate-50 text-slate-600 hover:text-slate-800 border-slate-200"
+                  }`}
+                >
+                  {divName}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="flex flex-col sm:flex-row gap-4 w-full justify-center mt-2">
+             <div className="flex items-center gap-2 bg-white rounded-full border border-slate-200 px-4 py-2 shadow-sm w-full sm:w-64 focus-within:border-emerald-500 focus-within:ring-2 focus-within:ring-emerald-500/20 transition-all">
+                <span className="text-slate-400 text-sm">🏢</span>
+                <select 
+                  value={selectedDistrict}
+                  onChange={(e) => setSelectedDistrict(e.target.value)}
+                  className="bg-transparent border-none outline-none text-sm text-slate-700 w-full cursor-pointer appearance-none"
+                >
+                  <option value="All">All Districts</option>
+                  {availableDistricts.map((dist) => (
+                    <option key={dist} value={dist}>{dist}</option>
+                  ))}
+                </select>
+             </div>
+             <div className="flex items-center gap-2 bg-white rounded-full border border-slate-200 px-4 py-2 shadow-sm w-full sm:w-64 focus-within:border-emerald-500 focus-within:ring-2 focus-within:ring-emerald-500/20 transition-all">
+                <span className="text-slate-400 text-sm">🏘️</span>
+                <input 
+                  type="text" 
+                  placeholder="Filter by City/Village..." 
+                  value={selectedCity}
+                  onChange={(e) => setSelectedCity(e.target.value)}
+                  className="bg-transparent border-none outline-none text-sm text-slate-700 w-full placeholder:text-slate-400"
+                />
+             </div>
           </div>
         </div>
 
@@ -237,13 +436,13 @@ const DoctorsPage = ({ apiBase }) => {
                 >
                   {doctor.available ? (
                     <Link
-                      to={`/doctors/${doctor.id}`}
+                      to={`/patient/doctors/${doctor.id}`}
                       state={{ doctor: doctor.raw || doctor }}
                       className={doctorsPageStyles.focusRing}
                     >
                       <div className={doctorsPageStyles.imageContainer}>
                         <img
-                          src={doctor.image || "/placeholder-doctor.jpg"}
+                          src={isDataSaver ? "/placeholder-doctor.jpg" : (doctor.image || "/placeholder-doctor.jpg")}
                           alt={doctor.name}
                           loading="lazy"
                           className={doctorsPageStyles.doctorImage}
@@ -259,7 +458,7 @@ const DoctorsPage = ({ apiBase }) => {
                       className={`${doctorsPageStyles.imageContainer} ${doctorsPageStyles.imageContainerUnavailable}`}
                     >
                       <img
-                        src={doctor.image || "/placeholder-doctor.jpg"}
+                        src={isDataSaver ? "/placeholder-doctor.jpg" : (doctor.image || "/placeholder-doctor.jpg")}
                         alt={doctor.name}
                         loading="lazy"
                         className={doctorsPageStyles.doctorImageUnavailable}
@@ -278,6 +477,14 @@ const DoctorsPage = ({ apiBase }) => {
                   <p className={doctorsPageStyles.doctorSpecialization}>
                     {doctor.specialization}
                   </p>
+                  <DoctorTrustBadge doctor={doctor.raw || doctor} />
+
+                  {getMedicalCollege(doctor.raw?.qualifications) && (
+                    <div className="mt-2 inline-flex items-center gap-1 px-2 py-0.5 bg-blue-50 border border-blue-100 text-blue-700 rounded-full text-[10px] font-bold">
+                      <span>🎓</span>
+                      <span>{getMedicalCollege(doctor.raw.qualifications)}</span>
+                    </div>
+                  )}
 
                   <div className={doctorsPageStyles.experienceBadge}>
                     <Medal className={doctorsPageStyles.experienceIcon} />
@@ -288,9 +495,16 @@ const DoctorsPage = ({ apiBase }) => {
                     </span>
                   </div>
 
+                  {doctor.distance !== undefined && doctor.distance !== null && (
+                    <div className="mt-2 text-emerald-600 text-xs font-bold flex items-center gap-1 justify-center bg-emerald-50 px-2 py-1 rounded-full border border-emerald-100">
+                      <MapPin size={12} />
+                      {doctor.distance.toFixed(1)} km away
+                    </div>
+                  )}
+
                   {doctor.available ? (
                     <Link
-                      to={`/doctors/${doctor.id}`}
+                      to={`/patient/doctors/${doctor.id}`}
                       state={{ doctor: doctor.raw || doctor }}
                       className={doctorsPageStyles.bookButton}
                       aria-label={`Book appointment with ${doctor.name}`}

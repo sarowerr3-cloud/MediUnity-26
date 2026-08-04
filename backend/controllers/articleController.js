@@ -1,5 +1,7 @@
 import Article from "../models/Article.js";
 import Doctor from "../models/Doctor.js";
+import * as cache from "../utils/cache.js";
+import APIFeatures from "../utils/apiFeatures.js";
 
 // Helper to resolve Clerk UserId
 function getClerkUserId(req) {
@@ -9,13 +11,28 @@ function getClerkUserId(req) {
 // 1. Get All Articles
 export async function getArticles(req, res) {
   try {
-    const { category } = req.query;
-    const filter = {};
-    if (category && category !== "All") {
-      filter.category = category;
+    const { category, page = 1 } = req.query;
+    const cacheKey = cache.keys.articleFeed(category, page);
+    
+    // Attempt cache read
+    const cachedArticles = await cache.get(cacheKey);
+    if (cachedArticles) {
+      return res.status(200).json({ success: true, articles: cachedArticles, fromCache: true });
     }
 
-    const articles = await Article.find(filter).sort({ createdAt: -1 });
+    // Build query using APIFeatures
+    const features = new APIFeatures(Article.find(), req.query)
+      .filter()
+      .search(["title", "content", "summary"])
+      .sort()
+      .limitFields()
+      .paginate();
+
+    const articles = await features.query;
+    
+    // Store in cache for 30 minutes (1800s)
+    await cache.set(cacheKey, articles, 1800);
+
     return res.status(200).json({ success: true, articles });
   } catch (err) {
     console.error("getArticles error:", err);
@@ -31,7 +48,12 @@ export async function getArticleById(req, res) {
     if (!article) {
       return res.status(404).json({ success: false, message: "Article not found" });
     }
-    return res.status(200).json({ success: true, article });
+    // Fetch doctor profile in parallel/same handler to optimize frontend performance
+    let doctor = null;
+    if (article.doctorId) {
+      doctor = await Doctor.findById(article.doctorId).select("specialization reputationPoints");
+    }
+    return res.status(200).json({ success: true, article, doctor });
   } catch (err) {
     console.error("getArticleById error:", err);
     return res.status(500).json({ success: false, message: "Server error" });
@@ -67,6 +89,7 @@ export async function createArticle(req, res) {
     });
 
     await article.save();
+    await cache.delPattern("article:feed:*");
     return res.status(201).json({ success: true, article });
   } catch (err) {
     console.error("createArticle error:", err);
@@ -92,6 +115,7 @@ export async function deleteArticle(req, res) {
     }
 
     await Article.findByIdAndDelete(id);
+    await cache.delPattern("article:feed:*");
     return res.status(200).json({ success: true, message: "Article deleted" });
   } catch (err) {
     console.error("deleteArticle error:", err);

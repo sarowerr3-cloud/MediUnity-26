@@ -1,6 +1,7 @@
 // src/pages/DoctorDetail/DoctorDetail.jsx
 import React, { useMemo, useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
+import Navbar from "../../components/Navbar/Navbar";
 import {
   ArrowLeft,
   CalendarCheck,
@@ -15,6 +16,7 @@ import {
   Shield,
   Users,
   Phone,
+  AlertCircle,
 } from "lucide-react";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
@@ -22,24 +24,62 @@ import "react-toastify/dist/ReactToastify.css";
 // Auth hooks
 import { useAuth, useUser } from "../../context/AuthContext";
 import { doctorDetailStyles } from "../../assets/dummyStyles";
+import DoctorTrustBadge from "../../components/DoctorTrustBadge/DoctorTrustBadge";
+import { useDataSaver } from "../../hooks/useDataSaver";
+import FamilyMemberSelector from "../../components/FamilyMember/FamilyMemberSelector";
 
 const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:4000";
 
-function getScheduleDates(schedule) {
-  if (!schedule) return [];
+function getScheduleDates(schedule, recurringSlots = [], blackoutPeriods = []) {
+  const today = new Date();
+  const dateOnlyValue = (d) =>
+    Date.UTC(d.getFullYear(), d.getMonth(), d.getDate());
+  const todayVal = dateOnlyValue(today);
 
+  const datesSet = new Set();
+
+  // 1. If we have recurring slots, generate dates for the next 7 days
+  if (Array.isArray(recurringSlots) && recurringSlots.length > 0) {
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(today);
+      d.setDate(today.getDate() + i);
+      const dateStr = d.toISOString().split("T")[0];
+
+      // Check if dateStr is blacked out
+      const isBlackedOut = Array.isArray(blackoutPeriods) && blackoutPeriods.some(period => {
+        if (!period || !period.startDate || !period.endDate) return false;
+        return dateStr >= period.startDate && dateStr <= period.endDate;
+      });
+
+      if (!isBlackedOut) {
+        datesSet.add(dateStr);
+      }
+    }
+  }
+
+  // 2. Add explicit dates from schedule
   const keys =
     typeof schedule === "object" && !Array.isArray(schedule)
       ? Object.keys(schedule)
       : [];
 
-  // Parse keys into Date objects (supporting YYYY-MM-DD and ISO)
-  const parsed = keys
+  keys.forEach((k) => {
+    // Check if blacked out
+    const isBlackedOut = Array.isArray(blackoutPeriods) && blackoutPeriods.some(period => {
+      if (!period || !period.startDate || !period.endDate) return false;
+      return k >= period.startDate && k <= period.endDate;
+    });
+
+    if (!isBlackedOut) {
+      datesSet.add(k);
+    }
+  });
+
+  const parsed = Array.from(datesSet)
     .map((k) => {
       const d = new Date(k);
       if (!isNaN(d)) return { key: k, date: d };
 
-      // fallback: try splitting YYYY-MM-DD
       const parts = k.split("-").map((n) => Number(n));
       if (parts.length >= 3) {
         const [y, m, day] = parts;
@@ -50,30 +90,14 @@ function getScheduleDates(schedule) {
     })
     .filter(Boolean);
 
-  // Normalize compare by date-only (use UTC to avoid timezone time-of-day issues)
-  const dateOnlyValue = (d) =>
-    Date.UTC(d.getFullYear(), d.getMonth(), d.getDate());
-
-  const today = new Date();
-  const todayVal = dateOnlyValue(today);
-
   const past = parsed
     .filter((p) => dateOnlyValue(p.date) < todayVal)
-    .sort(
-      (a, b) =>
-        // most recent past first (descending)
-        dateOnlyValue(b.date) - dateOnlyValue(a.date),
-    );
+    .sort((a, b) => dateOnlyValue(b.date) - dateOnlyValue(a.date));
 
   const future = parsed
     .filter((p) => dateOnlyValue(p.date) >= todayVal)
-    .sort(
-      (a, b) =>
-        // earliest first (ascending)
-        dateOnlyValue(a.date) - dateOnlyValue(b.date),
-    );
+    .sort((a, b) => dateOnlyValue(a.date) - dateOnlyValue(b.date));
 
-  // Return array of Date objects in desired order
   return [...past, ...future].map((p) => p.date);
 }
 
@@ -90,6 +114,7 @@ function normalizePhoneTo10(phone) {
 }
 
 export default function DoctorDetail() {
+  const { isDataSaver } = useDataSaver();
   const { id } = useParams();
 
   const [doctor, setDoctor] = useState(null);
@@ -99,6 +124,7 @@ export default function DoctorDetail() {
   const [selectedDate, setSelectedDate] = useState(null);
   const [selectedSlot, setSelectedSlot] = useState("");
   const [isVisible, setIsVisible] = useState(false);
+  const [selectedFamilyMember, setSelectedFamilyMember] = useState({ id: null, name: "Myself", relation: "Self" });
 
   const [formData, setFormData] = useState({
     name: "",
@@ -109,6 +135,7 @@ export default function DoctorDetail() {
   });
 
   const [paymentMethod, setPaymentMethod] = useState("Cash");
+  const [mfsProvider, setMfsProvider] = useState("bkash");
   const [consultType, setConsultType] = useState("video");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -178,7 +205,7 @@ export default function DoctorDetail() {
     };
   }, [id]);
 
-  const next7 = useMemo(() => getScheduleDates(doctor?.schedule), [doctor]);
+  const next7 = useMemo(() => getScheduleDates(doctor?.schedule, doctor?.recurringSlots, doctor?.blackoutPeriods), [doctor]);
   const fee = Number(doctor?.fee ?? doctor?.fees ?? 0);
 
   const selectedFee = useMemo(() => {
@@ -193,16 +220,16 @@ export default function DoctorDetail() {
     const key = selectedDate.toISOString().split("T")[0];
     const rawSlots = doctor.schedule && doctor.schedule[key] ? doctor.schedule[key] : [];
     const recurring = Array.isArray(doctor.recurringSlots) ? doctor.recurringSlots : [];
-    
+
     // Combine rawSlots and recurring, deduping
     const combined = Array.from(new Set([...rawSlots, ...recurring]));
-    
+
     // Filter out blocked slots
     const blocked = Array.isArray(doctor.blockedSlots) ? doctor.blockedSlots : [];
     const filtered = combined.filter(slot => {
       return !blocked.some(b => b && b.date === key && b.slot === slot);
     });
-    
+
     // Sort chronologically
     const parseTime = (t) => {
       if (!t) return 0;
@@ -218,6 +245,44 @@ export default function DoctorDetail() {
     return filtered;
   }, [selectedDate, doctor]);
 
+  const isSelectedDateFullyBooked = useMemo(() => {
+    if (!selectedDate || !doctor) return false;
+    const key = selectedDate.toISOString().split("T")[0];
+    const limit = doctor.maxPatientsPerDay?.[key] !== undefined && doctor.maxPatientsPerDay[key] !== null && doctor.maxPatientsPerDay[key] !== ""
+      ? Number(doctor.maxPatientsPerDay[key])
+      : (doctor.repeatLimitEnabled ? Number(doctor.defaultMaxPatientsPerDay) : 0);
+    const bookedCount = doctor.appointmentCountsByDate?.[key] || 0;
+    return limit > 0 && bookedCount >= limit;
+  }, [selectedDate, doctor]);
+
+  const selectedDateLimit = useMemo(() => {
+    if (!selectedDate || !doctor) return 0;
+    const key = selectedDate.toISOString().split("T")[0];
+    return doctor.maxPatientsPerDay?.[key] !== undefined && doctor.maxPatientsPerDay[key] !== null && doctor.maxPatientsPerDay[key] !== ""
+      ? Number(doctor.maxPatientsPerDay[key])
+      : (doctor.repeatLimitEnabled ? Number(doctor.defaultMaxPatientsPerDay) : 0);
+  }, [selectedDate, doctor]);
+
+  const selectedDateHospital = useMemo(() => {
+    if (!selectedDate || !doctor) return null;
+    const key = selectedDate.toISOString().split("T")[0];
+    const slotKey = selectedSlot ? `${key}_${selectedSlot}` : "";
+
+    if (slotKey && doctor.slotHospitals?.[slotKey]?.name && doctor.slotHospitals?.[slotKey]?.address) {
+      return doctor.slotHospitals[slotKey];
+    }
+    if (doctor.slotHospitals?.[key]?.name && doctor.slotHospitals?.[key]?.address) {
+      return doctor.slotHospitals[key];
+    }
+    if (doctor.defaultHospital?.name && doctor.defaultHospital?.address) {
+      return doctor.defaultHospital;
+    }
+    return {
+      name: "Doctor's Chamber",
+      address: doctor.location || "Consultation location will be provided by doctor"
+    };
+  }, [selectedDate, selectedSlot, doctor]);
+
   // Mobile input handlers: only digits, max 10
   const handleMobileChange = (value) => {
     const digits = value.replace(/\D/g, "").slice(0, 10);
@@ -229,6 +294,43 @@ export default function DoctorDetail() {
     const pasted = (e.clipboardData || window.clipboardData).getData("text");
     const digits = pasted.replace(/\D/g, "").slice(0, 10);
     setFormData((prev) => ({ ...prev, mobile: digits }));
+  };
+
+  const triggerConfetti = () => {
+    const duration = 3000;
+    const animationEnd = Date.now() + duration;
+    const randomInRange = (min, max) => Math.random() * (max - min) + min;
+
+    const interval = setInterval(() => {
+      const timeLeft = animationEnd - Date.now();
+      if (timeLeft <= 0) return clearInterval(interval);
+
+      for (let i = 0; i < 12; i++) {
+        const conf = document.createElement("div");
+        conf.style.position = "fixed";
+        conf.style.width = "8px";
+        conf.style.height = "8px";
+        conf.style.borderRadius = "50%";
+        conf.style.backgroundColor = ["#ff007f", "#00f0ff", "#ffdd00", "#10b981", "#8b5cf6"][Math.floor(Math.random() * 5)];
+        conf.style.left = randomInRange(0, 100) + "vw";
+        conf.style.top = "-10px";
+        conf.style.zIndex = "9999";
+        conf.style.pointerEvents = "none";
+        document.body.appendChild(conf);
+
+        let pos = -10;
+        let speed = randomInRange(3, 7);
+        const fall = setInterval(() => {
+          pos += speed;
+          conf.style.top = pos + "px";
+          conf.style.left = (parseFloat(conf.style.left) + Math.sin(pos / 30) * 0.4) + "vw";
+          if (pos > window.innerHeight) {
+            clearInterval(fall);
+            conf.remove();
+          }
+        }, 20);
+      }
+    }, 200);
   };
 
   const handleBooking = async () => {
@@ -260,6 +362,14 @@ export default function DoctorDetail() {
 
     if (!selectedDate || !selectedSlot) {
       toast.error("Please select a date and time slot", {
+        position: "top-center",
+        autoClose: 2000,
+      });
+      return;
+    }
+
+    if (isSelectedDateFullyBooked) {
+      toast.error("This date is fully booked. Please select another date.", {
         position: "top-center",
         autoClose: 2000,
       });
@@ -351,9 +461,10 @@ export default function DoctorDetail() {
       }
 
       // Booking created (Cash or free)
-      toast.success("Booking successful", {
+      triggerConfetti();
+      toast.success(`Booking successful! Serial: ${body.appointment?.serialNumber || ""}`, {
         position: "top-center",
-        autoClose: 1500,
+        autoClose: 3000,
       });
 
       // navigate to appointments list (you can change this path)
@@ -407,8 +518,10 @@ export default function DoctorDetail() {
     );
 
   return (
-    <div className={doctorDetailStyles.pageContainer}>
-      <ToastContainer />
+    <div className="min-h-screen bg-slate-50 flex flex-col font-sans">
+      <Navbar />
+      <div className={`${doctorDetailStyles.pageContainer} pt-20 flex-grow`}>
+        <ToastContainer />
       {/* Header */}
       <div className={doctorDetailStyles.headerContainer}>
         <div className={doctorDetailStyles.headerContent}>
@@ -434,11 +547,10 @@ export default function DoctorDetail() {
         </div>
       </div>
       <div
-        className={`${doctorDetailStyles.mainContent} ${
-          isVisible
-            ? doctorDetailStyles.visibleState
-            : doctorDetailStyles.hiddenState
-        }`}
+        className={`${doctorDetailStyles.mainContent} ${isVisible
+          ? doctorDetailStyles.visibleState
+          : doctorDetailStyles.hiddenState
+          }`}
       >
         {/* profile card */}
         <div className={doctorDetailStyles.profileCard}>
@@ -449,7 +561,7 @@ export default function DoctorDetail() {
 
                 <img
                   src={
-                    doctor.imageUrl || doctor.image || "/placeholder-doctor.jpg"
+                    isDataSaver ? "/placeholder-doctor.jpg" : (doctor.imageUrl || doctor.image || "/placeholder-doctor.jpg")
                   }
                   alt={doctor.name}
                   className={doctorDetailStyles.avatarImage}
@@ -498,6 +610,7 @@ export default function DoctorDetail() {
                     doctor.speciality ||
                     doctor.specialization}
                 </div>
+                <DoctorTrustBadge doctor={doctor} />
               </div>
 
               <div className={doctorDetailStyles.infoGrid}>
@@ -586,15 +699,22 @@ export default function DoctorDetail() {
                     {next7.map((date) => {
                       const isSelected =
                         selectedDate?.toDateString() === date.toDateString();
+
+                      const dateKey = date.toISOString().split("T")[0];
+                      const dateLimit = doctor?.maxPatientsPerDay?.[dateKey] !== undefined && doctor?.maxPatientsPerDay[dateKey] !== null && doctor?.maxPatientsPerDay[dateKey] !== ""
+                        ? Number(doctor.maxPatientsPerDay[dateKey])
+                        : (doctor?.repeatLimitEnabled ? Number(doctor.defaultMaxPatientsPerDay) : 0);
+                      const dateBooked = doctor?.appointmentCountsByDate?.[dateKey] || 0;
+                      const dateFullyBooked = dateLimit > 0 && dateBooked >= dateLimit;
+
                       return (
                         <button
                           key={date.toISOString()}
                           onClick={() => setSelectedDate(date)}
-                          className={`${doctorDetailStyles.dateButton} ${
-                            isSelected
-                              ? doctorDetailStyles.dateButtonSelected
-                              : doctorDetailStyles.dateButtonUnselected
-                          }`}
+                          className={`${doctorDetailStyles.dateButton} ${isSelected
+                            ? doctorDetailStyles.dateButtonSelected
+                            : doctorDetailStyles.dateButtonUnselected
+                            } ${dateFullyBooked ? "border-rose-200 bg-rose-50/50 hover:bg-rose-50 text-rose-800" : ""}`}
                         >
                           <div className={doctorDetailStyles.dateContent}>
                             <div className={doctorDetailStyles.dateWeekday}>
@@ -610,6 +730,11 @@ export default function DoctorDetail() {
                                 month: "short",
                               })}
                             </div>
+                            {dateFullyBooked && (
+                              <span className="mt-1 px-1 py-0.5 bg-rose-100 border border-rose-300 text-rose-700 text-[8px] font-bold rounded-full uppercase leading-none font-sans">
+                                Full
+                              </span>
+                            )}
                           </div>
                         </button>
                       );
@@ -689,29 +814,64 @@ export default function DoctorDetail() {
                   Available Time Slots
                 </h3>
 
-                <div className={doctorDetailStyles.timeSlotsContainer}>
-                  {slots.length === 0 && (
-                    <p className={doctorDetailStyles.noSlotsMessage}>
-                      No time slots for this date.
-                    </p>
-                  )}
+                {selectedDate && selectedDateHospital && (
+                  <div className="mb-4 p-4 bg-emerald-50/50 border border-emerald-100/60 rounded-2xl flex items-start gap-3">
+                    <MapPin className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
+                    <div className="min-w-0">
+                      <h4 className="text-xs font-bold text-emerald-900 font-sans">
+                        Chamber: {selectedDateHospital.name}
+                      </h4>
+                      <p className="text-[11px] text-emerald-700 font-sans mt-0.5">
+                        {selectedDateHospital.address}
+                      </p>
+                      {selectedDateHospital.address && (
+                        <a
+                          href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(selectedDateHospital.address)}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1 text-[10px] text-emerald-600 hover:text-emerald-800 font-bold font-sans mt-2 transition"
+                        >
+                          View on Google Maps & Get Directions &rarr;
+                        </a>
+                      )}
+                    </div>
+                  </div>
+                )}
 
-                  {slots.map((slot) => (
-                    <button
-                      key={slot}
-                      onClick={() => setSelectedSlot(slot)}
-                      className={`${doctorDetailStyles.timeSlotButton} ${
-                        selectedSlot === slot
-                          ? doctorDetailStyles.timeSlotButtonSelected
-                          : doctorDetailStyles.timeSlotButtonUnselected
-                      }`}
-                    >
-                      <div className={doctorDetailStyles.timeSlotContent}>
-                        <Clock className={doctorDetailStyles.timeSlotIcon} />
-                        <span>{slot}</span>
-                      </div>
-                    </button>
-                  ))}
+                <div className={doctorDetailStyles.timeSlotsContainer}>
+                  {isSelectedDateFullyBooked ? (
+                    <div className="flex flex-col items-center justify-center p-6 text-center bg-rose-50 border border-rose-100 rounded-2xl w-full">
+                      <AlertCircle className="w-8 h-8 text-rose-500 mb-2 animate-bounce" />
+                      <h4 className="text-sm font-bold text-rose-800 font-sans">Fully Booked for Today</h4>
+                      <p className="text-xs text-rose-600 mt-1 max-w-xs font-sans font-medium">
+                        The doctor has reached their daily limit of {selectedDateLimit} patient{selectedDateLimit !== 1 ? 's' : ''} for this date. Please select another date.
+                      </p>
+                    </div>
+                  ) : (
+                    <>
+                      {slots.length === 0 && (
+                        <p className={doctorDetailStyles.noSlotsMessage}>
+                          No time slots for this date.
+                        </p>
+                      )}
+
+                      {slots.map((slot) => (
+                        <button
+                          key={slot}
+                          onClick={() => setSelectedSlot(slot)}
+                          className={`${doctorDetailStyles.timeSlotButton} ${selectedSlot === slot
+                            ? doctorDetailStyles.timeSlotButtonSelected
+                            : doctorDetailStyles.timeSlotButtonUnselected
+                            }`}
+                        >
+                          <div className={doctorDetailStyles.timeSlotContent}>
+                            <Clock className={doctorDetailStyles.timeSlotIcon} />
+                            <span>{slot}</span>
+                          </div>
+                        </button>
+                      ))}
+                    </>
+                  )}
                 </div>
 
                 {/* SUMMARY */}
@@ -742,11 +902,11 @@ export default function DoctorDetail() {
                       <span className={doctorDetailStyles.summaryValue}>
                         {selectedDate
                           ? selectedDate.toLocaleDateString("en-US", {
-                              weekday: "long",
-                              year: "numeric",
-                              month: "long",
-                              day: "numeric",
-                            })
+                            weekday: "long",
+                            year: "numeric",
+                            month: "long",
+                            day: "numeric",
+                          })
                           : "Not selected"}
                       </span>
                     </div>
@@ -760,24 +920,34 @@ export default function DoctorDetail() {
                       </span>
                     </div>
 
-                    <div className={doctorDetailStyles.summaryRow}>
-                      <span className={doctorDetailStyles.summaryLabel}>
-                        Consultation Fee:
-                      </span>
-                      <span className={doctorDetailStyles.feeDisplay}>
-                        Tk {selectedFee}
-                      </span>
+                    <div className="border-t border-slate-100 pt-3 mt-3 space-y-1.5">
+                      <div className="flex justify-between text-xs text-slate-500">
+                        <span>Consultation Fee:</span>
+                        <span className="font-semibold text-slate-700">Tk {selectedFee}</span>
+                      </div>
+                      <div className="flex justify-between text-xs text-slate-500">
+                        <span>Platform Surcharge:</span>
+                        <span className="font-semibold text-slate-700 font-mono">Tk 50</span>
+                      </div>
+                      <div className="flex justify-between text-xs text-slate-500">
+                        <span>Govt Health Tax (5%):</span>
+                        <span className="font-semibold text-slate-700 font-mono">Tk {Math.round(selectedFee * 0.05)}</span>
+                      </div>
+                      <div className="flex justify-between text-sm font-bold text-slate-800 border-t border-dashed border-slate-200 pt-1.5 mt-1.5">
+                        <span>Total Payable:</span>
+                        <span className="text-emerald-600 font-bold">Tk {selectedFee + 50 + Math.round(selectedFee * 0.05)}</span>
+                      </div>
                     </div>
                   </div>
 
                   {/* CONSULTATION TYPE SELECTOR */}
                   {doctor?.pricingTiers && (
                     <div style={{ marginBottom: '1rem' }}>
-                      <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '700', color: '#6b7280', textTransform: 'uppercase', marginBottom: '0.5rem' }}>
+                      <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '700', color: '#0a0a0aff', textTransform: 'uppercase', marginBottom: '0.5rem' }}>
                         Consultation Type
                       </label>
                       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
-                        {[{type: 'video', icon: '🎥', label: 'Video'}, {type: 'offline', icon: '🏢', label: 'Offline'}].map(opt => (
+                        {[{ type: 'video', icon: '🎥', label: 'Video' }, { type: 'offline', icon: '🏢', label: 'Offline' }].map(opt => (
                           <button
                             key={opt.type}
                             type="button"
@@ -806,18 +976,27 @@ export default function DoctorDetail() {
                     </div>
                   )}
 
+                  {/* FAMILY MEMBER PATIENT SELECTOR */}
+                  <div className="mb-4">
+                    <FamilyMemberSelector
+                      selectedMemberId={selectedFamilyMember.id}
+                      onSelectMember={(memberId, memberName, relation) => {
+                        setSelectedFamilyMember({ id: memberId, name: memberName, relation });
+                      }}
+                    />
+                  </div>
+
                   {/* PAYMENT METHOD SELECTOR */}
                   <div className={doctorDetailStyles.paymentContainer}>
                     <label className={doctorDetailStyles.paymentLabel}>
-                      Payment:
+                      Payment Method:
                     </label>
                     <div className={doctorDetailStyles.paymentOptions}>
                       <label
-                        className={`${doctorDetailStyles.paymentOption} ${
-                          paymentMethod === "Cash"
-                            ? doctorDetailStyles.paymentOptionSelected
-                            : doctorDetailStyles.paymentOptionUnselected
-                        }`}
+                        className={`${doctorDetailStyles.paymentOption} ${paymentMethod === "Cash"
+                          ? doctorDetailStyles.paymentOptionSelected
+                          : doctorDetailStyles.paymentOptionUnselected
+                          }`}
                       >
                         <input
                           type="radio"
@@ -827,14 +1006,13 @@ export default function DoctorDetail() {
                           onChange={() => setPaymentMethod("Cash")}
                           className={doctorDetailStyles.paymentRadio}
                         />
-                        Cash
+                        💵 Cash on Chamber
                       </label>
                       <label
-                        className={`${doctorDetailStyles.paymentOption} ${
-                          paymentMethod === "Online"
-                            ? doctorDetailStyles.paymentOptionSelected
-                            : doctorDetailStyles.paymentOptionUnselected
-                        }`}
+                        className={`${doctorDetailStyles.paymentOption} ${paymentMethod === "Online"
+                          ? doctorDetailStyles.paymentOptionSelected
+                          : doctorDetailStyles.paymentOptionUnselected
+                          }`}
                       >
                         <input
                           type="radio"
@@ -844,19 +1022,87 @@ export default function DoctorDetail() {
                           onChange={() => setPaymentMethod("Online")}
                           className={doctorDetailStyles.paymentRadio}
                         />
-                        Online
+                        💳 Pay Online
                       </label>
+                    </div>
+                  </div>
+
+                  {/* MOBILE BANKING PROMOTION & SELECTOR */}
+                  {paymentMethod === "Online" && (
+                    <div className="mt-4 p-4 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-2xl">
+                      <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2.5">
+                        Select Mobile Banking Provider:
+                      </label>
+                      <div className="grid grid-cols-3 gap-2">
+                        {[
+                          { id: "bkash", name: "bKash", color: "border-pink-500 bg-pink-50/50 text-pink-700 dark:text-pink-400", logo: "🇧🇩" },
+                          { id: "nagad", name: "Nagad", color: "border-orange-500 bg-orange-50/50 text-orange-700 dark:text-orange-400", logo: "🔥" },
+                          { id: "rocket", name: "Rocket", color: "border-purple-500 bg-purple-50/50 text-purple-700 dark:text-purple-400", logo: "🚀" }
+                        ].map((provider) => (
+                          <button
+                            key={provider.id}
+                            type="button"
+                            onClick={() => setMfsProvider(provider.id)}
+                            className={`flex flex-col items-center justify-center py-2 px-1 border-2 rounded-xl transition text-xs font-bold cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700 ${mfsProvider === provider.id ? provider.color + " ring-2 ring-emerald-500" : "border-slate-200 dark:border-slate-700 text-slate-500"
+                              }`}
+                          >
+                            <span className="text-lg">{provider.logo}</span>
+                            <span className="mt-1">{provider.name}</span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* PREMIUM FEE BREAKDOWN - FUTURISTIC GLASS EDITION */}
+                  <div className="mt-5 p-5 bg-white/90 dark:bg-slate-900/90 border border-sky-200/60 dark:border-sky-900/40 rounded-2xl font-sans shadow-lg shadow-sky-500/5 dark:shadow-sky-950/20 relative overflow-hidden">
+                    {/* Glowing background accent */}
+                    <div className="absolute top-0 right-0 w-24 h-24 bg-sky-200/20 dark:bg-sky-500/5 rounded-full blur-2xl pointer-events-none" />
+                    
+                    <div className="flex items-center gap-2 mb-3.5">
+                      <div className="relative flex h-2 w-2">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-sky-400 opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-2 w-2 bg-sky-500"></span>
+                      </div>
+                      <label className="text-[10px] font-bold text-sky-500 dark:text-sky-400 uppercase tracking-widest">
+                        Fee Breakdown
+                      </label>
+                    </div>
+
+                    <div className="space-y-2.5 text-xs text-sky-600 dark:text-sky-300">
+                      <div className="flex justify-between items-center">
+                        <span className="text-slate-500 dark:text-slate-400">Consultation Fee</span>
+                        <span className="font-bold font-mono text-slate-800 dark:text-slate-100">Tk {selectedFee}</span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-slate-500 dark:text-slate-400">Platform Handling Fee</span>
+                        <span className="font-bold font-mono text-slate-800 dark:text-slate-100">Tk 20</span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-slate-500 dark:text-slate-400">VAT (5%)</span>
+                        <span className="font-bold font-mono text-slate-800 dark:text-slate-100">Tk {Math.round(selectedFee * 0.05)}</span>
+                      </div>
+
+                      {/* Gradient Divider */}
+                      <div className="h-[1px] bg-gradient-to-r from-sky-50 via-sky-200 to-sky-50 dark:via-sky-800 my-3" />
+
+                      {/* Highlighted Total Payable Capsule */}
+                      <div className="flex justify-between items-center p-3 bg-sky-50/40 dark:bg-sky-950/20 rounded-xl border border-sky-100/50 dark:border-sky-900/20 mt-1">
+                        <span className="font-extrabold text-sky-600 dark:text-sky-400">Total Payable</span>
+                        <span className="font-extrabold font-mono text-lg text-sky-500 dark:text-sky-300 drop-shadow-[0_2px_8px_rgba(14,165,233,0.15)]">
+                          Tk {selectedFee + 20 + Math.round(selectedFee * 0.05)}
+                        </span>
+                      </div>
                     </div>
                   </div>
 
                   <button
                     onClick={handleBooking}
-                    disabled={!selectedDate || !selectedSlot || isSubmitting}
-                    className={`${doctorDetailStyles.bookingButton} ${
-                      !selectedDate || !selectedSlot || isSubmitting
-                        ? doctorDetailStyles.bookingButtonDisabled
-                        : doctorDetailStyles.bookingButtonEnabled
-                    }`}
+                    disabled={!selectedDate || !selectedSlot || isSubmitting || isSelectedDateFullyBooked}
+                    className={`${doctorDetailStyles.bookingButton} ${!selectedDate || !selectedSlot || isSubmitting || isSelectedDateFullyBooked
+                      ? doctorDetailStyles.bookingButtonDisabled
+                      : doctorDetailStyles.bookingButtonEnabled
+                      }`}
                   >
                     <div className={doctorDetailStyles.bookingButtonContent}>
                       <Phone className={doctorDetailStyles.bookingIcon} />
@@ -873,7 +1119,15 @@ export default function DoctorDetail() {
 
         {/* Doctor Posts Feed */}
         <DoctorPostsFeed doctorId={doctor._id || doctor.id} doctorName={doctor.name} />
+
+        {/* Doctor Ratings & Reviews */}
+        <DoctorReviews
+          targetId={doctor._id || doctor.id}
+          targetType="Doctor"
+          onReviewSubmitted={(newAvg) => setDoctor(prev => prev ? { ...prev, rating: newAvg } : null)}
+        />
       </div>{" "}
+      </div>
     </div>
   );
 }
@@ -1023,9 +1277,8 @@ function DoctorPostsFeed({ doctorId, doctorName }) {
               <div className="flex items-center gap-4 pt-2 border-t border-slate-100 text-xs">
                 <button
                   onClick={() => handleLikePost(post._id)}
-                  className={`flex items-center gap-1.5 font-semibold transition cursor-pointer bg-transparent border-none ${
-                    isLiked ? "text-emerald-600" : "text-slate-500 hover:text-slate-700"
-                  }`}
+                  className={`flex items-center gap-1.5 font-semibold transition cursor-pointer bg-transparent border-none ${isLiked ? "text-emerald-600" : "text-slate-500 hover:text-slate-700"
+                    }`}
                 >
                   <Heart className={`w-4 h-4 ${isLiked ? "fill-emerald-600 text-emerald-600" : ""}`} />
                   <span>{post.likes?.length || 0} Likes</span>
@@ -1088,6 +1341,210 @@ function DoctorPostsFeed({ doctorId, doctorName }) {
           );
         })}
       </div>
+    </div>
+  );
+}
+
+function DoctorReviews({ targetId, targetType, onReviewSubmitted }) {
+  const [reviews, setReviews] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [rating, setRating] = useState(5);
+  const [comment, setComment] = useState("");
+  const { getToken } = useAuth();
+  const { user, isSignedIn } = useUser();
+
+  const fetchReviews = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch(`${API_BASE}/api/reviews/${targetId}`);
+      const json = await res.json();
+      if (json.success) {
+        setReviews(json.reviews || []);
+      }
+    } catch (err) {
+      console.error("fetch reviews error:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (targetId) {
+      fetchReviews();
+    }
+  }, [targetId]);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!isSignedIn) {
+      toast.error("Please sign in to write a review.", { position: "top-center" });
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      const token = await getToken();
+      const res = await fetch(`${API_BASE}/api/reviews`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          targetId,
+          targetType,
+          rating,
+          comment
+        })
+      });
+      const json = await res.json();
+      if (json.success) {
+        toast.success("Review submitted successfully!", { position: "top-center" });
+        setComment("");
+        fetchReviews();
+
+        if (onReviewSubmitted) {
+          const updatedReviews = [...reviews];
+          const existIdx = updatedReviews.findIndex(r => r.patient?._id === json.review.patient || r.patient === json.review.patient);
+          if (existIdx >= 0) {
+            updatedReviews[existIdx] = { ...updatedReviews[existIdx], rating, comment };
+          } else {
+            updatedReviews.push(json.review);
+          }
+          const sum = updatedReviews.reduce((acc, r) => acc + r.rating, 0);
+          const avg = Math.round((sum / updatedReviews.length) * 10) / 10;
+          onReviewSubmitted(avg);
+        }
+      } else {
+        toast.error(json.message || "Failed to submit review.");
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error("Network error.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="mt-8 bg-white border border-slate-200 rounded-3xl p-6 sm:p-8 shadow-sm text-left">
+      <div className="flex items-center gap-2 mb-6 border-b pb-3">
+        <div className="p-2 bg-amber-50 rounded-xl text-amber-600">
+          <Star className="w-5 h-5 fill-amber-500 text-amber-500" />
+        </div>
+        <div>
+          <h2 className="text-xl font-bold text-slate-900 font-serif">Patient Ratings & Reviews</h2>
+          <p className="text-xs text-slate-500 mt-0.5">Read feedback from patients or leave your own review.</p>
+        </div>
+      </div>
+
+      {/* Review Submission Form */}
+      {isSignedIn ? (
+        <form onSubmit={handleSubmit} className="mb-8 p-5 bg-slate-50 rounded-2xl border border-slate-100 space-y-4">
+          <h3 className="text-sm font-bold text-slate-800">Share your experience</h3>
+
+          {/* Star selector */}
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-slate-500 font-medium">Your Rating:</span>
+            <div className="flex items-center">
+              {[1, 2, 3, 4, 5].map((star) => (
+                <button
+                  key={star}
+                  type="button"
+                  onClick={() => setRating(star)}
+                  className="bg-transparent border-none p-0 cursor-pointer text-amber-400 hover:scale-110 transition mr-1"
+                >
+                  <Star className={`w-6 h-6 ${star <= rating ? "fill-amber-400 text-amber-400" : "text-slate-300"}`} />
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="space-y-1">
+            <label className="text-xs text-slate-500 font-medium block">Your Comments:</label>
+            <textarea
+              rows={3}
+              placeholder="What did you think of the service, bedside manner, or clinic environment? (Optional)"
+              value={comment}
+              onChange={(e) => setComment(e.target.value)}
+              className="w-full border border-slate-200 rounded-xl px-4 py-3 text-xs focus:outline-none focus:ring-1 focus:ring-emerald-500 bg-white"
+            />
+          </div>
+
+          <button
+            type="submit"
+            disabled={submitting}
+            className="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-300 text-white font-bold text-xs rounded-full shadow transition cursor-pointer border-none"
+          >
+            {submitting ? "Submitting..." : "Submit Review"}
+          </button>
+        </form>
+      ) : (
+        <div className="mb-8 p-4 bg-amber-50/50 border border-amber-100 rounded-2xl text-center text-xs text-slate-600">
+          Please <Link to="/patient/login" className="text-emerald-600 font-bold hover:underline">sign in as a patient</Link> to leave a review.
+        </div>
+      )}
+
+      {/* Reviews List */}
+      {loading ? (
+        <div className="py-8 text-center text-slate-400 text-sm flex items-center justify-center gap-2">
+          <span className="w-5 h-5 border-2 border-emerald-600 border-t-transparent rounded-full animate-spin"></span>
+          Loading reviews...
+        </div>
+      ) : reviews.length === 0 ? (
+        <div className="py-8 text-center text-slate-400 text-xs">
+          No reviews yet. Be the first to share your feedback!
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {reviews.map((rev) => {
+            const patientName = rev.patient?.name || "Verified Patient";
+            const patientAvatarUrl = rev.patient?.imageUrl;
+
+            return (
+              <div key={rev._id} className="border border-slate-100 rounded-2xl p-5 space-y-3 bg-slate-50/30">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    {patientAvatarUrl ? (
+                      <img src={patientAvatarUrl} alt={patientName} className="w-10 h-10 rounded-full object-cover border" />
+                    ) : (
+                      <div className="w-10 h-10 rounded-full bg-slate-200 flex items-center justify-center text-slate-600 font-bold uppercase text-sm">
+                        {patientName.substring(0, 1)}
+                      </div>
+                    )}
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <h4 className="text-sm font-bold text-slate-800">{patientName}</h4>
+                        {rev.isGolden && (
+                          <span className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full text-[9px] font-extrabold uppercase tracking-wide bg-amber-100 text-amber-800 border border-amber-300 shadow-sm animate-pulse">
+                            ⭐ Golden Rating
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-1 mt-0.5">
+                        {[1, 2, 3, 4, 5].map((star) => (
+                          <Star key={star} className={`w-3.5 h-3.5 ${star <= rev.rating ? "fill-amber-400 text-amber-400" : "text-slate-200"}`} />
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                  <span className="text-[11px] text-slate-400 font-medium">
+                    {new Date(rev.updatedAt).toLocaleDateString("en-GB", {
+                      day: "numeric",
+                      month: "short",
+                      year: "numeric"
+                    })}
+                  </span>
+                </div>
+                {rev.comment && (
+                  <p className="text-sm text-slate-600 leading-relaxed font-sans">{rev.comment}</p>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }

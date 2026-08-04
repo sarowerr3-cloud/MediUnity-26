@@ -1,7 +1,8 @@
 // routes/appointmentRouter.js
 import express from "express";
-import { requireFirebaseAuth } from "../middlewares/firebaseAuth.js";
-import doctorAuth from "../middlewares/doctorAuth.js";
+import { authMiddleware, requireRole } from "../middlewares/authMiddleware.js";
+import { auditLog } from "../middlewares/auditLogger.js";
+import admin from "firebase-admin";
 
 import {
   getAppointments,
@@ -19,28 +20,27 @@ import {
   checkIn,
   updateQueueState,
   getQueueBoard,
+  getDoctorRevenueAnalytics,
 } from "../controllers/appointmentController.js";
-import jwt from "jsonwebtoken";
-import Doctor from "../models/Doctor.js";
 
-const JWT_SECRET = process.env.JWT_SECRET || "your_jwt_secret_here";
-
+// Hybrid auth helper to verify Firebase token for intake summary access
 async function hybridAuth(req, res, next) {
-  if (req.auth?.userId) {
+  if (req.user) {
     return next();
   }
   const authHeader = req.headers.authorization;
   if (authHeader && authHeader.startsWith("Bearer ")) {
     const token = authHeader.split(" ")[1];
     try {
-      const payload = jwt.verify(token, JWT_SECRET);
-      const doctor = await Doctor.findById(payload.id).select("-password");
-      if (doctor) {
-        req.doctor = doctor;
-        return next();
-      }
+      const decodedToken = await admin.auth().verifyIdToken(token);
+      req.user = {
+        uid: decodedToken.uid,
+        email: decodedToken.email,
+        role: decodedToken.role || "patient",
+      };
+      return next();
     } catch (err) {
-      console.warn("appointmentRouter hybridAuth doctor JWT verify failed:", err.message);
+      console.warn("appointmentRouter hybridAuth verify failed:", err.message);
     }
   }
   return res.status(401).json({
@@ -55,51 +55,54 @@ const appointmentRouter = express.Router();
    PUBLIC / FIXED ROUTES
    ========================= */
 
-// list appointments
 appointmentRouter.get("/", getAppointments);
 
-// aamarpay callback
-appointmentRouter.post("/aamarpay/callback", handleAamarpayCallback);
+// Log payments completed on aamarPay callback and stripe confirm
+appointmentRouter.post("/aamarpay/callback", auditLog("PAYMENT_COMPLETED", "Payment"), handleAamarpayCallback);
+appointmentRouter.get("/confirm", auditLog("PAYMENT_COMPLETED", "Payment"), confirmPayment);
 
-// stripe confirm (fallback or legacy)
-appointmentRouter.get("/confirm", confirmPayment);
-
-// stats
 appointmentRouter.get("/stats/summary", getStats);
 
 /* =========================
    AUTHENTICATED ROUTES
    ========================= */
 
-// create appointment
+// Log appointment creation
 appointmentRouter.post(
   "/",
-  requireFirebaseAuth,
+  authMiddleware,
+  auditLog("CREATE_APPOINTMENT", "Appointment"),
   createAppointment
 );
 
-// 🔥 IMPORTANT: /me MUST COME BEFORE /:id
 appointmentRouter.get(
   "/me",
-  requireFirebaseAuth,
+  authMiddleware,
   getAppointmentsByPatient
 );
-// appointmentRouter.get("/:id", getAppointmentById);
+
 appointmentRouter.get(
   "/doctor/:doctorId",
   getAppointmentsByDoctor
 );
 
-appointmentRouter.post("/:id/cancel", cancelAppointment);
-appointmentRouter.get("/patients/count",getRegisteredUserCount); 
-appointmentRouter.put("/:id", updateAppointment);
+appointmentRouter.get(
+  "/doctor/:doctorId/revenue-analytics",
+  authMiddleware,
+  requireRole("doctor"),
+  getDoctorRevenueAnalytics
+);
+
+appointmentRouter.post("/:id/cancel", authMiddleware, auditLog("CANCEL_APPOINTMENT", "Appointment"), cancelAppointment);
+appointmentRouter.get("/patients/count", getRegisteredUserCount); 
+appointmentRouter.put("/:id", authMiddleware, updateAppointment);
 appointmentRouter.get("/:appointmentId/intake-summary", hybridAuth, getIntakeSummary);
 
 // Patient self check-in
-appointmentRouter.put("/:id/check-in", requireFirebaseAuth, checkIn);
+appointmentRouter.put("/:id/check-in", authMiddleware, checkIn);
 
 // Doctor queue-state transition
-appointmentRouter.put("/:id/queue-state", doctorAuth, updateQueueState);
+appointmentRouter.put("/:id/queue-state", authMiddleware, requireRole("doctor"), updateQueueState);
 
 // Doctor get today's queue board
 appointmentRouter.get("/queue-board/:doctorId", getQueueBoard);

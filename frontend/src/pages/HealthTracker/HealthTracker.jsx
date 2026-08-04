@@ -7,6 +7,7 @@ import Navbar from "../../components/Navbar/Navbar";
 import Footer from "../../components/Footer/Footer";
 import { useAuth, useUser } from "../../context/AuthContext";
 import toast, { Toaster } from "react-hot-toast";
+import WearablePanel from "../../components/Wearables/WearablePanel";
 
 const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:4000";
 
@@ -205,7 +206,11 @@ export default function HealthTracker() {
             </p>
           </div>
         ) : (
-          <div className="grid md:grid-cols-3 gap-8">
+          <div className="space-y-8">
+            {/* Wearables & IoT Telemetry Sync Panel */}
+            <WearablePanel onMetricsSynced={fetchLogs} />
+
+            <div className="grid md:grid-cols-3 gap-8">
             {/* Logging & quick stats */}
             <div className="md:col-span-1 space-y-6">
               <button
@@ -481,7 +486,7 @@ export default function HealthTracker() {
         {/* Hidden Printable Report Layout */}
         <div id="printable-health-report" className="hidden">
           <div style={{ borderBottom: "2px solid #10b981", paddingBottom: "15px", marginBottom: "20px" }}>
-            <h1 style={{ margin: "0", color: "#065f46" }}>Mediunity Clinical Health Report</h1>
+            <h1 style={{ margin: "0", color: "#065f46" }}>MediUnity Clinical Health Report</h1>
             <p style={{ margin: "5px 0 0", color: "#64748b", fontSize: "12px" }}>Automated diagnostic logging output</p>
           </div>
 

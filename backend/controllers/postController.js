@@ -1,11 +1,15 @@
 import Post from "../models/Post.js";
 import Doctor from "../models/Doctor.js";
+import { uploadToCloudinary, uploadLargeToCloudinary } from "../utils/cloudinary.js";
 
 // Helper to enrich comments with doctor profiles dynamically
 async function enrichPostsWithDoctorInfo(posts) {
-  // Find all doctor comments in these posts
+  // Find all doctor comments and posts authored by doctors
   const doctorIds = new Set();
   posts.forEach(post => {
+    if (post.authorRole === "doctor" && post.authorId) {
+      doctorIds.add(post.authorId);
+    }
     if (post.comments) {
       post.comments.forEach(comment => {
         if (comment.authorRole === "doctor" && comment.authorId) {
@@ -25,9 +29,17 @@ async function enrichPostsWithDoctorInfo(posts) {
       doctorMap[doc._id.toString()] = doc;
     });
 
-    // Enrich comments
+    // Enrich posts and comments
     return posts.map(post => {
       const postObj = post.toObject ? post.toObject() : post;
+      
+      if (postObj.authorRole === "doctor" && postObj.authorId) {
+        const doc = doctorMap[postObj.authorId];
+        if (doc) {
+          postObj.doctorIsVerified = doc.isVerified;
+        }
+      }
+
       postObj.comments = postObj.comments.map(comment => {
         if (comment.authorRole === "doctor" && comment.authorId) {
           const doc = doctorMap[comment.authorId];
@@ -83,7 +95,7 @@ function getClerkUserId(req) {
 // 1. Get All Posts
 export async function getPosts(req, res) {
   try {
-    const { category, isQA, circle, authorId, authorRole } = req.query;
+    const { category, isQA, circle, authorId, authorRole, forumType } = req.query;
     let currentUserId = getClerkUserId(req);
     if (!currentUserId && req.doctor) {
       currentUserId = req.doctor._id.toString();
@@ -101,6 +113,9 @@ export async function getPosts(req, res) {
     }
     if (authorRole) {
       filter.authorRole = authorRole;
+    }
+    if (forumType) {
+      filter.forumType = forumType;
     }
 
     if (circle) {
@@ -127,6 +142,48 @@ export async function getPosts(req, res) {
   }
 }
 
+export async function uploadMedia(req, res) {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ success: false, message: "No file uploaded" });
+    }
+
+    const filePath = req.file.path;
+    let mediaType = "image";
+    if (req.file.mimetype.startsWith("video/")) {
+      mediaType = "video";
+    }
+
+    const folder = mediaType === "video" ? "post_videos" : "post_images";
+    let uploadResult;
+    if (mediaType === "video") {
+      uploadResult = await uploadLargeToCloudinary(filePath, folder);
+    } else {
+      uploadResult = await uploadToCloudinary(filePath, folder);
+    }
+
+    console.log("[CLOUDINARY] uploadResult:", JSON.stringify(uploadResult, null, 2));
+
+    if (uploadResult && uploadResult.error) {
+      throw new Error(uploadResult.error.message || "Cloudinary upload failed");
+    }
+
+    const url = uploadResult.secure_url || uploadResult.url;
+    if (!url) {
+      throw new Error("Cloudinary upload succeeded but returned no secure_url or url");
+    }
+
+    return res.status(200).json({
+      success: true,
+      url: url,
+      type: mediaType,
+    });
+  } catch (err) {
+    console.error("uploadMedia error:", err);
+    return res.status(500).json({ success: false, message: err.message || "Failed to upload media file" });
+  }
+}
+
 export async function createPost(req, res) {
   try {
     let authorId = "";
@@ -145,7 +202,7 @@ export async function createPost(req, res) {
       return res.status(401).json({ success: false, message: "Unauthorized" });
     }
 
-    const { title, content, category, isQA, isAnonymous, circle } = req.body || {};
+    const { title, content, category, isQA, isAnonymous, circle, media, forumType } = req.body || {};
     if (!title || !content || !category || (authorRole === "patient" && !authorName)) {
       return res.status(400).json({ success: false, message: "title, content, category, and authorName (for patients) are required" });
     }
@@ -161,6 +218,8 @@ export async function createPost(req, res) {
       isAnonymous: authorRole === "doctor" ? false : !!isAnonymous,
       circle: circle || null,
       comments: [],
+      media: media || [],
+      forumType: forumType || "patient"
     });
 
     await post.save();
@@ -168,7 +227,7 @@ export async function createPost(req, res) {
     return res.status(201).json({ success: true, post: anonymized[0] });
   } catch (err) {
     console.error("createPost error:", err);
-    return res.status(500).json({ success: false, message: "Server error" });
+    return res.status(500).json({ success: false, message: err.message || "Server error" });
   }
 }
 
@@ -176,7 +235,7 @@ export async function createPost(req, res) {
 export async function addComment(req, res) {
   try {
     const { id } = req.params;
-    const { content, authorName, isAnonymous } = req.body || {};
+    const { content, authorName, isAnonymous, media } = req.body || {};
 
     if (!content) {
       return res.status(400).json({ success: false, message: "Comment content is required" });
@@ -219,6 +278,7 @@ export async function addComment(req, res) {
       authorName: finalAuthorName,
       authorRole,
       isAnonymous: !!isAnonymous,
+      media: media || [],
     });
 
     await post.save();
@@ -372,7 +432,7 @@ export async function upvoteComment(req, res) {
 export async function editPost(req, res) {
   try {
     const { id } = req.params;
-    const { title, content, category, isAnonymous } = req.body || {};
+    const { title, content, category, isAnonymous, media } = req.body || {};
     
     let userId = "";
     if (req.auth?.userId) {
@@ -401,6 +461,9 @@ export async function editPost(req, res) {
     post.category = category;
     if (post.authorRole === "patient") {
       post.isAnonymous = !!isAnonymous;
+    }
+    if (media) {
+      post.media = media;
     }
 
     await post.save();
