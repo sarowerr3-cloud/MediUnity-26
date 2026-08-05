@@ -30,7 +30,7 @@ services:
     name: mediunity-patient
     env: static
     rootDir: frontend
-    buildCommand: npm install && npm run build
+    buildCommand: npm install --legacy-peer-deps && npm run build
     staticPublishPath: ./dist
     autoDeploy: true
     routes:
@@ -46,7 +46,7 @@ services:
     name: mediunity-doctor
     env: static
     rootDir: frontend-doctor
-    buildCommand: npm install && npm run build
+    buildCommand: npm install --legacy-peer-deps && npm run build
     staticPublishPath: ./dist
     autoDeploy: true
     routes:
@@ -62,7 +62,7 @@ services:
     name: mediunity-admin
     env: static
     rootDir: admin
-    buildCommand: npm install && npm run build
+    buildCommand: npm install --legacy-peer-deps && npm run build
     staticPublishPath: ./dist
     autoDeploy: true
     routes:
