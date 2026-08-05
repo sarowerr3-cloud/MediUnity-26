@@ -72,8 +72,8 @@ function deleteFile(filePath) {
   }
 }
 
-// 2. Delete corrupted folders
-const folders = ['backend', 'frontend', 'admin'];
+// 2. Delete corrupted folders across all 4 portals & backend
+const folders = ['backend', 'frontend-patient', 'frontend-doctor', 'frontend-partner', 'admin'];
 for (const folder of folders) {
   const folderPath = path.join(rootDir, folder);
   deleteDir(path.join(folderPath, 'node_modules'));
@@ -84,6 +84,7 @@ console.log('');
 // 3. Reinstall dependencies
 for (const folder of folders) {
   const folderPath = path.join(rootDir, folder);
+  if (!fs.existsSync(folderPath)) continue;
   console.log(`========================================`);
   console.log(`[*] Installing dependencies in: ${folder}`);
   console.log(`========================================`);
@@ -105,11 +106,15 @@ console.log('[*] Launching applications in new windows...');
 console.log('========================================');
 
 exec(`start "Medi-Unity BACKEND" cmd /k "cd backend && npm run dev"`, { cwd: rootDir, shell: 'cmd.exe' });
-exec(`start "Medi-Unity FRONTEND" cmd /k "cd frontend && npm run dev"`, { cwd: rootDir, shell: 'cmd.exe' });
+exec(`start "Medi-Unity PATIENT" cmd /k "cd frontend-patient && npm run dev"`, { cwd: rootDir, shell: 'cmd.exe' });
+exec(`start "Medi-Unity DOCTOR" cmd /k "cd frontend-doctor && npm run dev text"`, { cwd: rootDir, shell: 'cmd.exe' });
+exec(`start "Medi-Unity PARTNER" cmd /k "cd frontend-partner && npm run dev"`, { cwd: rootDir, shell: 'cmd.exe' });
 exec(`start "Medi-Unity ADMIN" cmd /k "cd admin && npm run dev"`, { cwd: rootDir, shell: 'cmd.exe' });
 
-console.log('🚀 All applications triggered to launch!');
-console.log('Backend:  http://localhost:4000');
-console.log('Frontend: http://localhost:5173');
-console.log('Admin:    http://localhost:5174');
+console.log('🚀 All 4 portals + backend triggered to launch!');
+console.log('Backend:        http://localhost:4000');
+console.log('Patient Portal: http://localhost:5175');
+console.log('Doctor Portal:  http://localhost:5176');
+console.log('Partner Portal: http://localhost:5177');
+console.log('Admin Portal:   http://localhost:5174');
 console.log('========================================');

@@ -29,7 +29,7 @@ services:
   - type: web
     name: mediunity-patient
     env: static
-    rootDir: frontend
+    rootDir: frontend-patient
     buildCommand: npm install --legacy-peer-deps && npm run build
     staticPublishPath: ./dist
     autoDeploy: true
@@ -57,7 +57,23 @@ services:
       - key: VITE_API_URL
         value: https://mediunity-api.onrender.com
 
-  # 4. Admin Panel React/Vite Static Site
+  # 4. Partner Portal React/Vite Static Site
+  - type: web
+    name: mediunity-partner
+    env: static
+    rootDir: frontend-partner
+    buildCommand: npm install --legacy-peer-deps && npm run build
+    staticPublishPath: ./dist
+    autoDeploy: true
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    envVars:
+      - key: VITE_API_URL
+        value: https://mediunity-api.onrender.com
+
+  # 5. Admin Control Center React/Vite Static Site
   - type: web
     name: mediunity-admin
     env: static
