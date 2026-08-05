@@ -17,7 +17,7 @@
     "body-parser": "^2.2.1",
     "bullmq": "^5.79.3",
     "cheerio": "^1.2.0",
-    "cloudinary": "^2.8.0",
+    "cloudinary": "^1.41.3",
     "cors": "^2.8.5",
     "dotenv": "^17.2.3",
     "express": "^5.2.1",
