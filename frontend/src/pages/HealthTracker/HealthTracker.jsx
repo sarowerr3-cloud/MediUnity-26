@@ -367,7 +367,8 @@ export default function HealthTracker() {
               </div>
             </div>
           </div>
-        )}
+        </div>
+      )}
 
         {/* Modal: New Log Entry */}
         {showLogModal && (
