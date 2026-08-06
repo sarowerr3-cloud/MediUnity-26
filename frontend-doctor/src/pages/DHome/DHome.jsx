@@ -1,13 +1,8 @@
-import React from 'react'
-import Navbar from "../../doctor/Navbar/Navbar"
-import DashboardPage from "../../doctor/DashboardPage/DashboardPage"
-const DHome = () => {
-  return (
-    <div>
-        <Navbar/>
-        <DashboardPage/>
-    </div>
-  )
-}
+import React from "react";
+import DashboardPage from "../../doctor/DashboardPage/DashboardPage";
 
-export default DHome
+const DHome = () => {
+  return <DashboardPage />;
+};
+
+export default DHome;
