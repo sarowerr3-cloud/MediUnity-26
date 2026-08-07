@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, useMemo } from "react";
 import axios from "axios";
 import toast, { Toaster } from "react-hot-toast";
 import { Pill, ShoppingBag, Plus, Minus, ArrowLeft, Phone, Search, MapPin, Truck, Star } from "lucide-react";
@@ -9,6 +9,8 @@ import Footer from "../../components/Footer/Footer";
 import ReviewsModal from "../../components/Reviews/ReviewsModal";
 import MapViewer from "../../components/Map/MapViewer";
 import TiltWrapper from "../../components/TiltWrapper/TiltWrapper";
+import LocationSearchBar from "../../components/Location/LocationSearchBar";
+import { calculateDistance, BANGLADESH_LOCATION_COORDS } from "../../utils/distance";
 import { useTranslation } from "react-i18next";
 
 const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:4000";
@@ -262,10 +264,50 @@ export default function PharmaciesPage() {
     }
   };
 
-  const filteredPharmacies = pharmacies.filter(p => 
-    p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    p.address?.city?.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredPharmacies = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    let targetCoords = null;
+    if (q) {
+      const cleanLoc = q.split(",")[0].trim();
+      targetCoords = BANGLADESH_LOCATION_COORDS[cleanLoc];
+      if (!targetCoords) {
+        const key = Object.keys(BANGLADESH_LOCATION_COORDS).find(k => cleanLoc.includes(k) || k.includes(cleanLoc));
+        if (key) targetCoords = BANGLADESH_LOCATION_COORDS[key];
+      }
+    }
+
+    const matched = pharmacies.filter(p => 
+      !q ||
+      p.name.toLowerCase().includes(q) ||
+      (p.address?.city || "").toLowerCase().includes(q) ||
+      (p.address?.street || "").toLowerCase().includes(q)
+    );
+
+    const listWithDistance = matched.map(p => {
+      let distance = null;
+      const lat = p.locationGeo?.coordinates?.[1] || (p.address?.city?.toLowerCase().includes("cumilla") ? 23.46 : 23.81);
+      const lng = p.locationGeo?.coordinates?.[0] || (p.address?.city?.toLowerCase().includes("cumilla") ? 91.18 : 90.41);
+      if (targetCoords) {
+        distance = calculateDistance(targetCoords.lat, targetCoords.lng, lat, lng);
+      }
+      return { ...p, distance };
+    });
+
+    let result = listWithDistance;
+    if (targetCoords) {
+      const within60 = listWithDistance.filter(p => p.distance !== null && p.distance <= 60);
+      if (within60.length > 0) result = within60;
+    }
+
+    result.sort((a, b) => {
+      if (a.distance === null && b.distance === null) return 0;
+      if (a.distance === null) return 1;
+      if (b.distance === null) return -1;
+      return a.distance - b.distance;
+    });
+
+    return result;
+  }, [pharmacies, searchQuery]);
 
   const mapLocations = filteredPharmacies.filter(p => p.locationGeo?.coordinates?.length === 2 && p.locationGeo.coordinates[0] !== 0).map(p => ({
     lat: p.locationGeo.coordinates[1],
@@ -314,24 +356,32 @@ export default function PharmaciesPage() {
               </p>
             </div>
 
-            <div className="relative w-full md:max-w-md flex flex-col sm:flex-row items-center gap-2">
-              <div className="relative flex-grow w-full">
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-orange-600" />
-                <input
-                  type="text"
-                  placeholder={isBn ? "নাম বা শহর দিয়ে ফার্মেসি খুঁজুন..." : "Search pharmacies by name or city..."}
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-11 pr-5 py-3.5 bg-slate-50 border border-slate-200 focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10 rounded-2xl text-sm font-semibold text-slate-700 outline-none transition-all shadow-sm"
-                />
+            <div className="w-full space-y-4">
+              <LocationSearchBar
+                locationInput={searchQuery}
+                setLocationInput={setSearchQuery}
+                placeholder="Find pharmacies by city or live location (e.g. New York, London, Tokyo, Dhaka, Cumilla)"
+              />
+
+              <div className="relative w-full md:max-w-md mx-auto flex flex-col sm:flex-row items-center gap-2">
+                <div className="relative flex-grow w-full">
+                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-orange-600" />
+                  <input
+                    type="text"
+                    placeholder={isBn ? "নাম দিয়ে ফার্মেসি খুঁজুন..." : "Search pharmacies by name..."}
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full pl-11 pr-5 py-3.5 bg-slate-50 border border-slate-200 focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10 rounded-2xl text-sm font-semibold text-slate-700 outline-none transition-all shadow-sm"
+                  />
+                </div>
+                <button
+                  onClick={() => setViewMode(viewMode === 'list' ? 'map' : 'list')}
+                  className="px-5 py-3.5 bg-orange-100 hover:bg-orange-200 text-orange-800 rounded-2xl text-sm font-bold flex items-center justify-center gap-2 cursor-pointer transition shadow-sm border border-orange-200 shrink-0 w-full sm:w-auto"
+                >
+                  <MapPin className="w-4 h-4" />
+                  {viewMode === 'list' ? (isBn ? "ম্যাপ দেখুন" : "View Map") : (isBn ? "তালিকা দেখুন" : "View List")}
+                </button>
               </div>
-              <button
-                onClick={() => setViewMode(viewMode === 'list' ? 'map' : 'list')}
-                className="px-5 py-3.5 bg-orange-100 hover:bg-orange-200 text-orange-800 rounded-2xl text-sm font-bold flex items-center justify-center gap-2 cursor-pointer transition shadow-sm border border-orange-200 shrink-0 w-full sm:w-auto"
-              >
-                <MapPin className="w-4 h-4" />
-                {viewMode === 'list' ? (isBn ? "ম্যাপ দেখুন" : "View Map") : (isBn ? "তালিকা দেখুন" : "View List")}
-              </button>
             </div>
           </div>
         )}

@@ -25,6 +25,7 @@ const TrackingPage = lazy(() => import("./pages/Tracking/TrackingPage"));
 const HospitalsPage = lazy(() => import("./pages/Hospitals/Hospitals"));
 const DiagnosticsPage = lazy(() => import("./pages/Diagnostics/Diagnostics"));
 const PharmaciesPage = lazy(() => import("./pages/Pharmacy/Pharmacies"));
+const FamilyMemberDetailPage = lazy(() => import("./pages/FamilyMember/FamilyMemberDetailPage"));
 
 // DOCTOR PORTAL
 const PortalGateway = lazy(() => import("./pages/PortalGateway/PortalGateway"));
@@ -160,6 +161,7 @@ const App = () => {
             <Route path="/hospitals" element={<HospitalsPage />} />
             <Route path="/diagnostics" element={<DiagnosticsPage />} />
             <Route path="/pharmacies" element={<PharmaciesPage />} />
+            <Route path="/family-member/:id" element={<FamilyMemberDetailPage />} />
             
             {/* DOCTOR ROUTES */}
             <Route path="/doctors" element={<Doctors />} />
@@ -195,18 +197,9 @@ const App = () => {
           <Route path="/health-tracker" element={<ProtectedRoute><HealthTracker /></ProtectedRoute>} />
           <Route path="/symptom-checker" element={<ProtectedRoute><SymptomChecker /></ProtectedRoute>} />
 
-          {/* Doctor Portal */}
+          {/* Doctor Portal External Redirect */}
           <Route path="/doctor" element={<Login defaultRole="doctor" />} />
-          <Route path="/doctor/:id" element={<DHome />} />
-          <Route path="/doctor/:id/appointments" element={<List />} />
-          <Route
-            path="/doctor/:id/profile/edit"
-            element={<EditProfile />}
-          />
-          <Route
-            path="/doctor/:id/schedule"
-            element={<ScheduleManager />}
-          />
+          <Route path="/doctor/*" element={<Login defaultRole="doctor" />} />
 
 
 

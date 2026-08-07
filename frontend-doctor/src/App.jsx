@@ -25,6 +25,7 @@ const TrackingPage = lazy(() => import("./pages/Tracking/TrackingPage"));
 const HospitalsPage = lazy(() => import("./pages/Hospitals/Hospitals"));
 const DiagnosticsPage = lazy(() => import("./pages/Diagnostics/Diagnostics"));
 const PharmaciesPage = lazy(() => import("./pages/Pharmacy/Pharmacies"));
+const FamilyMemberDetailPage = lazy(() => import("./pages/FamilyMember/FamilyMemberDetailPage"));
 
 // DOCTOR PORTAL
 const PortalGateway = lazy(() => import("./pages/PortalGateway/PortalGateway"));
@@ -147,8 +148,9 @@ const App = () => {
       }>
         <div className="overflow-x-hidden bg-white text-gray-900">
           <Routes>
-            {/* Gateway Portal Selector */}
-            <Route path="/" element={<PortalGateway />} />
+            {/* Gateway & Root Doctor Route */}
+            <Route path="/" element={<Navigate to="/doctor" replace />} />
+            <Route path="/portal" element={<PortalGateway />} />
             <Route path="/appointment/success" element={<VerifyPaymentPage />} />
             <Route path="/appointment/cancel" element={<VerifyPaymentPage />} />
 
@@ -162,6 +164,7 @@ const App = () => {
             <Route path="/hospitals" element={<HospitalsPage />} />
             <Route path="/diagnostics" element={<DiagnosticsPage />} />
             <Route path="/pharmacies" element={<PharmaciesPage />} />
+            <Route path="/family-member/:id" element={<FamilyMemberDetailPage />} />
             
             {/* DOCTOR ROUTES */}
             <Route path="/doctors" element={<Doctors />} />
@@ -211,6 +214,10 @@ const App = () => {
           />
           <Route
             path="/doctor/prescription/build"
+            element={<PrescriptionBuilder />}
+          />
+          <Route
+            path="/doctor/prescription/build/:appointmentId"
             element={<PrescriptionBuilder />}
           />
 

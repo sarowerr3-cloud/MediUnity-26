@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Generating MediUnity Monetization & Revenue Model Document...</title>
+  <script src="https://unpkg.com/docx@8.5.0/build/index.umd.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #0f172a;
+      color: #f8fafc;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      margin: 0;
+    }
+    .card {
+      background: #1e293b;
+      padding: 40px;
+      border-radius: 16px;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+      text-align: center;
+      max-width: 550px;
+    }
+    h1 { color: #0d9488; margin-bottom: 10px; font-size: 24px; }
+    p { color: #94a3b8; font-size: 14px; line-height: 1.6; }
+    .status {
+      margin-top: 20px;
+      font-weight: bold;
+      color: #38bdf8;
+    }
+    button {
+      margin-top: 20px;
+      padding: 12px 24px;
+      background: #0d9488;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 15px;
+      cursor: pointer;
+      font-weight: 600;
+    }
+    button:hover { background: #14b8a6; }
+  </style>
+</head>
+<body>
+
+<div class="card">
+  <h1>💰 MediUnity Revenue Model Builder</h1>
+  <p>Generating your <strong>MONETIZATION STRATEGY & REVENUE MODEL</strong> Word Document (.docx)...</p>
+  <div id="status" class="status">Initializing Docx Generator...</div>
+  <button id="downloadBtn" onclick="generateAndDownload()">Download .docx File</button>
+</div>
+
+<script>
+async function generateAndDownload() {
+  const statusEl = document.getElementById('status');
+  statusEl.innerText = "Building Word Document structure...";
+
+  try {
+    const { Document, Paragraph, TextRun, Table, TableRow, TableCell, AlignmentType, WidthType, HeadingLevel, BorderStyle, ShadingType, Packer } = docx;
+
+    const PRIMARY_COLOR = "0F766E";   // Deep Teal
+    const SECONDARY_COLOR = "0F172A"; // Dark Slate
+    const BODY_COLOR = "334155";      // Slate 700
+    const MUTED_COLOR = "64748B";     // Slate 500
+    const BLUE_ACCENT = "1E3A8A";     // Deep Blue
+
+    const createTitle = (text) => new Paragraph({
+      alignment: AlignmentType.CENTER,
+      spacing: { before: 200, after: 100 },
+      children: [
+        new TextRun({ text, bold: true, size: 44, color: PRIMARY_COLOR, font: "Calibri" })
+      ]
+    });
+
+    const createSubtitle = (text) => new Paragraph({
+      alignment: AlignmentType.CENTER,
+      spacing: { before: 0, after: 300 },
+      children: [
+        new TextRun({ text, italics: true, size: 23, color: SECONDARY_COLOR, font: "Calibri" })
+      ]
+    });
+
+    const createHeading1 = (text) => new Paragraph({
+      heading: HeadingLevel.HEADING_1,
+      spacing: { before: 400, after: 160 },
+      children: [
+        new TextRun({ text, bold: true, size: 32, color: PRIMARY_COLOR, font: "Calibri" })
+      ]
+    });
+
+    const createHeading2 = (text) => new Paragraph({
+      heading: HeadingLevel.HEADING_2,
+      spacing: { before: 300, after: 120 },
+      children: [
+        new TextRun({ text, bold: true, size: 26, color: SECONDARY_COLOR, font: "Calibri" })
+      ]
+    });
+
+    const createPara = (text) => new Paragraph({
+      spacing: { before: 0, after: 120, line: 276 },
+      children: [
+        new TextRun({ text, size: 22, color: BODY_COLOR, font: "Calibri" })
+      ]
+    });
+
+    const createBullet = (lead, text) => new Paragraph({
+      bullet: { level: 0 },
+      spacing: { before: 40, after: 80, line: 276 },
+      children: [
+        new TextRun({ text: lead + " ", bold: true, size: 22, color: SECONDARY_COLOR, font: "Calibri" }),
+        new TextRun({ text, size: 22, color: BODY_COLOR, font: "Calibri" })
+      ]
+    });
+
+    const createCallout = (title, lines) => new Table({
+      width: { size: 100, type: WidthType.PERCENTAGE },
+      rows: [
+        new TableRow({
+          children: [
+            new TableCell({
+              shading: { fill: "F1F5F9", val: ShadingType.CLEAR },
+              margins: { top: 200, bottom: 200, left: 240, right: 240 },
+              borders: {
+                left: { style: BorderStyle.SINGLE, size: 24, color: PRIMARY_COLOR },
+                top: { style: BorderStyle.NONE },
+                right: { style: BorderStyle.NONE },
+                bottom: { style: BorderStyle.NONE }
+              },
+              children: [
+                new Paragraph({
+                  spacing: { before: 0, after: 80 },
+                  children: [
+                    new TextRun({ text: "💰 " + title, bold: true, size: 22, color: PRIMARY_COLOR, font: "Calibri" })
+                  ]
+                }),
+                ...lines.map(line => new Paragraph({
+                  spacing: { before: 40, after: 60, line: 276 },
+                  children: [
+                    new TextRun({ text: line, size: 21, color: BODY_COLOR, font: "Calibri" })
+                  ]
+                }))
+              ]
+            })
+          ]
+        })
+      ]
+    });
+
+    const docChildren = [
+      new Paragraph({
+        alignment: AlignmentType.CENTER,
+        spacing: { before: 100, after: 60 },
+        children: [
+          new TextRun({ text: "MEDIUNITY — HEALTHCARE PLATFORM MONETIZATION REPORT", bold: true, size: 19, color: MUTED_COLOR, font: "Calibri" })
+        ]
+      }),
+      createTitle("BUSINESS MONETIZATION STRATEGY & REVENUE MODEL"),
+      createSubtitle("Comprehensive Breakdown of Platform Monetization Channels, Commission Mechanics, SaaS Subscriptions & Financial Projections"),
+
+      createHeading1("1. Executive Summary & Business Architecture"),
+      createPara("MediUnity operates a multi-sided digital healthcare marketplace model that monetizes transactions, platform software access, advertising placements, and enterprise healthcare services. Designed for global scalability, the platform generates recurring and transactional revenue from five key stakeholder groups: Patients, Doctors, Hospitals, Diagnostic Laboratories, and Retail Pharmacies."),
+      createPara("The platform's financial engine is built upon automated payment splits via Stripe, tiered SaaS subscriptions, percentage commissions on diagnostic and pharmacy orders, B2B hospital advertising placements, and corporate wellness contracts. This multi-stream revenue approach minimizes single-source dependency and ensures predictable, scalable cash flow."),
+
+      createCallout("CORE MONETIZATION HIGHLIGHT", [
+        "Hybrid Monetization Model: Combines Transactional Take Rates (15% per consultation), SaaS Subscriptions ($29–$99/month for doctors), Partner Marketplace Commissions (5–12% on orders), B2B Advertising, and Corporate Enterprise Packages.",
+        "Automated Financial Clearing: Powered by backend algorithms (in earningsController.js and paymentRouter.js) that automatically calculate platform commission, record doctor payouts, and maintain transparent audit trails."
+      ]),
+
+      createHeading1("2. Breakdown of Primary Revenue Streams"),
+      createPara("MediUnity implements seven distinct, complementary revenue streams integrated directly into the software architecture:"),
+
+      createHeading2("2.1 Stream 1: Telehealth Consultation Commission Split (Transactional Take Rate)"),
+      createBullet("Standard Commission Rate (15%):", "By default, the platform deducts a 15% commission on every paid doctor appointment processed through Stripe. For instance, on a $50 consultation, MediUnity retains $7.50 as platform revenue, while $42.50 is credited to the doctor's payout balance."),
+      createBullet("Dynamic Subscription Override (10%):", "Subscribed premium doctors receive a reduced platform commission rate of 10% as an incentive for maintaining active paid SaaS plans, encouraging long-term platform loyalty."),
+      createBullet("Backend Automated Splitting:", "Handled in real time by earningsController.js during Stripe webhook payment verification, instantly populating the Payment and Payout database models."),
+
+      createHeading2("2.2 Stream 2: Clinician SaaS Subscription Tiers (Recurring SaaS Revenue)"),
+      createBullet("Basic Clinician Plan (Free):", "Standard marketplace listing, 15% commission per appointment, basic calendar scheduling."),
+      createBullet("Doctor Pro Plan ($29 / month):", "Reduced 10% commission rate, priority placement in doctor search filters, advanced patient vitals analytics, branded digital prescription header."),
+      createBullet("Doctor Elite / Practice Plan ($79 / month):", "Reduced 8% commission rate, featured badge on marketplace home, unlimited multi-clinic slot scheduling, integrated Socket.IO telehealth video room priority, SMS notification credits."),
+
+      createHeading2("2.3 Stream 3: Retail Pharmacy E-Commerce & Order Convenience Fees"),
+      createBullet("Partner Pharmacy Marketplace Commission (8%–10%):", "MediUnity charges registered retail pharmacies a percentage commission on all prescription and OTC medication orders fulfilled through the platform."),
+      createBullet("Prescription Processing & Handling Fee ($1.50 per order):", "A nominal convenience fee charged to patients for digital prescription OCR parsing (Tesseract.js) and order routing."),
+      createBullet("Home Delivery Convenience Margin ($2.00–$4.00):", "Added margin fee shared between MediUnity and logistics delivery riders."),
+
+      createHeading2("2.4 Stream 4: Diagnostic Laboratory Test Commissions & Home Sample Fees"),
+      createBullet("Diagnostic Test Booking Take Rate (10%–12%):", "Diagnostic centers pay a percentage fee for every blood test, MRI, CT scan, or ultrasound booked through MediUnity."),
+      createBullet("Home Specimen Collection Fee ($3.00–$5.00):", "Convenience fee split for arranging certified phlebotomist home visits for blood sample collection."),
+
+      createHeading2("2.5 Stream 5: Hospital B2B Sponsored Advertising & Featured Listings"),
+      createBullet("Hospital Banner Advertisements (HospitalAd Model):", "Hospitals and specialized clinics pay monthly sponsorship fees to feature promotional banners on the patient portal homepage and specialty search pages."),
+      createBullet("Featured Search Position Bidding:", "Hospitals bid for top placement in regional searches for specialized departments (e.g., Cardiac Emergency, ICU Bed availability)."),
+      createBullet("Inpatient Bed Booking & Transfer Fee ($15–$50 per referral):", "Success-based referral fee charged to hospitals upon patient admission through MediUnity's emergency inquiry portal."),
+
+      createHeading2("2.6 Stream 6: Home Healthcare & Emergency Service Commissions"),
+      createBullet("Home Care Nursing & Physiotherapy Fee (10%):", "Commission on home nursing, post-surgical care, and elderly care service bookings."),
+      createBullet("Emergency Ambulance Dispatch Fee ($5 per booking):", "Platform routing fee for connecting patients with verified emergency transport services."),
+
+      createHeading2("2.7 Stream 7: B2B Corporate Wellness & Insurance Plans"),
+      createBullet("Corporate Employee Wellness Packages ($5–$12 / employee / month):", "Employer-sponsored plans providing staff with unlimited telehealth consultations, discounted lab tests, and home medicine delivery."),
+      createBullet("Insurance Partner API Integrations:", "B2B licensing fees paid by health insurance providers to integrate MediUnity's EHR and instant claim verification APIs."),
+
+      createHeading1("3. Feature Matrix of Revenue Streams"),
+      createPara("The table below summarizes the operational mechanism and target margins for each monetization channel:"),
+
+      new Table({
+        width: { size: 100, type: WidthType.PERCENTAGE },
+        rows: [
+          new TableRow({
+            children: [
+              new TableCell({ shading: { fill: PRIMARY_COLOR }, margins: { top: 120, bottom: 120, left: 120, right: 120 }, children: [new Paragraph({ children: [new TextRun({ text: "Revenue Channel", bold: true, color: "FFFFFF", size: 20, font: "Calibri" })] })] }),
+              new TableCell({ shading: { fill: PRIMARY_COLOR }, margins: { top: 120, bottom: 120, left: 120, right: 120 }, children: [new Paragraph({ children: [new TextRun({ text: "Target Customer / Partner", bold: true, color: "FFFFFF", size: 20, font: "Calibri" })] })] }),
+              new TableCell({ shading: { fill: PRIMARY_COLOR }, margins: { top: 120, bottom: 120, left: 120, right: 120 }, children: [new Paragraph({ children: [new TextRun({ text: "Pricing Mechanism", bold: true, color: "FFFFFF", size: 20, font: "Calibri" })] })] }),
+              new TableCell({ shading: { fill: PRIMARY_COLOR }, margins: { top: 120, bottom: 120, left: 120, right: 120 }, children: [new Paragraph({ children: [new TextRun({ text: "Platform Margin / Rate", bold: true, color: "FFFFFF", size: 20, font: "Calibri" })] })] }),
+            ]
+          }),
+          new TableRow({
+            children: [
+              new TableCell({ shading: { fill: "F8FAFC" }, margins: { top: 100, bottom: 100, left: 120, right: 120 }, children: [new Paragraph({ children: [new TextRun({ text: "Telehealth Commissions", bold: true, color: SECONDARY_COLOR, size: 19, font: "Calibri" })] })] }),
+              new TableCell({ shading: { fill: "F8FAFC" }, margins: { top: 100, bottom: 100, left: 120, right: 120 }, children: [new Paragraph({ children: [new TextRun({ text: "Patients & Doctors", color: BODY_COLOR, size: 19, font: "Calibri" })] })] }),
+              new TableCell({ shading: { fill: "F8FAFC" }, margins: { top: 100, bottom: 100, left: 120, right: 120 }, children: [new Paragraph({ children: [new TextRun({ text: "Per-appointment Stripe split", color: BODY_COLOR, size: 19, font: "Calibri" })] })] }),
+              new TableCell({ shading: { fill: "F8FAFC" }, margins: { top: 100, bottom: 100, left: 120, right: 120 }, children: [new Paragraph({ children: [new TextRun({ text: "15% standard (10% premium)", bold: true, color: PRIMARY_COLOR, size: 19, font: "Calibri" })] })] }),
+            ]
+          }),
+          new TableRow({
+            children: [
+              new TableCell({ shading: { fill: "FFFFFF" }, margins: { top: 100, bottom: 100, left: 120, right: 120 }, children: [new Paragraph({ children: [new TextRun({ text: "Clinician Subscriptions", bold: true, color: SECONDARY_COLOR, size: 19, font: "Calibri" })] })] }),
+              new TableCell({ shading: { fill: "FFFFFF" }, margins: { top: 100, bottom: 100, left: 120, right: 120 }, children: [new Paragraph({ children: [new TextRun({ text: "Medical Doctors", color: BODY_COLOR, size: 19, font: "Calibri" })] })] }),
+              new TableCell({ shading: { fill: "FFFFFF" }, margins: { top: 100, bottom: 100, left: 120, right: 120 }, children: [new Paragraph({ children: [new TextRun({ text: "Monthly / Annual SaaS Tiers", color: BODY_COLOR, size: 19, font: "Calibri" })] })] }),
+              new TableCell({ shading: { fill: "FFFFFF" }, margins: { top: 100, bottom: 100, left: 120, right: 120 }, children: [new Paragraph({ children: [new TextRun({ text: "$29 – $79 / doctor / month", bold: true, color: PRIMARY_COLOR, size: 19, font: "Calibri" })] })] }),
+            ]
+          }),
+          new TableRow({
+            children: [
+              new TableCell({ shading: { fill: "F8FAFC" }, margins: { top: 100, bottom: 100, left: 120, right: 120 }, children: [new Paragraph({ children: [new TextRun({ text: "Pharmacy E-Commerce", bold: true, color: SECONDARY_COLOR, size: 19, font: "Calibri" })] })] }),
+              new TableCell({ shading: { fill: "F8FAFC" }, margins: { top: 100, bottom: 100, left: 120, right: 120 }, children: [new Paragraph({ children: [new TextRun({ text: "Retail Pharmacies", color: BODY_COLOR, size: 19, font: "Calibri" })] })] }),
+              new TableCell({ shading: { fill: "F8FAFC" }, margins: { top: 100, bottom: 100, left: 120, right: 120 }, children: [new Paragraph({ children: [new TextRun({ text: "Order take-rate + handling fee", color: BODY_COLOR, size: 19, font: "Calibri" })] })] }),
+              new TableCell({ shading: { fill: "F8FAFC" }, margins: { top: 100, bottom: 100, left: 120, right: 120 }, children: [new Paragraph({ children: [new TextRun({ text: "8% – 10% per order + $1.50 fee", bold: true, color: PRIMARY_COLOR, size: 19, font: "Calibri" })] })] }),
+            ]
+          }),
+          new TableRow({
+            children: [
+              new TableCell({ shading: { fill: "FFFFFF" }, margins: { top: 100, bottom: 100, left: 120, right: 120 }, children: [new Paragraph({ children: [new TextRun({ text: "Diagnostic Lab Bookings", bold: true, color: SECONDARY_COLOR, size: 19, font: "Calibri" })] })] }),
+              new TableCell({ shading: { fill: "FFFFFF" }, margins: { top: 100, bottom: 100, left: 120, right: 120 }, children: [new Paragraph({ children: [new TextRun({ text: "Diagnostic Centers", color: BODY_COLOR, size: 19, font: "Calibri" })] })] }),
+              new TableCell({ shading: { fill: "FFFFFF" }, margins: { top: 100, bottom: 100, left: 120, right: 120 }, children: [new Paragraph({ children: [new TextRun({ text: "Lab test booking commission", color: BODY_COLOR, size: 19, font: "Calibri" })] })] }),
+              new TableCell({ shading: { fill: "FFFFFF" }, margins: { top: 100, bottom: 100, left: 120, right: 120 }, children: [new Paragraph({ children: [new TextRun({ text: "10% – 12% per lab test", bold: true, color: PRIMARY_COLOR, size: 19, font: "Calibri" })] })] }),
+            ]
+          }),
+          new TableRow({
+            children: [
+              new TableCell({ shading: { fill: "F8FAFC" }, margins: { top: 100, bottom: 100, left: 120, right: 120 }, children: [new Paragraph({ children: [new TextRun({ text: "Hospital Advertising", bold: true, color: SECONDARY_COLOR, size: 19, font: "Calibri" })] })] }),
+              new TableCell({ shading: { fill: "F8FAFC" }, margins: { top: 100, bottom: 100, left: 120, right: 120 }, children: [new Paragraph({ children: [new TextRun({ text: "Hospitals & Clinics", color: BODY_COLOR, size: 19, font: "Calibri" })] })] }),
+              new TableCell({ shading: { fill: "F8FAFC" }, margins: { top: 100, bottom: 100, left: 120, right: 120 }, children: [new Paragraph({ children: [new TextRun({ text: "HospitalAd monthly sponsored slots", color: BODY_COLOR, size: 19, font: "Calibri" })] })] }),
+              new TableCell({ shading: { fill: "F8FAFC" }, margins: { top: 100, bottom: 100, left: 120, right: 120 }, children: [new Paragraph({ children: [new TextRun({ text: "$150 – $500 / hospital / month", bold: true, color: PRIMARY_COLOR, size: 19, font: "Calibri" })] })] }),
+            ]
+          }),
+          new TableRow({
+            children: [
+              new TableCell({ shading: { fill: "FFFFFF" }, margins: { top: 100, bottom: 100, left: 120, right: 120 }, children: [new Paragraph({ children: [new TextRun({ text: "Home Health & Ambulance", bold: true, color: SECONDARY_COLOR, size: 19, font: "Calibri" })] })] }),
+              new TableCell({ shading: { fill: "FFFFFF" }, margins: { top: 100, bottom: 100, left: 120, right: 120 }, children: [new Paragraph({ children: [new TextRun({ text: "Care Providers & Drivers", color: BODY_COLOR, size: 19, font: "Calibri" })] })] }),
+              new TableCell({ shading: { fill: "FFFFFF" }, margins: { top: 100, bottom: 100, left: 120, right: 120 }, children: [new Paragraph({ children: [new TextRun({ text: "Booking commission & dispatch fee", color: BODY_COLOR, size: 19, font: "Calibri" })] })] }),
+              new TableCell({ shading: { fill: "FFFFFF" }, margins: { top: 100, bottom: 100, left: 120, right: 120 }, children: [new Paragraph({ children: [new TextRun({ text: "10% on services + $5 ambulance", bold: true, color: PRIMARY_COLOR, size: 19, font: "Calibri" })] })] }),
+            ]
+          }),
+          new TableRow({
+            children: [
+              new TableCell({ shading: { fill: "F8FAFC" }, margins: { top: 100, bottom: 100, left: 120, right: 120 }, children: [new Paragraph({ children: [new TextRun({ text: "Corporate Enterprise", bold: true, color: SECONDARY_COLOR, size: 19, font: "Calibri" })] })] }),
+              new TableCell({ shading: { fill: "F8FAFC" }, margins: { top: 100, bottom: 100, left: 120, right: 120 }, children: [new Paragraph({ children: [new TextRun({ text: "Employers & Insurers", color: BODY_COLOR, size: 19, font: "Calibri" })] })] }),
+              new TableCell({ shading: { fill: "F8FAFC" }, margins: { top: 100, bottom: 100, left: 120, right: 120 }, children: [new Paragraph({ children: [new TextRun({ text: "Per-employee monthly SaaS fee", color: BODY_COLOR, size: 19, font: "Calibri" })] })] }),
+              new TableCell({ shading: { fill: "F8FAFC" }, margins: { top: 100, bottom: 100, left: 120, right: 120 }, children: [new Paragraph({ children: [new TextRun({ text: "$5 – $12 / employee / month", bold: true, color: PRIMARY_COLOR, size: 19, font: "Calibri" })] })] }),
+            ]
+          })
+        ]
+      }),
+
+      createHeading1("4. Pro Forma Financial Revenue Projections"),
+      createPara("To demonstrate commercial viability, the table below projects estimated monthly and annual revenue based on moderate platform scale (500 Active Doctors, 10,000 Monthly Appointments, 2,500 Pharmacy Orders, 1,500 Lab Tests, and 20 Hospital Sponsors):"),
+
+      new Table({
+        width: { size: 100, type: WidthType.PERCENTAGE },
+        rows: [
+          new TableRow({
+            children: [
+              new TableCell({ shading: { fill: PRIMARY_COLOR }, margins: { top: 120, bottom: 120, left: 120, right: 120 }, children: [new Paragraph({ children: [new TextRun({ text: "Revenue Category", bold: true, color: "FFFFFF", size: 20, font: "Calibri" })] })] }),
+              new TableCell({ shading: { fill: PRIMARY_COLOR }, margins: { top: 120, bottom: 120, left: 120, right: 120 }, children: [new Paragraph({ children: [new TextRun({ text: "Monthly Volume / Units", bold: true, color: "FFFFFF", size: 20, font: "Calibri" })] })] }),
+              new TableCell({ shading: { fill: PRIMARY_COLOR }, margins: { top: 120, bottom: 120, left: 120, right: 120 }, children: [new Paragraph({ children: [new TextRun({ text: "Average Unit Price / Take", bold: true, color: "FFFFFF", size: 20, font: "Calibri" })] })] }),
+              new TableCell({ shading: { fill: PRIMARY_COLOR }, margins: { top: 120, bottom: 120, left: 120, right: 120 }, children: [new Paragraph({ children: [new TextRun({ text: "Est. Monthly Revenue", bold: true, color: "FFFFFF", size: 20, font: "Calibri" })] })] }),
+            ]
+          }),
+          new TableRow({
+            children: [
+              new TableCell({ shading: { fill: "F8FAFC" }, margins: { top: 100, bottom: 100, left: 120, right: 120 }, children: [new Paragraph({ children: [new TextRun({ text: "Doctor Consultations", bold: true, color: SECONDARY_COLOR, size: 19, font: "Calibri" })] })] }),
+              new TableCell({ shading: { fill: "F8FAFC" }, margins: { top: 100, bottom: 100, left: 120, right: 120 }, children: [new Paragraph({ children: [new TextRun({ text: "10,000 appointments", color: BODY_COLOR, size: 19, font: "Calibri" })] })] }),
+              new TableCell({ shading: { fill: "F8FAFC" }, margins: { top: 100, bottom: 100, left: 120, right: 120 }, children: [new Paragraph({ children: [new TextRun({ text: "$40 avg fee ($6.00 take @ 15%)", color: BODY_COLOR, size: 19, font: "Calibri" })] })] }),
+              new TableCell({ shading: { fill: "F8FAFC" }, margins: { top: 100, bottom: 100, left: 120, right: 120 }, children: [new Paragraph({ children: [new TextRun({ text: "$60,000 / month", bold: true, color: PRIMARY_COLOR, size: 19, font: "Calibri" })] })] }),
+            ]
+          }),
+          new TableRow({
+            children: [
+              new TableCell({ shading: { fill: "FFFFFF" }, margins: { top: 100, bottom: 100, left: 120, right: 120 }, children: [new Paragraph({ children: [new TextRun({ text: "Doctor Pro Subscriptions", bold: true, color: SECONDARY_COLOR, size: 19, font: "Calibri" })] })] }),
+              new TableCell({ shading: { fill: "FFFFFF" }, margins: { top: 100, bottom: 100, left: 120, right: 120 }, children: [new Paragraph({ children: [new TextRun({ text: "200 subscribed doctors", color: BODY_COLOR, size: 19, font: "Calibri" })] })] }),
+              new TableCell({ shading: { fill: "FFFFFF" }, margins: { top: 100, bottom: 100, left: 120, right: 120 }, children: [new Paragraph({ children: [new TextRun({ text: "$49 / month average plan", color: BODY_COLOR, size: 19, font: "Calibri" })] })] }),
+              new TableCell({ shading: { fill: "FFFFFF" }, margins: { top: 100, bottom: 100, left: 120, right: 120 }, children: [new Paragraph({ children: [new TextRun({ text: "$9,800 / month", bold: true, color: PRIMARY_COLOR, size: 19, font: "Calibri" })] })] }),
+            ]
+          }),
+          new TableRow({
+            children: [
+              new TableCell({ shading: { fill: "F8FAFC" }, margins: { top: 100, bottom: 100, left: 120, right: 120 }, children: [new Paragraph({ children: [new TextRun({ text: "Pharmacy Orders", bold: true, color: SECONDARY_COLOR, size: 19, font: "Calibri" })] })] }),
+              new TableCell({ shading: { fill: "F8FAFC" }, margins: { top: 100, bottom: 100, left: 120, right: 120 }, children: [new Paragraph({ children: [new TextRun({ text: "2,500 medicine orders", color: BODY_COLOR, size: 19, font: "Calibri" })] })] }),
+              new TableCell({ shading: { fill: "F8FAFC" }, margins: { top: 100, bottom: 100, left: 120, right: 120 }, children: [new Paragraph({ children: [new TextRun({ text: "$30 avg order ($3.00 take @ 10%)", color: BODY_COLOR, size: 19, font: "Calibri" })] })] }),
+              new TableCell({ shading: { fill: "F8FAFC" }, margins: { top: 100, bottom: 100, left: 120, right: 120 }, children: [new Paragraph({ children: [new TextRun({ text: "$7,500 / month", bold: true, color: PRIMARY_COLOR, size: 19, font: "Calibri" })] })] }),
+            ]
+          }),
+          new TableRow({
+            children: [
+              new TableCell({ shading: { fill: "FFFFFF" }, margins: { top: 100, bottom: 100, left: 120, right: 120 }, children: [new Paragraph({ children: [new TextRun({ text: "Diagnostic Lab Tests", bold: true, color: SECONDARY_COLOR, size: 19, font: "Calibri" })] })] }),
+              new TableCell({ shading: { fill: "FFFFFF" }, margins: { top: 100, bottom: 100, left: 120, right: 120 }, children: [new Paragraph({ children: [new TextRun({ text: "1,500 lab bookings", color: BODY_COLOR, size: 19, font: "Calibri" })] })] }),
+              new TableCell({ shading: { fill: "FFFFFF" }, margins: { top: 100, bottom: 100, left: 120, right: 120 }, children: [new Paragraph({ children: [new TextRun({ text: "$50 avg test ($6.00 take @ 12%)", color: BODY_COLOR, size: 19, font: "Calibri" })] })] }),
+              new TableCell({ shading: { fill: "FFFFFF" }, margins: { top: 100, bottom: 100, left: 120, right: 120 }, children: [new Paragraph({ children: [new TextRun({ text: "$9,000 / month", bold: true, color: PRIMARY_COLOR, size: 19, font: "Calibri" })] })] }),
+            ]
+          }),
+          new TableRow({
+            children: [
+              new TableCell({ shading: { fill: "F8FAFC" }, margins: { top: 100, bottom: 100, left: 120, right: 120 }, children: [new Paragraph({ children: [new TextRun({ text: "Hospital Ads & B2B Leads", bold: true, color: SECONDARY_COLOR, size: 19, font: "Calibri" })] })] }),
+              new TableCell({ shading: { fill: "F8FAFC" }, margins: { top: 100, bottom: 100, left: 120, right: 120 }, children: [new Paragraph({ children: [new TextRun({ text: "20 hospital sponsors", color: BODY_COLOR, size: 19, font: "Calibri" })] })] }),
+              new TableCell({ shading: { fill: "F8FAFC" }, margins: { top: 100, bottom: 100, left: 120, right: 120 }, children: [new Paragraph({ children: [new TextRun({ text: "$300 / hospital ad slot", color: BODY_COLOR, size: 19, font: "Calibri" })] })] }),
+              new TableCell({ shading: { fill: "F8FAFC" }, margins: { top: 100, bottom: 100, left: 120, right: 120 }, children: [new Paragraph({ children: [new TextRun({ text: "$6,000 / month", bold: true, color: PRIMARY_COLOR, size: 19, font: "Calibri" })] })] }),
+            ]
+          }),
+          new TableRow({
+            children: [
+              new TableCell({ shading: { fill: "E0F2FE" }, margins: { top: 100, bottom: 100, left: 120, right: 120 }, children: [new Paragraph({ children: [new TextRun({ text: "TOTAL ESTIMATED REVENUE", bold: true, color: SECONDARY_COLOR, size: 19, font: "Calibri" })] })] }),
+              new TableCell({ shading: { fill: "E0F2FE" }, margins: { top: 100, bottom: 100, left: 120, right: 120 }, children: [new Paragraph({ children: [new TextRun({ text: "Scale: 500 Doctors / 10k Patients", color: BODY_COLOR, size: 19, font: "Calibri" })] })] }),
+              new TableCell({ shading: { fill: "E0F2FE" }, margins: { top: 100, bottom: 100, left: 120, right: 120 }, children: [new Paragraph({ children: [new TextRun({ text: "Combined Revenue Engine", color: BODY_COLOR, size: 19, font: "Calibri" })] })] }),
+              new TableCell({ shading: { fill: "E0F2FE" }, margins: { top: 100, bottom: 100, left: 120, right: 120 }, children: [new Paragraph({ children: [new TextRun({ text: "$92,300 / month ($1.1M / yr)", bold: true, color: PRIMARY_COLOR, size: 19, font: "Calibri" })] })] }),
+            ]
+          })
+        ]
+      }),
+
+      createHeading1("5. Competitive Strengths & Financial Growth Strategy"),
+      createBullet("Asset-Light Enterprise Model:", "MediUnity does not own physical clinics, laboratories, or warehouses. It operates as a high-margin digital orchestrator, resulting in minimal operational overhead."),
+      createBullet("Global Multi-Currency Scaling:", "Integrated Stripe payment pipelines allow instant multi-currency processing (USD, EUR, GBP, BDT, INR), permitting seamless expansion into new international markets."),
+      createBullet("High Customer Retention:", "Centralized Electronic Health Records (EHR) and continuous vitals graphing create high switching costs for patients and doctors, driving recurring long-term revenue."),
+
+      createHeading1("6. Conclusion"),
+      createPara("MediUnity's business monetization model presents a highly attractive, scalable, and diversified financial structure. By combining transaction commissions, SaaS subscriptions, pharmacy margins, lab test take rates, and hospital advertising, MediUnity achieves sustainable revenue growth while expanding affordable, high-quality digital healthcare worldwide.")
+    ];
+
+    const docObj = new Document({
+      sections: [{
+        properties: {
+          page: {
+            margin: { top: 1440, bottom: 1440, left: 1440, right: 1440 }
+          }
+        },
+        children: docChildren
+      }]
+    });
+
+    statusEl.innerText = "Packing document into blob...";
+    const blob = await Packer.toBlob(docObj);
+    saveAs(blob, "MediUnity_Monetization_and_Revenue_Model.docx");
+
+    statusEl.innerText = "✅ Successfully Generated and Downloaded MediUnity_Monetization_and_Revenue_Model.docx!";
+    statusEl.style.color = "#4ade80";
+  } catch (err) {
+    console.error(err);
+    statusEl.innerText = "❌ Error: " + err.message;
+    statusEl.style.color = "#f87171";
+  }
+}
+
+// Auto run on load
+window.addEventListener('DOMContentLoaded', () => {
+  setTimeout(generateAndDownload, 800);
+});
+</script>
+</body>
+</html>

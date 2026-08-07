@@ -316,7 +316,7 @@ export default function Login({ defaultRole }) {
       }
     } catch (err) {
       console.error(err);
-      toast.error("Connection failed. Try again.");
+      toast.error("Backend server unreachable. Please run LAUNCH_MEDI_UNITY.bat to start http://localhost:4000.");
     } finally {
       setLoading(false);
     }
@@ -438,7 +438,7 @@ export default function Login({ defaultRole }) {
       }
     } catch (err) {
       console.error(err);
-      toast.error("Connection failed. Try again.");
+      toast.error("Backend server unreachable. Please run LAUNCH_MEDI_UNITY.bat to start http://localhost:4000.");
     } finally {
       setLoading(false);
     }

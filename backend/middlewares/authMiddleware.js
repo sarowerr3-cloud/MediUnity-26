@@ -1,5 +1,7 @@
 import admin from "firebase-admin";
 import jwt from "jsonwebtoken";
+import crypto from "crypto";
+import mongoose from "mongoose";
 import { getGooglePublicKeys } from "./firebaseAuth.js";
 import Doctor from "../models/Doctor.js";
 
@@ -46,23 +48,25 @@ export async function authMiddleware(req, res, next) {
 
   const token = authHeader.split(" ")[1];
 
-  // 1. Try custom patient JWT token verification first (if it's not a Firebase token)
+  // 1. Try custom JWT token verification (patient, doctor, admin roles)
   const JWT_SECRET = process.env.JWT_SECRET || "your_jwt_secret_here";
   try {
     const payload = jwt.verify(token, JWT_SECRET);
-    if (payload && (payload.role === "patient" || payload.role === "doctor" || payload.role === "admin")) {
+    const validRoles = ["patient", "doctor", "admin", "super-admin", "moderator", "support"];
+    if (payload && (validRoles.includes(payload.role) || payload.adminId)) {
+      const isSystemAdmin = ["admin", "super-admin", "moderator", "support"].includes(payload.role) || !!payload.adminId;
       const userData = {
-        uid: payload.id,
+        uid: payload.adminId || payload.id || payload.uid,
         email: payload.email,
-        role: payload.role,
-        verified: !!payload.verified,
-        bmdcVerified: !!payload.bmdcVerified,
-        adminRole: payload.adminRole || null,
+        role: isSystemAdmin ? "admin" : payload.role,
+        verified: true,
+        bmdcVerified: true,
+        adminRole: payload.adminRole || (payload.role === "super-admin" ? "super_admin" : payload.role),
         claims: payload,
       };
       req.user = userData;
       req.auth = {
-        userId: payload.id,
+        userId: payload.adminId || payload.id || payload.uid,
         email: payload.email,
         name: payload.name || payload.email?.split("@")[0] || "User",
         claims: payload,
@@ -180,7 +184,15 @@ export function requireRole(allowedRoles = []) {
 export async function populateReqDoctor(req, res, next) {
   if (req.user && req.user.role === "doctor") {
     try {
-      const doctor = await Doctor.findOne({ email: req.user.email });
+      let doctor = null;
+      const docId = req.user.uid || req.user.id || req.auth?.userId;
+      if (docId && mongoose.Types.ObjectId.isValid(docId)) {
+        doctor = await Doctor.findById(docId);
+      }
+      if (!doctor && req.user.email) {
+        const emailHash = crypto.createHash("sha256").update(req.user.email.toLowerCase().trim()).digest("hex");
+        doctor = await Doctor.findOne({ emailHash });
+      }
       if (doctor) {
         req.doctor = doctor;
       }

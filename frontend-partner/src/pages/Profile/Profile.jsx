@@ -7,6 +7,7 @@ import { useAuth, useUser } from "../../context/AuthContext";
 import toast, { Toaster } from "react-hot-toast";
 import VerifiedBadge from "../../components/VerifiedBadge/VerifiedBadge";
 import VerificationModal from "../../components/VerificationModal/VerificationModal";
+import FamilyMemberSelector from "../../components/FamilyMember/FamilyMemberSelector";
 
 const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:4000";
 
@@ -396,6 +397,14 @@ export default function Profile() {
               Medical History
             </button>
             <button
+              onClick={() => setActiveTab("family")}
+              className={`p-3 text-left font-semibold text-sm rounded-xl transition ${
+                activeTab === "family" ? "bg-emerald-50 text-emerald-700 font-bold" : "text-slate-500 hover:bg-slate-50 hover:text-slate-800"
+              }`}
+            >
+              Family Members
+            </button>
+            <button
               onClick={() => setActiveTab("bookmarks")}
               className={`p-3 text-left font-semibold text-sm rounded-xl transition ${
                 activeTab === "bookmarks" ? "bg-emerald-50 text-emerald-700" : "text-slate-500 hover:bg-slate-50 hover:text-slate-800"
@@ -431,6 +440,18 @@ export default function Profile() {
                 <img src={profile.nidImageUrl} alt="NID Document" className="rounded-xl border border-slate-300 w-full object-cover max-h-48" />
               </div>
             )}
+
+            {/* Embedded Family Member Selector in Overview */}
+            <div className="pt-6 border-t border-slate-100">
+              <FamilyMemberSelector userProfile={profile} />
+            </div>
+          </div>
+        )}
+
+        {/* Tab content: Family Members */}
+        {activeTab === "family" && (
+          <div className="space-y-6">
+            <FamilyMemberSelector userProfile={profile} />
           </div>
         )}
 
@@ -459,6 +480,11 @@ export default function Profile() {
                       onChange={(e) => {
                         const file = e.target.files?.[0];
                         if (file) {
+                          if (file.size > 15 * 1024 * 1024) {
+                            toast.error("File size exceeds 15MB limit. Please select a smaller image.");
+                            e.target.value = "";
+                            return;
+                          }
                           setEditImageFile(file);
                           setEditImagePreview(URL.createObjectURL(file));
                         }
@@ -470,7 +496,7 @@ export default function Profile() {
 
                 <div className="text-center sm:text-left">
                   <h4 className="font-bold text-slate-700 text-sm">Profile Avatar</h4>
-                  <p className="text-xs text-slate-400 mt-1">Accepts JPG, PNG, or WEBP up to 5MB. Click the image placeholder to change.</p>
+                  <p className="text-xs text-slate-400 mt-1">Accepts JPG, PNG, or WEBP up to 15MB. Click the image placeholder to change.</p>
                   <label className="inline-block mt-3 px-4 py-2 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-700 rounded-xl font-bold text-xs cursor-pointer transition">
                     Upload Photo
                     <input
@@ -479,6 +505,11 @@ export default function Profile() {
                       onChange={(e) => {
                         const file = e.target.files?.[0];
                         if (file) {
+                          if (file.size > 15 * 1024 * 1024) {
+                            toast.error("File size exceeds 15MB limit. Please select a smaller image.");
+                            e.target.value = "";
+                            return;
+                          }
                           setEditImageFile(file);
                           setEditImagePreview(URL.createObjectURL(file));
                         }

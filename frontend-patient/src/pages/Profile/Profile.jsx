@@ -1,12 +1,13 @@
 import React, { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { User, ShieldCheck, Calendar, FileText, Upload, Plus, Trash, AlertCircle, CheckCircle2, Phone, Key, HelpCircle, MessageSquare } from "lucide-react";
+import { User, ShieldCheck, Calendar, FileText, Upload, Plus, Trash, AlertCircle, CheckCircle2, Phone, Key, HelpCircle, MessageSquare, Zap, Send, Copy, X, Stethoscope, TestTube, Building2, Pill } from "lucide-react";
 import Navbar from "../../components/Navbar/Navbar";
 import Footer from "../../components/Footer/Footer";
 import { useAuth, useUser } from "../../context/AuthContext";
 import toast, { Toaster } from "react-hot-toast";
 import VerifiedBadge from "../../components/VerifiedBadge/VerifiedBadge";
 import VerificationModal from "../../components/VerificationModal/VerificationModal";
+import FamilyMemberSelector from "../../components/FamilyMember/FamilyMemberSelector";
 import { useTranslation } from "react-i18next";
 
 const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:4000";
@@ -60,6 +61,59 @@ export default function Profile() {
   const [postCategoryFilter, setPostCategoryFilter] = useState("All");
   const [articleReferenceFilter, setArticleReferenceFilter] = useState("All");
   const [postReferenceFilter, setPostReferenceFilter] = useState("All");
+
+  // Direct Transfer / Share states
+  const [sharingProfileRecord, setSharingProfileRecord] = useState(null);
+  const [transferRecipientType, setTransferRecipientType] = useState("doctor");
+  const [transferRecipientName, setTransferRecipientName] = useState("");
+  const [transferNote, setTransferNote] = useState("");
+  const [transferringProfileRecord, setTransferringProfileRecord] = useState(false);
+  const [profileSharePass, setProfileSharePass] = useState(null);
+
+  // Direct Transfer Record function
+  async function handleDirectTransferProfileRecord(e) {
+    e.preventDefault();
+    if (!transferRecipientName.trim()) {
+      toast.error("Please enter doctor or healthcare partner name");
+      return;
+    }
+
+    setTransferringProfileRecord(true);
+    try {
+      const token = await getToken();
+      const res = await fetch(`${API_BASE}/api/patients/profile/share-record`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          recordId: sharingProfileRecord._id,
+          recipientType: transferRecipientType,
+          recipientId: transferRecipientName.trim(),
+          notes: transferNote.trim(),
+        }),
+      });
+
+      const json = await res.json();
+      if (json.success) {
+        toast.success(`Record transferred to ${transferRecipientName}! 🚀`);
+        const passLink = window.location.origin + (sharingProfileRecord.fileUrl || "/profile");
+        setProfileSharePass({
+          passId: "PASS-" + Math.random().toString(36).substring(2, 8).toUpperCase(),
+          recipientName: transferRecipientName,
+          recipientType: transferRecipientType,
+          passLink,
+        });
+      } else {
+        toast.error(json.message || "Transfer failed");
+      }
+    } catch (err) {
+      toast.error("Network error during transfer");
+    } finally {
+      setTransferringProfileRecord(false);
+    }
+  }
 
   // Verification Modal
   const [showVerificationModal, setShowVerificationModal] = useState(false);
@@ -443,6 +497,14 @@ export default function Profile() {
               {isBn ? "মেডিকেল হিস্ট্রি" : "Medical History"}
             </button>
             <button
+              onClick={() => setActiveTab("family")}
+              className={`p-3 text-left font-semibold text-sm rounded-xl transition ${
+                activeTab === "family" ? "bg-emerald-50 text-emerald-700 font-bold" : "text-slate-500 hover:bg-slate-50 hover:text-slate-800"
+              }`}
+            >
+              {isBn ? "পরিবারের সদস্য" : "Family Members"}
+            </button>
+            <button
               onClick={() => setActiveTab("bookmarks")}
               className={`p-3 text-left font-semibold text-sm rounded-xl transition ${
                 activeTab === "bookmarks" ? "bg-emerald-50 text-emerald-700" : "text-slate-500 hover:bg-slate-50 hover:text-slate-800"
@@ -478,6 +540,18 @@ export default function Profile() {
                 <img src={profile.nidImageUrl} alt="NID Document" className="rounded-xl border border-slate-300 w-full object-cover max-h-48" />
               </div>
             )}
+
+            {/* Embedded Family Member Selector in Overview */}
+            <div className="pt-6 border-t border-slate-100">
+              <FamilyMemberSelector userProfile={profile} />
+            </div>
+          </div>
+        )}
+
+        {/* Tab content: Family Members */}
+        {activeTab === "family" && (
+          <div className="space-y-6">
+            <FamilyMemberSelector userProfile={profile} />
           </div>
         )}
 
@@ -506,6 +580,11 @@ export default function Profile() {
                       onChange={(e) => {
                         const file = e.target.files?.[0];
                         if (file) {
+                          if (file.size > 15 * 1024 * 1024) {
+                            toast.error(isBn ? "ফাইলের আকার ১৫MB সীমা অতিক্রম করেছে।" : "File size exceeds 15MB limit. Please select a smaller image.");
+                            e.target.value = "";
+                            return;
+                          }
                           setEditImageFile(file);
                           setEditImagePreview(URL.createObjectURL(file));
                         }
@@ -517,7 +596,7 @@ export default function Profile() {
 
                 <div className="text-center sm:text-left">
                   <h4 className="font-bold text-slate-700 text-sm">{isBn ? "প্রোফাইল ছবি" : "Profile Avatar"}</h4>
-                  <p className="text-xs text-slate-400 mt-1">{isBn ? "JPG, PNG বা WEBP ফরম্যাটে ৫MB পর্যন্ত আপলোড করুন।" : "Accepts JPG, PNG, or WEBP up to 5MB. Click the image placeholder to change."}</p>
+                  <p className="text-xs text-slate-400 mt-1">{isBn ? "JPG, PNG বা WEBP ফরম্যাটে ১৫MB পর্যন্ত আপলোড করুন।" : "Accepts JPG, PNG, or WEBP up to 15MB. Click the image placeholder to change."}</p>
                   <label className="inline-block mt-3 px-4 py-2 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-700 rounded-xl font-bold text-xs cursor-pointer transition">
                     {isBn ? "ছবি আপলোড করুন" : "Upload Photo"}
                     <input
@@ -526,6 +605,11 @@ export default function Profile() {
                       onChange={(e) => {
                         const file = e.target.files?.[0];
                         if (file) {
+                          if (file.size > 15 * 1024 * 1024) {
+                            toast.error(isBn ? "ফাইলের আকার ১৫MB সীমা অতিক্রম করেছে।" : "File size exceeds 15MB limit. Please select a smaller image.");
+                            e.target.value = "";
+                            return;
+                          }
                           setEditImageFile(file);
                           setEditImagePreview(URL.createObjectURL(file));
                         }
@@ -798,7 +882,7 @@ export default function Profile() {
             ) : (
               <div className="space-y-4">
                 {profile.medicalHistory.map((item) => (
-                  <div key={item._id} className="p-5 border border-slate-200 rounded-2xl bg-slate-50 flex items-start justify-between gap-4">
+                  <div key={item._id} className="p-5 border border-slate-200 rounded-2xl bg-slate-50 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                     <div className="space-y-1.5">
                       <div className="flex items-center gap-2 flex-wrap">
                         <span className="font-bold text-slate-800 text-base">{item.condition}</span>
@@ -816,24 +900,199 @@ export default function Profile() {
                           href={item.fileUrl}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1 text-xs text-emerald-700 hover:text-emerald-800 font-bold mt-1"
+                          className="inline-flex items-center gap-1 text-xs text-emerald-700 hover:text-emerald-800 font-bold mt-1 mr-4"
                         >
                           <FileText className="w-3.5 h-3.5" /> {isBn ? "ক্লিনিক্যাল রিপোর্ট দেখুন" : "View Clinical Report Document"}
                         </a>
                       )}
                     </div>
 
-                    <button
-                      onClick={() => handleDeleteHistory(item._id)}
-                      className="p-2 text-rose-500 hover:bg-rose-50 rounded-full transition cursor-pointer"
-                      title={isBn ? "রেকর্ড মুছুন" : "Remove record"}
-                    >
-                      <Trash className="w-4 h-4" />
-                    </button>
+                    <div className="flex items-center gap-2 self-end sm:self-auto shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSharingProfileRecord(item);
+                          setTransferRecipientName("");
+                          setTransferNote("");
+                          setProfileSharePass(null);
+                        }}
+                        className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs flex items-center gap-1.5 transition shadow-xs cursor-pointer"
+                      >
+                        <Zap className="w-3.5 h-3.5 text-amber-300" /> {isBn ? "ডাক্তার/পার্টনারের কাছে সরাসরি ট্রান্সফার করুন" : "Direct Transfer to Doctor/Partner"}
+                      </button>
+
+                      <button
+                        onClick={() => handleDeleteHistory(item._id)}
+                        className="p-2 text-rose-500 hover:bg-rose-50 rounded-full transition cursor-pointer"
+                        title={isBn ? "রেকর্ড মুছুন" : "Remove record"}
+                      >
+                        <Trash className="w-4 h-4" />
+                      </button>
+                    </div>
                   </div>
                 ))}
               </div>
             )}
+          </div>
+        )}
+
+        {/* DIRECT TRANSFER MODAL FOR PROFILE */}
+        {sharingProfileRecord && (
+          <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+            <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-100 space-y-5 animate-in fade-in zoom-in duration-150 font-sans">
+              <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                <div className="flex items-center gap-2">
+                  <div className="p-2 rounded-xl bg-amber-50 text-amber-600">
+                    <Zap className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-slate-900 text-sm">Direct Medical Record Transfer</h3>
+                    <p className="text-[11px] text-slate-500">Patient: <strong className="text-emerald-700">{profile?.name || "Self"}</strong></p>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setSharingProfileRecord(null)}
+                  className="p-1.5 text-slate-400 hover:text-slate-600 rounded-full"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="bg-slate-50 p-3 rounded-xl border border-slate-200 text-xs">
+                <div className="font-bold text-slate-800">{sharingProfileRecord.condition}</div>
+                <div className="text-[10px] text-slate-400 font-mono">Date: {sharingProfileRecord.date}</div>
+              </div>
+
+              {profileSharePass ? (
+                <div className="bg-emerald-50 border border-emerald-200 p-4 rounded-2xl text-center space-y-3 animate-in fade-in">
+                  <div className="w-10 h-10 rounded-full bg-emerald-600 text-white flex items-center justify-center mx-auto">
+                    <CheckCircle2 className="w-6 h-6" />
+                  </div>
+                  <div>
+                    <h4 className="font-extrabold text-emerald-950 text-sm">Transfer Pass Generated!</h4>
+                    <p className="text-xs text-emerald-800 mt-1">Transferred to: <strong>{profileSharePass.recipientName}</strong></p>
+                    <p className="text-[10px] font-mono text-emerald-600 mt-0.5">Access Key: {profileSharePass.passId}</p>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      readOnly
+                      value={profileSharePass.passLink}
+                      className="w-full text-[10px] p-2 bg-white border border-emerald-300 rounded-xl font-mono text-slate-600"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        navigator.clipboard.writeText(profileSharePass.passLink);
+                        toast.success("Share link copied to clipboard!");
+                      }}
+                      className="p-2 bg-emerald-600 text-white rounded-xl font-bold text-xs hover:bg-emerald-700 transition cursor-pointer"
+                    >
+                      <Copy className="w-4 h-4" />
+                    </button>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => setSharingProfileRecord(null)}
+                    className="w-full py-2 bg-emerald-700 text-white font-bold text-xs rounded-xl"
+                  >
+                    Done
+                  </button>
+                </div>
+              ) : (
+                <form onSubmit={handleDirectTransferProfileRecord} className="space-y-4 text-xs">
+                  <div>
+                    <label className="block font-bold text-slate-700 mb-1">Select Healthcare Partner Type</label>
+                    <div className="grid grid-cols-2 gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setTransferRecipientType("doctor")}
+                        className={`p-2.5 rounded-xl border text-xs font-bold transition flex items-center justify-center gap-1.5 ${
+                          transferRecipientType === "doctor" ? "bg-emerald-50 border-emerald-500 text-emerald-900" : "bg-slate-50 border-slate-200 text-slate-600"
+                        }`}
+                      >
+                        <Stethoscope className="w-4 h-4" /> Doctor
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setTransferRecipientType("diagnostic")}
+                        className={`p-2.5 rounded-xl border text-xs font-bold transition flex items-center justify-center gap-1.5 ${
+                          transferRecipientType === "diagnostic" ? "bg-indigo-50 border-indigo-500 text-indigo-900" : "bg-slate-50 border-slate-200 text-slate-600"
+                        }`}
+                      >
+                        <TestTube className="w-4 h-4" /> Diagnostic Lab
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setTransferRecipientType("hospital")}
+                        className={`p-2.5 rounded-xl border text-xs font-bold transition flex items-center justify-center gap-1.5 ${
+                          transferRecipientType === "hospital" ? "bg-sky-50 border-sky-500 text-sky-900" : "bg-slate-50 border-slate-200 text-slate-600"
+                        }`}
+                      >
+                        <Building2 className="w-4 h-4" /> Hospital
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setTransferRecipientType("pharmacy")}
+                        className={`p-2.5 rounded-xl border text-xs font-bold transition flex items-center justify-center gap-1.5 ${
+                          transferRecipientType === "pharmacy" ? "bg-amber-50 border-amber-500 text-amber-900" : "bg-slate-50 border-slate-200 text-slate-600"
+                        }`}
+                      >
+                        <Pill className="w-4 h-4" /> Pharmacy
+                      </button>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block font-bold text-slate-700 mb-1">
+                      Recipient Name / ID ({transferRecipientType.toUpperCase()}) *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. Dr. Sabbir Ahmed, Square Hospital, Labaid Diagnostics"
+                      value={transferRecipientName}
+                      onChange={(e) => setTransferRecipientName(e.target.value)}
+                      className="w-full p-2.5 border border-slate-200 rounded-xl bg-slate-50 focus:bg-white text-xs font-semibold"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block font-bold text-slate-700 mb-1">Instructions / Note for Recipient</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Please review before my appointment"
+                      value={transferNote}
+                      onChange={(e) => setTransferNote(e.target.value)}
+                      className="w-full p-2.5 border border-slate-200 rounded-xl bg-slate-50 focus:bg-white text-xs"
+                    />
+                  </div>
+
+                  <div className="pt-2 flex justify-end gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setSharingProfileRecord(null)}
+                      className="px-4 py-2 text-slate-500 font-bold hover:bg-slate-100 rounded-xl"
+                    >
+                      Cancel
+                    </button>
+
+                    <button
+                      type="submit"
+                      disabled={transferringProfileRecord}
+                      className="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl shadow-md transition disabled:opacity-50 flex items-center gap-1.5 cursor-pointer text-xs"
+                    >
+                      {transferringProfileRecord ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                      <span>Transfer Record Now</span>
+                    </button>
+                  </div>
+                </form>
+              )}
+            </div>
           </div>
         )}
 

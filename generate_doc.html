@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Generating MediUnity Project Report Document...</title>
+  <script src="https://unpkg.com/docx@8.5.0/build/index.umd.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #0f172a;
+      color: #f8fafc;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      margin: 0;
+    }
+    .card {
+      background: #1e293b;
+      padding: 40px;
+      border-radius: 16px;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+      text-align: center;
+      max-width: 550px;
+    }
+    h1 { color: #0d9488; margin-bottom: 10px; font-size: 24px; }
+    p { color: #94a3b8; font-size: 14px; line-height: 1.6; }
+    .status {
+      margin-top: 20px;
+      font-weight: bold;
+      color: #38bdf8;
+    }
+    button {
+      margin-top: 20px;
+      padding: 12px 24px;
+      background: #0d9488;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 15px;
+      cursor: pointer;
+      font-weight: 600;
+    }
+    button:hover { background: #14b8a6; }
+  </style>
+</head>
+<body>
+
+<div class="card">
+  <h1>🏥 MediUnity Report Builder</h1>
+  <p>Generating your exhaustive <strong>PROJECT OVERVIEW & CORE FUNCTIONAL MODULES</strong> Word Document (.docx)...</p>
+  <div id="status" class="status">Initializing Docx Generator...</div>
+  <button id="downloadBtn" onclick="generateAndDownload()">Download .docx File</button>
+</div>
+
+<script>
+async function generateAndDownload() {
+  const statusEl = document.getElementById('status');
+  statusEl.innerText = "Building Word Document structure...";
+
+  try {
+    const { Document, Paragraph, TextRun, Table, TableRow, TableCell, AlignmentType, WidthType, HeadingLevel, BorderStyle, ShadingType, Packer } = docx;
+
+    const PRIMARY_COLOR = "0F766E";   // Deep Teal
+    const SECONDARY_COLOR = "0F172A"; // Dark Slate
+    const BODY_COLOR = "334155";      // Slate 700
+    const MUTED_COLOR = "64748B";     // Slate 500
+    const BLUE_ACCENT = "1E3A8A";     // Deep Blue
+
+    // Helper functions
+    const createTitle = (text) => new Paragraph({
+      alignment: AlignmentType.CENTER,
+      spacing: { before: 200, after: 100 },
+      children: [
+        new TextRun({ text, bold: true, size: 48, color: PRIMARY_COLOR, font: "Calibri" })
+      ]
+    });
+
+    const createSubtitle = (text) => new Paragraph({
+      alignment: AlignmentType.CENTER,
+      spacing: { before: 0, after: 300 },
+      children: [
+        new TextRun({ text, italics: true, size: 24, color: SECONDARY_COLOR, font: "Calibri" })
+      ]
+    });
+
+    const createHeading1 = (text) => new Paragraph({
+      heading: HeadingLevel.HEADING_1,
+      spacing: { before: 400, after: 160 },
+      children: [
+        new TextRun({ text, bold: true, size: 34, color: PRIMARY_COLOR, font: "Calibri" })
+      ]
+    });
+
+    const createHeading2 = (text) => new Paragraph({
+      heading: HeadingLevel.HEADING_2,
+      spacing: { before: 300, after: 120 },
+      children: [
+        new TextRun({ text, bold: true, size: 27, color: SECONDARY_COLOR, font: "Calibri" })
+      ]
+    });
+
+    const createHeading3 = (text) => new Paragraph({
+      heading: HeadingLevel.HEADING_3,
+      spacing: { before: 200, after: 80 },
+      children: [
+        new TextRun({ text, bold: true, size: 23, color: BLUE_ACCENT, font: "Calibri" })
+      ]
+    });
+
+    const createPara = (text) => new Paragraph({
+      spacing: { before: 0, after: 120, line: 276 },
+      children: [
+        new TextRun({ text, size: 22, color: BODY_COLOR, font: "Calibri" })
+      ]
+    });
+
+    const createBullet = (lead, text) => new Paragraph({
+      bullet: { level: 0 },
+      spacing: { before: 40, after: 80, line: 276 },
+      children: [
+        new TextRun({ text: lead + " ", bold: true, size: 22, color: SECONDARY_COLOR, font: "Calibri" }),
+        new TextRun({ text, size: 22, color: BODY_COLOR, font: "Calibri" })
+      ]
+    });
+
+    const createCallout = (title, lines) => new Table({
+      width: { size: 100, type: WidthType.PERCENTAGE },
+      rows: [
+        new TableRow({
+          children: [
+            new TableCell({
+              shading: { fill: "F1F5F9", val: ShadingType.CLEAR },
+              margins: { top: 200, bottom: 200, left: 240, right: 240 },
+              borders: {
+                left: { style: BorderStyle.SINGLE, size: 24, color: PRIMARY_COLOR },
+                top: { style: BorderStyle.NONE },
+                right: { style: BorderStyle.NONE },
+                bottom: { style: BorderStyle.NONE }
+              },
+              children: [
+                new Paragraph({
+                  spacing: { before: 0, after: 80 },
+                  children: [
+                    new TextRun({ text: "💡 " + title, bold: true, size: 22, color: PRIMARY_COLOR, font: "Calibri" })
+                  ]
+                }),
+                ...lines.map(line => new Paragraph({
+                  spacing: { before: 40, after: 60, line: 276 },
+                  children: [
+                    new TextRun({ text: line, size: 21, color: BODY_COLOR, font: "Calibri" })
+                  ]
+                }))
+              ]
+            })
+          ]
+        })
+      ]
+    });
+
+    const docChildren = [
+      new Paragraph({
+        alignment: AlignmentType.CENTER,
+        spacing: { before: 100, after: 60 },
+        children: [
+          new TextRun({ text: "MEDIUNITY — CLOUD-READY DISTRIBUTED HEALTHCARE & WELLNESS PLATFORM", bold: true, size: 19, color: MUTED_COLOR, font: "Calibri" })
+        ]
+      }),
+      createTitle("PROJECT OVERVIEW AND DISCUSSION"),
+      createSubtitle("Exhaustive Core Functional Modules & User Workflows Breakdown (Part-by-Part)"),
+
+      createHeading1("1. Executive Project Summary & Mission Statement"),
+      createPara("MediUnity (also designated as the Medicare Systems Platform) is an enterprise-grade, cloud-native, multi-portal digital healthcare and wellness ecosystem. Built with a scalable multi-tenant architecture, MediUnity seamlessly connects healthcare consumers (patients), clinical professionals (medical doctors), healthcare facilities (hospitals and diagnostic centers), and pharmaceutical providers (retail pharmacies) into a single, unified digital platform."),
+      createPara("The core mission of MediUnity is to eliminate traditional healthcare operational silos and geographical accessibility barriers by engineering a globally accessible platform that digitizes the entire spectrum of outpatient medical care—from doctor discovery and instant appointment scheduling to real-time telehealth consultations, electronic health record (EHR) management, lab test ordering, and pharmacy prescription fulfillment."),
+      
+      createCallout("EXECUTIVE ARCHITECTURAL PRINCIPLE", [
+        "Global Scope & Scalability: MediUnity is architected for worldwide deployment across diverse healthcare environments. It avoids localized hardcoding, supporting international date and metric formats, multi-currency processing via Stripe, and distributed multi-portal rollouts suitable for international clinic networks and hospitals.",
+        "Unified Multi-Tenant Core: Rather than forcing diverse stakeholders into a generic monolithic interface, MediUnity deploys specialized user-role applications (Patient Portal, Doctor Portal, Partner Portal, Admin Control Center) backed by a central, high-throughput Node.js orchestration engine."
+      ]),
+
+      createHeading1("2. Background, Context & Problem Statement"),
+      createPara("Global healthcare delivery faces persistent operational challenges driven by fragmented digital tools, manual paper-based recordkeeping, physical clinic queue bottlenecks, and isolated service providers. Patients and healthcare institutions routinely suffer from systemic inefficiencies:"),
+      
+      createBullet("Fragmented Patient Records:", "Patient health histories, diagnostic laboratory reports, and prescription records remain locked inside disconnected clinical databases, preventing holistic patient evaluation and increasing diagnostic errors."),
+      createBullet("Scheduling Friction & Queue Delays:", "Manual clinic phone bookings and in-person queue management lead to prolonged waiting times, underutilized doctor schedules, and high appointment no-show rates."),
+      createBullet("Diagnostic Laboratory Isolation:", "Patients face cumbersome processes to find accredited diagnostic centers, schedule sample pickups, and receive digital lab results securely."),
+      createBullet("Pharmacy Inventory & Prescription Delays:", "Manual paper prescriptions lead to poor drug adherence, inventory stockout frustration, and delayed home delivery of essential chronic medications."),
+      createBullet("Lack of Unified Regulatory Oversight:", "System administrators lack real-time telemetry, credential verification audit trails, and automated financial settlement pipelines to govern multi-provider networks effectively."),
+
+      createPara("MediUnity resolves these systemic failures by establishing a unified digital bridge across all healthcare participants, enforcing strict credential verification, zero-trust role-based access control (RBAC), and automated background service queues."),
+
+      createHeading1("3. Comprehensive Core Functional Modules & User Workflows (Part-by-Part)"),
+      createPara("MediUnity organizes its clinical and operational features into five interconnected functional pillars, described in detail below:"),
+
+      createHeading2("Part 1: Patient Ecosystem & Telehealth Experience"),
+      createPara("The Patient Ecosystem (comprising frontend and frontend-patient applications) delivers an intuitive, accessible experience for healthcare consumers globally."),
+
+      createHeading3("1.1 Authentication, Role Gateway & Account Management"),
+      createBullet("Multi-Role Registration & Login:", "Supports email/password authentication backed by bcrypt password hashing and JWT token issuance (Access Tokens + HTTP-only Refresh Tokens)."),
+      createBullet("Portal Gateway Switcher:", "Allows authenticated users to seamlessly switch between Patient, Doctor, or Partner profiles depending on authorized account permissions."),
+      createBullet("Security Session Rotation:", "Integrates RefreshToken models for secure token invalidation and device session revocation."),
+
+      createHeading3("1.2 Patient Medical Profile & Family Dependent Vault"),
+      createBullet("Personal EHR Demographics:", "Stores patient personal metrics (Blood Group, Height, Weight, Emergency Contacts, Allergic History, Chronic Illnesses, Insurance Policy numbers)."),
+      createBullet("Family Member Profiles:", "Allows primary patient account holders to create secondary dependent profiles (e.g., children, elderly parents) to schedule appointments and manage prescriptions on their behalf."),
+
+      createHeading3("1.3 Smart Doctor Discovery & Consultation Booking Workflow"),
+      createBullet("Multi-Criteria Search & Filter Engine:", "Enables patients to query doctors by medical specialty (e.g., Cardiology, Neurology, Pediatrics, Dermatology), location, consultation fee range, user ratings, and gender."),
+      createBullet("Doctor Profile & Real-Time Availability:", "Displays doctor bio, qualifications, hospital affiliations, consultation fees, user reviews, and interactive calendar availability slots."),
+      createBullet("Real-Time Slot Locking & Stripe Checkout:", "When a patient selects a time slot, the system locks the slot to prevent double-booking. Payment is processed securely via Stripe API. Upon payment authorization, the appointment transitions to confirmed status."),
+      createBullet("Multi-Channel Alert Dispatches:", "Triggers asynchronous notification workers via BullMQ, sending instant browser dispatches, Nodemailer email receipts, and Twilio SMS reminders."),
+
+      createHeading3("1.4 Interactive Teleconsultation & Real-Time Messaging Hub"),
+      createBullet("Socket.IO WebSocket Telehealth Chat:", "Establishes low-latency, bi-directional real-time communication channels between doctor and patient during scheduled appointment slots."),
+      createBullet("Clinical File & Media Sharing:", "Allows patients to attach past diagnostic test images, lab reports, or symptom photographs during live chat using Cloudinary secure media pipelines."),
+      createBullet("Live Doctor Presence & Queue Status:", "Displays live doctor online/offline indicators and estimated waiting queue duration."),
+
+      createHeading3("1.5 Electronic Health Record (EHR) & Vitals Health Tracker"),
+      createBullet("Continuous Vitals Logging:", "Patients log daily health metrics: Blood Pressure (Systolic/Diastolic), Blood Glucose (Fasting/Post-prandial), Heart Rate (BPM), Body Temperature (°F/°C), and BMI."),
+      createBullet("Interactive Trend Visualizations:", "Render responsive time-series graphs displaying historical vitals trends to identify health spikes or chronic degradation."),
+      createBullet("EHR Document Vault:", "Stores downloadable PDF prescriptions issued by doctors, diagnostic laboratory test results, and uploaded medical file archives."),
+
+      createHeading3("1.6 AI Symptom Checker & Health Journal"),
+      createBullet("Interactive Symptom Triage Tool:", "Guides patients through a structured clinical symptom questionnaire, analyzing reported discomforts and recommending suitable doctor specialties."),
+      createBullet("Personal Mood & Wellness Journal:", "Private health diary allowing patients to record daily mood logs, stress levels, mental wellness notes, and physical exercise routines."),
+
+      createHeading3("1.7 Pharmacy E-Commerce & Medication Delivery Workflow"),
+      createBullet("Medicine Search & Inventory Catalog:", "Browse prescription medications, OTC drugs, health supplements, and healthcare equipment with real-time pricing."),
+      createBullet("OCR Prescription Parsing (Tesseract.js):", "Patients upload paper prescription images, which are automatically parsed via Tesseract.js optical character recognition to extract medication names."),
+      createBullet("Pharmacy Selection & Order Checkout:", "Patients choose local or online partner pharmacies, confirm delivery addresses, upload verified prescriptions, and complete online payment."),
+      createBullet("Order Fulfillment & Delivery Tracking:", "Tracks order status through real-time state transitions (Order Placed -> Verified -> Packed -> Out for Delivery -> Delivered)."),
+
+      createHeading3("1.8 Diagnostic Center & Lab Test Booking Workflow"),
+      createBullet("Diagnostic Test Cataloging:", "Explore comprehensive diagnostic test menus (Complete Blood Count, Lipid Profile, MRI Scans, Ultrasound, Thyroid Panel)."),
+      createBullet("Sample Collection Scheduling:", "Choose between home specimen pickup or diagnostic center walk-in appointment slots."),
+      createBullet("Electronic Result Delivery:", "Diagnostic centers upload completed lab test PDF reports directly to the patient's EHR vault, sending instant push and SMS notifications."),
+
+      createHeading3("1.9 Home Healthcare Services & Emergency Ambulance Tracking"),
+      createBullet("Home Nursing & Healthcare Booking:", "Schedule home visits for post-operative nursing care, physiotherapy, elderly care assistance, and wound dressing."),
+      createBullet("Real-Time Ambulance Dispatch Tracking:", "Requests emergency medical transport and tracks real-time GPS location updates of assigned emergency vehicles."),
+
+      createHeading2("Part 2: Doctor Clinical Workspace & Practice Management"),
+      createPara("The Doctor Portal (frontend-doctor) provides medical clinicians with comprehensive tools to manage consultations, issue prescriptions, review medical histories, and track clinical earnings."),
+
+      createHeading3("2.1 Clinician Onboarding & Credential Verification"),
+      createBullet("License & Qualification Submission:", "Prospective doctors submit medical registration numbers (BMDC / Medical Council), specialization degrees, institutional affiliations, and government identity proofs."),
+      createBullet("Verification Status Governance:", "Accounts remain in unverified state until platform administrators audit submitted credentials, granting isVerified status to publish profiles publicly."),
+
+      createHeading3("2.2 Dynamic Availability Calendar & Slot Builder"),
+      createBullet("Recurring Consultation Slots:", "Doctors define weekly recurring work shifts, consultation slot durations (15, 20, 30 mins), consultation fees, and emergency buffers."),
+      createBullet("Slot Blockade & Schedule Adjustments:", "Enables doctors to temporarily mark unavailability or cancel slots, automatically triggering patient refunds and reschedule dispatches."),
+
+      createHeading3("2.3 Clinical Consultation Roster & Patient EHR Inspection"),
+      createBullet("Consultation Roster Dashboard:", "Chronological schedule of upcoming, completed, and canceled patient appointments with one-click access to consultation rooms."),
+      createBullet("Pre-Consultation Medical History Review:", "Doctors inspect patient vitals trend graphs, past prescriptions, allergic histories, and diagnostic lab reports prior to initiating telehealth sessions."),
+
+      createHeading3("2.4 Digital Prescription Builder (PrescriptionBuilder)"),
+      createBullet("Structured Clinical Scripting:", "Doctors input primary diagnosis, ICD disease codes, drug dosage instructions (1-0-1, before/after meals), duration, diet advice, and recommended lab tests."),
+      createBullet("PDF Generation & Instant EHR Vault Sync:", "Auto-generates digital PDF prescriptions, stores them in MongoDB, and instantly syncs them to the patient's mobile app and pharmacy ordering queue."),
+
+      createHeading3("2.5 Specialist Referral & Hospital Transfer System"),
+      createBullet("Inter-Specialist Referral Notes:", "Refers patients to sub-specialists or tertiary hospitals with attached clinical summary notes and diagnostic findings."),
+
+      createHeading3("2.6 Financial Accounting & Doctor Payouts"),
+      createBullet("Earnings & Commission Accounting:", "Displays gross consultation revenue, platform commission deductions, and net withdrawal balances."),
+      createBullet("Payout Disbursement Requests:", "Submits payout withdrawal requests to platform administrators, tracking bank/mobile money transfer updates."),
+
+      createHeading2("Part 3: Partner Provider Ecosystem (Hospitals, Diagnostic Centers, Pharmacies)"),
+      createPara("The Partner Portal (frontend-partner) equips institutional healthcare providers with operational management interfaces."),
+
+      createHeading3("3.1 Hospital Operations & Facility Management"),
+      createBullet("Department & Staff Administration:", "Configure hospital clinical departments (Emergency, ICU, Cardiology, Pediatrics) and assign resident doctor rosters."),
+      createBullet("Inpatient Bed & ICU Emergency Inquiries:", "Manages real-time inquiries for available ICU beds, general ward rooms, and emergency surgery admissions."),
+
+      createHeading3("3.2 Diagnostic Laboratory Operations"),
+      createBullet("Test Menu & Pricing Catalog:", "Publish available laboratory tests, specimen requirements, fasting guidelines, turnaround times, and pricing."),
+      createBullet("Specimen Dispatch & Digital Results Upload:", "Assign phlebotomists for home sample collection and upload digital lab test PDF reports directly to patient EHR accounts."),
+
+      createHeading3("3.3 Retail Pharmacy Management"),
+      createBullet("Medicine Stock Inventory:", "Manage drug inventory quantities, unit prices, batch numbers, and stock expiration alerts."),
+      createBullet("Order Processing & Prescription Verification:", "Review incoming patient orders, verify doctor digital signatures, pack medications, and assign delivery riders."),
+
+      createHeading2("Part 4: Administrative Governance, Security & System Telemetry"),
+      createPara("The Administrative Control Center (admin) provides platform moderators and system engineers with global oversight."),
+
+      createHeading3("4.1 Partner Verification & License Audit Desk"),
+      createBullet("Credential Auditing Desk:", "Centralized verification dashboard to review medical license credentials, institutional registration certificates, and ID proofs for pending doctors, hospitals, labs, and pharmacies."),
+      createBullet("Approval / Rejection Governance:", "Approves verified partners (isVerified: true) to enable public marketplace listing or requests document resubmissions."),
+
+      createHeading3("4.2 Financial & Revenue Allocation Engine"),
+      createBullet("Global Commission Control:", "Configures platform commission percentages across doctor fees, lab bookings, and pharmacy sales."),
+      createBullet("Payout Approvals Desk:", "Audits and approves financial payout disbursements to doctors and partner facilities."),
+
+      createHeading3("4.3 System Telemetry & Infrastructure Performance Monitoring"),
+      createBullet("Real-Time Telemetry Gauges:", "Monitors server CPU/memory load, API endpoint latencies, database connection pool stats, and BullMQ background task throughput."),
+
+      createHeading3("4.4 Immutable Audit Logging"),
+      createBullet("Security Audit Trails:", "Appends every administrative action, status modification, and role escalation into an immutable AuditLog collection for regulatory compliance auditing."),
+
+      createHeading2("Part 5: Social Healthcare Community & Educational Content Hub"),
+      createPara("Promotes healthcare awareness and peer support across patients and medical professionals."),
+
+      createHeading3("5.1 Medical Community Forum & Peer Discussions"),
+      createBullet("Health Discussion Boards:", "Patients and doctors share medical wellness advice, health tips, and community support posts."),
+      createBullet("Community Interaction Engine:", "Supports post liking, commenting, category filtering (Nutrition, Mental Health, Fitness), and content moderation reporting."),
+
+      createHeading3("5.2 Peer-Reviewed Health Articles & Wellness Blog"),
+      createBullet("Expert Publishing Platform:", "Verified doctors write educational health articles, preventive medical advice, and wellness blogs."),
+
+      createHeading1("4. Technical Discussion & Architectural Evaluation"),
+      createPara("This section evaluates the primary technical paradigms governing MediUnity:"),
+      createBullet("Asynchronous Task Processing (Redis + BullMQ):", "Decouples heavy external dispatches (SMS via Twilio, Emails via Nodemailer, OCR via Tesseract.js) from the main Node.js event loop, guaranteeing sub-100ms API responses."),
+      createBullet("Defense-in-Depth Security Architecture:", "Combines JWT token authentication, Express RBAC middleware, NoSQL injection filtering via mongo-sanitize, Helmet security headers, and IP rate limiting."),
+      createBullet("Real-Time WebSockets Communication:", "Employs Socket.IO for low-latency doctor-patient telehealth chat, live queue status updates, and instant emergency notifications."),
+
+      createHeading1("5. Comparative Feature Matrix"),
+      createPara("Evaluates MediUnity's technical advantages over legacy healthcare workflows:"),
+
+      new Table({
+        width: { size: 100, type: WidthType.PERCENTAGE },
+        rows: [
+          new TableRow({
+            children: [
+              new TableCell({ shading: { fill: PRIMARY_COLOR }, margins: { top: 120, bottom: 120, left: 120, right: 120 }, children: [new Paragraph({ children: [new TextRun({ text: "Feature Domain", bold: true, color: "FFFFFF", size: 20, font: "Calibri" })] })] }),
+              new TableCell({ shading: { fill: PRIMARY_COLOR }, margins: { top: 120, bottom: 120, left: 120, right: 120 }, children: [new Paragraph({ children: [new TextRun({ text: "Traditional Paper Systems", bold: true, color: "FFFFFF", size: 20, font: "Calibri" })] })] }),
+              new TableCell({ shading: { fill: PRIMARY_COLOR }, margins: { top: 120, bottom: 120, left: 120, right: 120 }, children: [new Paragraph({ children: [new TextRun({ text: "Single-Purpose Apps", bold: true, color: "FFFFFF", size: 20, font: "Calibri" })] })] }),
+              new TableCell({ shading: { fill: PRIMARY_COLOR }, margins: { top: 120, bottom: 120, left: 120, right: 120 }, children: [new Paragraph({ children: [new TextRun({ text: "MediUnity Platform", bold: true, color: "FFFFFF", size: 20, font: "Calibri" })] })] }),
+            ]
+          }),
+          new TableRow({
+            children: [
+              new TableCell({ shading: { fill: "F8FAFC" }, margins: { top: 100, bottom: 100, left: 120, right: 120 }, children: [new Paragraph({ children: [new TextRun({ text: "Multi-Stakeholder Integration", bold: true, color: SECONDARY_COLOR, size: 19, font: "Calibri" })] })] }),
+              new TableCell({ shading: { fill: "F8FAFC" }, margins: { top: 100, bottom: 100, left: 120, right: 120 }, children: [new Paragraph({ children: [new TextRun({ text: "Manual paper handoffs, zero digital connection", color: BODY_COLOR, size: 19, font: "Calibri" })] })] }),
+              new TableCell({ shading: { fill: "F8FAFC" }, margins: { top: 100, bottom: 100, left: 120, right: 120 }, children: [new Paragraph({ children: [new TextRun({ text: "Doctor-Patient only; no pharmacy or lab integration", color: BODY_COLOR, size: 19, font: "Calibri" })] })] }),
+              new TableCell({ shading: { fill: "F8FAFC" }, margins: { top: 100, bottom: 100, left: 120, right: 120 }, children: [new Paragraph({ children: [new TextRun({ text: "Unified Patients, Doctors, Hospitals, Labs, Pharmacies & Admins", bold: true, color: PRIMARY_COLOR, size: 19, font: "Calibri" })] })] }),
+            ]
+          }),
+          new TableRow({
+            children: [
+              new TableCell({ shading: { fill: "FFFFFF" }, margins: { top: 100, bottom: 100, left: 120, right: 120 }, children: [new Paragraph({ children: [new TextRun({ text: "Appointment Booking", bold: true, color: SECONDARY_COLOR, size: 19, font: "Calibri" })] })] }),
+              new TableCell({ shading: { fill: "FFFFFF" }, margins: { top: 100, bottom: 100, left: 120, right: 120 }, children: [new Paragraph({ children: [new TextRun({ text: "Physical queues & manual phone calls", color: BODY_COLOR, size: 19, font: "Calibri" })] })] }),
+              new TableCell({ shading: { fill: "FFFFFF" }, margins: { top: 100, bottom: 100, left: 120, right: 120 }, children: [new Paragraph({ children: [new TextRun({ text: "Basic calendar booking", color: BODY_COLOR, size: 19, font: "Calibri" })] })] }),
+              new TableCell({ shading: { fill: "FFFFFF" }, margins: { top: 100, bottom: 100, left: 120, right: 120 }, children: [new Paragraph({ children: [new TextRun({ text: "Real-time slot lock, Stripe payments, automated queue & alerts", bold: true, color: PRIMARY_COLOR, size: 19, font: "Calibri" })] })] }),
+            ]
+          }),
+          new TableRow({
+            children: [
+              new TableCell({ shading: { fill: "F8FAFC" }, margins: { top: 100, bottom: 100, left: 120, right: 120 }, children: [new Paragraph({ children: [new TextRun({ text: "Health Record Storage", bold: true, color: SECONDARY_COLOR, size: 19, font: "Calibri" })] })] }),
+              new TableCell({ shading: { fill: "F8FAFC" }, margins: { top: 100, bottom: 100, left: 120, right: 120 }, children: [new Paragraph({ children: [new TextRun({ text: "Siloed physical paper charts", color: BODY_COLOR, size: 19, font: "Calibri" })] })] }),
+              new TableCell({ shading: { fill: "F8FAFC" }, margins: { top: 100, bottom: 100, left: 120, right: 120 }, children: [new Paragraph({ children: [new TextRun({ text: "Fragmented PDF uploads", color: BODY_COLOR, size: 19, font: "Calibri" })] })] }),
+              new TableCell({ shading: { fill: "F8FAFC" }, margins: { top: 100, bottom: 100, left: 120, right: 120 }, children: [new Paragraph({ children: [new TextRun({ text: "Centralized Cloud MongoDB EHR with vitals trend graphing", bold: true, color: PRIMARY_COLOR, size: 19, font: "Calibri" })] })] }),
+            ]
+          }),
+          new TableRow({
+            children: [
+              new TableCell({ shading: { fill: "FFFFFF" }, margins: { top: 100, bottom: 100, left: 120, right: 120 }, children: [new Paragraph({ children: [new TextRun({ text: "Background Operations", bold: true, color: SECONDARY_COLOR, size: 19, font: "Calibri" })] })] }),
+              new TableCell({ shading: { fill: "FFFFFF" }, margins: { top: 100, bottom: 100, left: 120, right: 120 }, children: [new Paragraph({ children: [new TextRun({ text: "Manual staff execution", color: BODY_COLOR, size: 19, font: "Calibri" })] })] }),
+              new TableCell({ shading: { fill: "FFFFFF" }, margins: { top: 100, bottom: 100, left: 120, right: 120 }, children: [new Paragraph({ children: [new TextRun({ text: "Synchronous blocking HTTP loops", color: BODY_COLOR, size: 19, font: "Calibri" })] })] }),
+              new TableCell({ shading: { fill: "FFFFFF" }, margins: { top: 100, bottom: 100, left: 120, right: 120 }, children: [new Paragraph({ children: [new TextRun({ text: "Asynchronous Redis + BullMQ task queues for high throughput", bold: true, color: PRIMARY_COLOR, size: 19, font: "Calibri" })] })] }),
+            ]
+          }),
+          new TableRow({
+            children: [
+              new TableCell({ shading: { fill: "F8FAFC" }, margins: { top: 100, bottom: 100, left: 120, right: 120 }, children: [new Paragraph({ children: [new TextRun({ text: "Security & Compliance", bold: true, color: SECONDARY_COLOR, size: 19, font: "Calibri" })] })] }),
+              new TableCell({ shading: { fill: "F8FAFC" }, margins: { top: 100, bottom: 100, left: 120, right: 120 }, children: [new Paragraph({ children: [new TextRun({ text: "Physical locks, high risk of record loss", color: BODY_COLOR, size: 19, font: "Calibri" })] })] }),
+              new TableCell({ shading: { fill: "F8FAFC" }, margins: { top: 100, bottom: 100, left: 120, right: 120 }, children: [new Paragraph({ children: [new TextRun({ text: "Basic HTTPS login", color: BODY_COLOR, size: 19, font: "Calibri" })] })] }),
+              new TableCell({ shading: { fill: "F8FAFC" }, margins: { top: 100, bottom: 100, left: 120, right: 120 }, children: [new Paragraph({ children: [new TextRun({ text: "Defense-in-depth: Helmet, NoSQL sanitization, RBAC & Audit Logs", bold: true, color: PRIMARY_COLOR, size: 19, font: "Calibri" })] })] }),
+            ]
+          })
+        ]
+      }),
+
+      createHeading1("6. Implementation Challenges & Technical Mitigation Strategies"),
+      createBullet("Challenge 1: Third-Party API Latencies.", "Offloaded Twilio SMS, Nodemailer Email, and Tesseract.js OCR to BullMQ worker queues."),
+      createBullet("Challenge 2: Multi-Portal State Sync.", "Implemented a central Socket.IO event router broadcasting room-based updates."),
+      createBullet("Challenge 3: Medical License Verification.", "Enforced dual-stage Admin verification workflow (isVerified: true) prior to public profile visibility."),
+      createBullet("Challenge 4: Diagnostic File Security.", "Configured Cloudinary private upload presets with signed temporal URLs."),
+
+      createHeading1("7. Strategic Future Directions & Recommendations"),
+      createBullet("AI Symptom Triage LLM Assistant:", "Automating specialty recommendations based on natural language symptom descriptions."),
+      createBullet("Direct Wearable IoT Sync:", "Ingesting continuous vitals (ECG, SpO2, Continuous Glucose) via Apple HealthKit and Google Fit APIs."),
+      createBullet("Embedded WebRTC Video Teleconsultations:", "Upgrading Socket.IO text chat to native peer-to-peer audio/video streaming."),
+
+      createHeading1("8. Conclusion"),
+      createPara("MediUnity demonstrates a robust, scalable multi-portal digital healthcare architecture. By unifying Patients, Doctors, Hospitals, Labs, Pharmacies, and Admins under a single secure JavaScript stack, MediUnity delivers a comprehensive foundation for modern global digital health.")
+    ];
+
+    const docObj = new Document({
+      sections: [{
+        properties: {
+          page: {
+            margin: { top: 1440, bottom: 1440, left: 1440, right: 1440 }
+          }
+        },
+        children: docChildren
+      }]
+    });
+
+    statusEl.innerText = "Packing document into blob...";
+    const blob = await Packer.toBlob(docObj);
+    saveAs(blob, "MediUnity_Project_Overview_and_Discussion.docx");
+
+    statusEl.innerText = "✅ Successfully Generated and Downloaded MediUnity_Project_Overview_and_Discussion.docx!";
+    statusEl.style.color = "#4ade80";
+  } catch (err) {
+    console.error(err);
+    statusEl.innerText = "❌ Error: " + err.message;
+    statusEl.style.color = "#f87171";
+  }
+}
+
+// Auto run on load
+window.addEventListener('DOMContentLoaded', () => {
+  setTimeout(generateAndDownload, 800);
+});
+</script>
+</body>
+</html>

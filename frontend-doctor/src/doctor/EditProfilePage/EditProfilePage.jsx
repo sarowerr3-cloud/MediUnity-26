@@ -407,6 +407,7 @@ export default function EditProfilePage({ apiBase }) {
       const updatable = [
         "name",
         "specialization",
+        "bmdcNumber",
         "experience",
         "qualifications",
         "location",
@@ -451,7 +452,12 @@ export default function EditProfilePage({ apiBase }) {
         form.append("imageUrl", doc.imageUrl);
       }
 
-      const token = localStorage.getItem(STORAGE_KEY);
+      const token =
+        localStorage.getItem("doctorToken_v1") ||
+        localStorage.getItem("doctor_token") ||
+        localStorage.getItem("doctorToken") ||
+        localStorage.getItem("token") ||
+        "";
       const headers = token ? { Authorization: `Bearer ${token}` } : {};
 
       const res = await fetch(`${API_BASE}/${id}`, {

@@ -235,12 +235,12 @@ export default function SocialDashboard() {
           : `${API_BASE}/api/posts?category=${encodeURIComponent(category)}`;
       }
       const res = await fetch(url, { headers });
-      const json = await res.json();
-      if (json.success) {
+      const json = await res.json().catch(() => null);
+      if (json && json.success && Array.isArray(json.posts)) {
         setPosts(json.posts);
       }
     } catch (e) {
-      toast.error("Failed to load social community feed");
+      console.warn("fetchPosts exception in frontend:", e);
     } finally {
       setLoadingPosts(false);
     }

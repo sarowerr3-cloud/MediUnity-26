@@ -42,6 +42,9 @@ import {
   addFamilyMember,
   updateFamilyMember,
   deleteFamilyMember,
+  addFamilyMedicalHistory,
+  deleteFamilyMedicalHistory,
+  shareMedicalRecord,
 } from "../controllers/patientProfileController.js";
 
 const patientProfileRouter = express.Router();
@@ -137,6 +140,25 @@ patientProfileRouter.delete(
   "/profile/family-members/:memberId",
   authMiddleware,
   deleteFamilyMember
+);
+
+patientProfileRouter.put(
+  "/profile/family-members/:memberId/medical-history",
+  authMiddleware,
+  upload.single("reportFile"),
+  addFamilyMedicalHistory
+);
+
+patientProfileRouter.delete(
+  "/profile/family-members/:memberId/medical-history/:itemId",
+  authMiddleware,
+  deleteFamilyMedicalHistory
+);
+
+patientProfileRouter.post(
+  "/profile/share-record",
+  authMiddleware,
+  shareMedicalRecord
 );
 
 // --- Automated Identity Verification Routes ---

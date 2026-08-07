@@ -8,6 +8,8 @@ const HospitalDashboard = lazy(() => import("./pages/PartnerPortal/HospitalDashb
 const DiagnosticDashboard = lazy(() => import("./pages/PartnerPortal/DiagnosticDashboard"));
 const PharmacyDashboard = lazy(() => import("./pages/PartnerPortal/PharmacyDashboard"));
 const Login = lazy(() => import("./pages/Login/Login"));
+const Profile = lazy(() => import("./pages/Profile/Profile"));
+const FamilyMemberDetailPage = lazy(() => import("./pages/FamilyMember/FamilyMemberDetailPage"));
 
 // Lucide icon
 import { CircleChevronUp, Loader2 } from "lucide-react";
@@ -125,6 +127,8 @@ const App = () => {
             <Route path="/partner/hospital/dashboard" element={<HospitalDashboard />} />
             <Route path="/partner/diagnostic/dashboard" element={<DiagnosticDashboard />} />
             <Route path="/partner/pharmacy/dashboard" element={<PharmacyDashboard />} />
+            <Route path="/profile" element={<Profile />} />
+            <Route path="/family-member/:id" element={<FamilyMemberDetailPage />} />
           </Routes>
         </div>
       </Suspense>

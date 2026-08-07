@@ -11,7 +11,7 @@ const PatientSummaryCard = ({ patientId, familyMemberId = null }) => {
   const [error, setError] = useState("");
   const [expanded, setExpanded] = useState(true);
 
-  const backendUrl = import.meta.env.VITE_BACKEND_URL || "http://localhost:4000";
+  const backendUrl = import.meta.env.VITE_BACKEND_URL || import.meta.env.VITE_API_URL || "http://localhost:4000";
 
   useEffect(() => {
     if (!patientId) return;

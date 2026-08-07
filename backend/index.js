@@ -667,9 +667,11 @@ connectDB().then(() => {
 
 
 import wearableRouter from './routes/wearableRouter.js';
+import reminderRouter from './routes/reminderRouter.js';
 
 // Routes
 app.use('/api/auth', tokenRouter);
+app.use("/api/reminders", reminderRouter);
 app.use("/api/appointments", appointmentRouter);
 app.use("/api/doctors", doctorRouter);
 app.use("/api/services", serviceRouter);
@@ -716,7 +718,13 @@ app.get('/api/temp-delete-test-doctors', async (req, res) => {
 // Global Error Handler (catches Multer errors, etc.)
 app.use((err, req, res, next) => {
   console.error("[GLOBAL ERROR]", err);
-  res.status(500).json({
+  if (err.code === "LIMIT_FILE_SIZE") {
+    return res.status(400).json({
+      success: false,
+      message: "Selected file is too large. Maximum allowed size is 15MB.",
+    });
+  }
+  res.status(err.status || 500).json({
     success: false,
     message: err.message || "Internal Server Error",
   });

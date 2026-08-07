@@ -13,6 +13,7 @@ import SosModal from "../../components/SosModal/SosModal";
 import TiltWrapper from "../../components/TiltWrapper/TiltWrapper";
 import VerifiedBadge from "../../components/VerifiedBadge/VerifiedBadge";
 import SaveReferenceModal from "../../components/SaveReferenceModal/SaveReferenceModal";
+import PatientAppointmentReminders from "../../components/Reminders/PatientAppointmentReminders";
 
 const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:4000";
 const DOCTOR_TOKEN_KEY = "doctorToken_v1";
@@ -325,12 +326,12 @@ export default function SocialDashboard() {
           : `${API_BASE}/api/posts?category=${encodeURIComponent(category)}`;
       }
       const res = await fetch(url, { headers });
-      const json = await res.json();
-      if (json.success) {
+      const json = await res.json().catch(() => null);
+      if (json && json.success && Array.isArray(json.posts)) {
         setPosts(json.posts);
       }
     } catch (e) {
-      toast.error("Failed to load social community feed");
+      console.warn("fetchPosts exception:", e);
     } finally {
       setLoadingPosts(false);
     }
@@ -560,8 +561,11 @@ export default function SocialDashboard() {
     <div className="min-h-screen bg-slate-50 font-sans flex flex-col">
       <Toaster position="top-right" />
 
+      {/* Dedicated Patient Appointment Reminders */}
+      <PatientAppointmentReminders />
+
       {/* Main Social Grid Dashboard */}
-      <div className="flex-grow max-w-6xl w-full mx-auto px-4 py-8 grid grid-cols-1 lg:grid-cols-4 gap-6">
+      <div className="flex-grow max-w-6xl w-full mx-auto px-4 py-4 grid grid-cols-1 lg:grid-cols-4 gap-6">
         
         {/* ================= LEFT SIDEBAR ================= */}
         <aside className="lg:col-span-1 flex flex-col gap-6">

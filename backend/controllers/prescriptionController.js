@@ -23,6 +23,9 @@ export async function createOrUpdatePrescription(req, res) {
       diagnosis = "",
       advice = "",
       tests = "",
+      vitals = {},
+      followUpDate = null,
+      followUpNotes = "",
     } = req.body || {};
 
     let medicines = [];
@@ -51,6 +54,26 @@ export async function createOrUpdatePrescription(req, res) {
       });
     }
 
+    // Sanitize medicines to ensure required dosage field is present
+    const sanitizedMedicines = (medicines || []).map((m) => {
+      const dosageStr =
+        m.dosage ||
+        (m.dosagePattern
+          ? `${m.dosagePattern.morning || 0}+${m.dosagePattern.afternoon || 0}+${m.dosagePattern.night || 0}`
+          : m.frequency || "1+0+1");
+      return {
+        name: m.name || "Medicine",
+        genericName: m.genericName || "",
+        dosage: dosageStr,
+        dosageForm: m.dosageForm || "tablet",
+        dosagePattern: m.dosagePattern || { morning: 1, afternoon: 0, night: 1 },
+        frequency: m.frequency || m.instruction || "After food",
+        duration: m.duration || "7 days",
+        durationDays: m.durationDays || 7,
+        instructions: m.instructions || m.instruction || "",
+      };
+    });
+
     // Find or create prescription
     let prescription = await Prescription.findOne({ appointmentId });
     if (!prescription) {
@@ -65,9 +88,14 @@ export async function createOrUpdatePrescription(req, res) {
 
     prescription.symptoms = symptoms;
     prescription.diagnosis = diagnosis;
-    prescription.medicines = medicines;
+    prescription.medicines = sanitizedMedicines;
     prescription.advice = advice;
     prescription.tests = tests;
+    if (vitals && typeof vitals === "object") {
+      prescription.vitals = { ...prescription.vitals, ...vitals };
+    }
+    if (followUpDate) prescription.followUpDate = followUpDate;
+    if (followUpNotes) prescription.followUpNotes = followUpNotes;
 
     // Handle PDF Upload
     if (req.file?.path) {

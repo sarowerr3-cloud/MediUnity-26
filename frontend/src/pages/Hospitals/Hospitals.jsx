@@ -9,6 +9,7 @@ import Footer from "../../components/Footer/Footer";
 import ReviewsModal from "../../components/Reviews/ReviewsModal";
 import MapViewer from "../../components/Map/MapViewer";
 import { calculateDistance } from "../../utils/distance";
+import LocationSearchBar from "../../components/Location/LocationSearchBar";
 
 const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:4000";
 const API = axios.create({ baseURL: API_BASE });
@@ -371,33 +372,41 @@ export default function HospitalsPage() {
                 <p className="text-slate-500 text-sm font-medium mt-2 max-w-lg">Discover highly-rated verified hospitals, check real-time bed availability, and book clinical services instantly.</p>
               </div>
 
-              <div className="relative w-full md:max-w-md flex flex-col sm:flex-row items-center gap-2">
-                <div className="relative flex-grow w-full">
-                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-emerald-600" />
-                  <input
-                    type="text"
-                    placeholder="Search by hospital name, city, or location..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full pl-11 pr-5 py-3.5 bg-slate-50 border border-slate-200 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 rounded-2xl text-sm font-semibold text-slate-700 outline-none transition-all shadow-sm"
-                  />
-                </div>
-                <div className="flex gap-2 w-full sm:w-auto">
-                  <button
-                    onClick={handleFindNearest}
-                    disabled={locationLoading}
-                    className="px-4 py-3.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl text-sm font-bold flex items-center justify-center gap-2 cursor-pointer transition shadow-sm border border-emerald-700 shrink-0 flex-1 sm:flex-none disabled:opacity-50"
-                  >
-                    <MapPin className="w-4 h-4" />
-                    {locationLoading ? "Finding..." : "Nearest"}
-                  </button>
-                  <button
-                    onClick={() => setViewMode(viewMode === 'list' ? 'map' : 'list')}
-                    className="px-5 py-3.5 bg-emerald-100 hover:bg-emerald-200 text-emerald-800 rounded-2xl text-sm font-bold flex items-center justify-center gap-2 cursor-pointer transition shadow-sm border border-emerald-200 shrink-0 flex-1 sm:flex-none"
-                  >
-                    <MapPin className="w-4 h-4" />
-                    {viewMode === 'list' ? "Map" : "List"}
-                  </button>
+              <div className="w-full space-y-4">
+                <LocationSearchBar
+                  locationInput={searchQuery}
+                  setLocationInput={setSearchQuery}
+                  placeholder="Find hospitals by city or live location (e.g. New York, London, Tokyo, Dhaka, Cumilla)"
+                />
+
+                <div className="relative w-full md:max-w-md mx-auto flex flex-col sm:flex-row items-center gap-2">
+                  <div className="relative flex-grow w-full">
+                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-emerald-600" />
+                    <input
+                      type="text"
+                      placeholder="Search by hospital name..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="w-full pl-11 pr-5 py-3.5 bg-slate-50 border border-slate-200 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 rounded-2xl text-sm font-semibold text-slate-700 outline-none transition-all shadow-sm"
+                    />
+                  </div>
+                  <div className="flex gap-2 w-full sm:w-auto">
+                    <button
+                      onClick={handleFindNearest}
+                      disabled={locationLoading}
+                      className="px-4 py-3.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl text-sm font-bold flex items-center justify-center gap-2 cursor-pointer transition shadow-sm border border-emerald-700 shrink-0 flex-1 sm:flex-none disabled:opacity-50"
+                    >
+                      <MapPin className="w-4 h-4" />
+                      {locationLoading ? "Finding..." : "Nearest"}
+                    </button>
+                    <button
+                      onClick={() => setViewMode(viewMode === 'list' ? 'map' : 'list')}
+                      className="px-5 py-3.5 bg-emerald-100 hover:bg-emerald-200 text-emerald-800 rounded-2xl text-sm font-bold flex items-center justify-center gap-2 cursor-pointer transition shadow-sm border border-emerald-200 shrink-0 flex-1 sm:flex-none"
+                    >
+                      <MapPin className="w-4 h-4" />
+                      {viewMode === 'list' ? "Map" : "List"}
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>

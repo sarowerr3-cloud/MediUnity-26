@@ -16,6 +16,8 @@ import {
   ChevronDown
 } from "lucide-react";
 import toast from "react-hot-toast";
+import logo from "../../assets/patient_logo.png";
+import logoAnim from "../../assets/logo_icon_animation.mp4";
 
 const STORAGE_KEY = "doctorToken_v1";
 
@@ -62,15 +64,37 @@ export default function Navbar({ searchVal, setSearchVal, activeTab, setActiveTa
 
   // Fetch Doctor Profile Info
   useEffect(() => {
-    if (!doctorId) return;
-    fetch(`${API_BASE}/api/doctors/${doctorId}`)
-      .then(res => res.json())
-      .then(json => {
-        if (json.success && json.data) {
-          setDoctorInfo(json.data);
+    const token =
+      localStorage.getItem("doctorToken_v1") ||
+      localStorage.getItem("doctor_token") ||
+      localStorage.getItem("doctorToken") ||
+      localStorage.getItem("token") ||
+      "";
+    const headers = token ? { Authorization: `Bearer ${token}` } : {};
+
+    fetch(`${API_BASE}/api/doctors/me?_t=${Date.now()}`, { headers })
+      .then((res) => res.json())
+      .then((json) => {
+        let info = json.doctor || json.data;
+        if (!info && doctorId) {
+          return fetch(`${API_BASE}/api/doctors/${doctorId}?_t=${Date.now()}`, { headers })
+            .then((r) => r.json())
+            .then((dJson) => dJson.data || dJson.doctor);
+        }
+        return info;
+      })
+      .then((info) => {
+        if (info) {
+          if (!info.name || info.name === "Dr. Sarower Rahman") {
+            info.name = "Prof. Dr. Ajit Kumar Paul";
+          }
+          if (!info.imageUrl) {
+            info.imageUrl = "https://images.unsplash.com/photo-1622253692010-333f2da6031d?w=500&auto=format&fit=crop&q=80";
+          }
+          setDoctorInfo(info);
         }
       })
-      .catch(err => console.error(err));
+      .catch((err) => console.error("Navbar fetchDoctorInfo error:", err));
   }, [doctorId, API_BASE]);
 
   // Fetch Notifications
@@ -97,15 +121,19 @@ export default function Navbar({ searchVal, setSearchVal, activeTab, setActiveTa
 
   return (
     <header className="w-full bg-[#111827] border-b border-[#1F2937] px-6 py-3 sticky top-0 z-50 flex items-center justify-between gap-4 font-sans text-white">
-      {/* LEFT: Logo & Brand */}
+      {/* LEFT: MediUnity Logo & Brand */}
       <div className="flex items-center gap-3 shrink-0 cursor-pointer" onClick={() => navigate(basePath)}>
-        <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-sky-600 to-blue-500 flex items-center justify-center font-extrabold text-white text-xs shadow-md shadow-sky-500/20">
-          M-U
+        <div className="w-10 h-10 rounded-xl bg-slate-900 border border-slate-700/80 p-0.5 flex items-center justify-center shadow-md shadow-sky-500/10 overflow-hidden">
+          <img
+            src={logo}
+            alt="MediUnity Logo"
+            className="w-full h-full object-contain scale-105"
+          />
         </div>
-        <div className="flex items-center gap-1.5">
-          <span className="font-bold text-base tracking-tight text-white font-serif">MediUnity</span>
-          <span className="text-slate-500 font-medium">|</span>
-          <span className="text-slate-400 font-semibold text-xs uppercase tracking-wider font-mono">Doctor Platform</span>
+        <div className="flex items-center gap-2">
+          <span className="font-bold text-lg tracking-tight text-white font-serif bg-gradient-to-r from-white via-slate-100 to-sky-300 bg-clip-text text-transparent">MediUnity</span>
+          <span className="text-slate-600 font-medium">|</span>
+          <span className="text-sky-300 font-bold text-[10px] uppercase tracking-wider font-mono bg-sky-950/80 border border-sky-800/60 px-2 py-0.5 rounded-full shadow-xs">Doctor Portal</span>
         </div>
       </div>
 
