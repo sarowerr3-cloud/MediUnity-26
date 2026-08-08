@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { Search, X, Phone, Calendar, MessageSquare, Activity, RefreshCw, FileText, Users } from "lucide-react";
-import { useParams, useLocation } from "react-router-dom";
+import { Search, X, Phone, Calendar, MessageSquare, Activity, RefreshCw, FileText, Users, ArrowLeft } from "lucide-react";
+import { useParams, useLocation, useNavigate } from "react-router-dom";
 import { listPageStyles } from "../../assets/dummyStyles";
 import ChatModal from "../../components/Chat/ChatModal";
 import IntakeSummaryModal from "../../components/IntakeSummary/IntakeSummaryModal";
@@ -322,6 +322,7 @@ function RescheduleButton({ appointment, onReschedule }) {
 
 /* ================= Main Component ================= */
 export default function ListPage() {
+  const navigate = useNavigate();
   const [appointments, setAppointments] = useState([]);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
@@ -657,47 +658,47 @@ export default function ListPage() {
   const renderAppointmentCard = (a) => {
     if (viewMode === 'list') {
       return (
-        <article key={a.id} className="bg-slate-800/40 rounded-xl p-4 flex flex-col md:flex-row items-center gap-6 border border-emerald-500/20 shadow-sm transition-all w-full hover:bg-slate-800/60">
+        <article key={a.id} className="bg-white rounded-2xl p-4 flex flex-col md:flex-row items-center gap-6 border border-slate-200 shadow-xs transition-all w-full hover:bg-slate-50">
           {/* Avatar & Patient Info */}
           <div className="flex items-center gap-4 min-w-[220px] w-full md:w-auto">
-            <div className="w-12 h-12 rounded-full overflow-hidden bg-slate-800/50 border border-emerald-500/30 flex items-center justify-center shrink-0 shadow-[0_0_15px_rgba(16,185,129,0.3)]">
+            <div className="w-12 h-12 rounded-full overflow-hidden bg-slate-100 border border-emerald-500 flex items-center justify-center shrink-0 shadow-xs">
               {a.patientImage ? (
                 <img src={a.patientImage} alt={a.patient} onError={(e) => (e.currentTarget.style.display = "none")} className="w-full h-full object-cover" />
               ) : (
-                <div className="text-emerald-300 font-bold">{(a.patient || "P").charAt(0)}</div>
+                <div className="text-blue-950 font-extrabold">{(a.patient || "P").charAt(0)}</div>
               )}
             </div>
             <div className="min-w-0 flex-1">
-              <div className="text-sm font-bold text-white truncate">{a.patient}</div>
-              <div className="text-xs text-emerald-100/70">{a.age} yrs · {a.gender}</div>
-              <div className="text-xs text-emerald-300 font-medium truncate mt-0.5">{a.speciality}</div>
+              <div className="text-sm font-extrabold text-blue-950 truncate">{a.patient}</div>
+              <div className="text-xs text-slate-700 font-bold">{a.age} yrs &bull; {a.gender}</div>
+              <div className="text-xs text-emerald-800 font-extrabold truncate mt-0.5">{a.speciality}</div>
             </div>
           </div>
           
           {/* Date & Time & Phone */}
-          <div className="flex flex-col min-w-[150px] w-full md:w-auto gap-1 border-l-0 md:border-l border-emerald-500/20 md:pl-6">
-            <div className="text-sm text-emerald-50 font-bold flex items-center gap-1.5"><Calendar className="w-3.5 h-3.5" /> {formatDate(a.date)}</div>
-            <div className="text-xs text-emerald-100/70 ml-5">{formatTimeAMPM(a.time)}</div>
-            <div className="text-xs text-emerald-200/80 font-medium ml-5 flex items-center gap-1 mt-1"><Phone className="w-3 h-3"/> {a.mobile}</div>
+          <div className="flex flex-col min-w-[150px] w-full md:w-auto gap-1 border-l-0 md:border-l border-slate-200 md:pl-6">
+            <div className="text-sm text-slate-900 font-extrabold flex items-center gap-1.5"><Calendar className="w-3.5 h-3.5 text-blue-700" /> {formatDate(a.date)}</div>
+            <div className="text-xs text-slate-700 font-bold ml-5">{formatTimeAMPM(a.time)}</div>
+            <div className="text-xs text-emerald-800 font-bold ml-5 flex items-center gap-1 mt-1"><Phone className="w-3 h-3 text-emerald-700"/> {a.mobile}</div>
           </div>
           
           {/* Status */}
-          <div className="flex flex-col sm:flex-row md:flex-col items-center justify-center min-w-[140px] w-full md:w-auto gap-2 border-l-0 md:border-l border-emerald-500/20 md:pl-6">
+          <div className="flex flex-col sm:flex-row md:flex-col items-center justify-center min-w-[140px] w-full md:w-auto gap-2 border-l-0 md:border-l border-slate-200 md:pl-6">
             <StatusBadge status={a.status} />
             <div className="scale-90 origin-center"><StatusSelect appointment={a} onChange={(s) => updateStatus(a.id, s)} /></div>
           </div>
           
           {/* Reschedule & Actions */}
-          <div className="flex flex-col sm:flex-row items-center justify-end gap-3 w-full md:w-auto ml-auto shrink-0 border-l-0 md:border-l border-emerald-500/20 md:pl-6">
+          <div className="flex flex-col sm:flex-row items-center justify-end gap-3 w-full md:w-auto ml-auto shrink-0 border-l-0 md:border-l border-slate-200 md:pl-6">
             <div className="scale-90 origin-center hidden xl:block">
               <RescheduleButton appointment={a} onReschedule={(d, t) => updateDateTime(a.id, d, t)} />
             </div>
             
             <div className="flex items-center gap-2">
-              <button onClick={() => setSummaryPatientId(a.raw.createdBy || a.raw.patientId || a.raw.owner)} className="p-2.5 bg-blue-50/10 hover:bg-blue-500/30 text-blue-400 rounded-full transition" title="Medical History"><Activity className="w-4 h-4" /></button>
-              {a.status !== "cancelled" && <button onClick={() => setPrescriptionAppt(a)} className="p-2.5 bg-indigo-50/10 hover:bg-indigo-500/30 text-indigo-400 rounded-full transition" title="Write Prescription"><FileText className="w-4 h-4" /></button>}
-              {a.status !== "cancelled" && <button onClick={() => handleOpenChatWithIntake(a)} className="p-2.5 bg-emerald-500/20 hover:bg-emerald-500/40 text-emerald-400 rounded-full transition" title="Telehealth Call"><MessageSquare className="w-4 h-4" /></button>}
-              {a.status !== "cancelled" && <button onClick={() => setReferralAppt(a)} className="p-2.5 bg-amber-50/10 hover:bg-amber-500/30 text-amber-400 rounded-full transition" title="Refer Patient"><Users className="w-4 h-4" /></button>}
+              <button onClick={() => setSummaryPatientId(a.raw.createdBy || a.raw.patientId || a.raw.owner)} className="p-2.5 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-full transition cursor-pointer" title="Medical History"><Activity className="w-4 h-4" /></button>
+              {a.status !== "cancelled" && <button onClick={() => setPrescriptionAppt(a)} className="p-2.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-full transition cursor-pointer" title="Write Prescription"><FileText className="w-4 h-4" /></button>}
+              {a.status !== "cancelled" && <button onClick={() => handleOpenChatWithIntake(a)} className="p-2.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-full transition cursor-pointer" title="Telehealth Call"><MessageSquare className="w-4 h-4" /></button>}
+              {a.status !== "cancelled" && <button onClick={() => setReferralAppt(a)} className="p-2.5 bg-amber-50 hover:bg-amber-100 text-amber-700 rounded-full transition cursor-pointer" title="Refer Patient"><Users className="w-4 h-4" /></button>}
             </div>
           </div>
         </article>
@@ -821,6 +822,12 @@ export default function ListPage() {
       <div className={listPageStyles.contentWrapper}>
         <div className={listPageStyles.headerContainer}>
           <div>
+            <button
+              onClick={() => navigate(-1)}
+              className="mb-3 px-3.5 py-1.5 bg-white border border-slate-300 hover:bg-slate-100 text-slate-800 rounded-full font-bold text-xs flex items-center gap-1.5 transition shadow-xs cursor-pointer"
+            >
+              <ArrowLeft className="w-4 h-4 text-blue-700" /> Back
+            </button>
             <h1 className={listPageStyles.headerTitle}>All Appointments</h1>
             <p className={listPageStyles.headerSubtitle}>
               Latest at top — search by patient name

@@ -454,18 +454,18 @@ export default function DashboardPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#0B0F17] flex items-center justify-center font-sans text-white">
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center font-sans text-slate-800">
         <div className="flex flex-col items-center gap-3">
           <div className="w-10 h-10 border-4 border-sky-500/20 border-t-sky-500 rounded-full animate-spin"></div>
-          <div className="text-sky-400 font-bold uppercase tracking-widest text-xs font-mono">Initializing Doctor Workspace...</div>
+          <div className="text-sky-600 font-bold uppercase tracking-widest text-xs font-mono">Initializing Doctor Workspace...</div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#0B0F17] text-[#F8FAFC] font-sans antialiased">
-      <Toaster position="top-center" />
+    <div className="min-h-screen bg-slate-50 text-slate-800 font-sans antialiased">
+      <Toaster position="top-right" />
 
       {/* TOP HEADER BAR */}
       <Navbar searchVal={searchVal} setSearchVal={setSearchVal} />
@@ -474,15 +474,15 @@ export default function DashboardPage() {
       <div className="flex min-h-[calc(100vh-61px)]">
         
         {/* LEFT SIDEBAR NAVIGATION */}
-        <aside className="w-56 bg-[#111827] border-r border-[#1F2937] p-4 flex flex-col justify-between shrink-0 hidden md:flex">
+        <aside className="w-56 bg-white border-r border-slate-200 p-4 flex flex-col justify-between shrink-0 hidden md:flex">
           <div>
-            <div className="flex items-center gap-2 px-2 py-1.5 mb-3 bg-[#172033] rounded-xl border border-sky-500/20 shadow-xs">
-              <div className="w-6 h-6 rounded-lg bg-slate-900 border border-slate-700/70 p-0.5 shrink-0 overflow-hidden flex items-center justify-center">
+            <div className="flex items-center gap-2 px-2 py-1.5 mb-3 bg-sky-50 rounded-xl border border-sky-200 shadow-xs">
+              <div className="w-6 h-6 rounded-lg bg-white border border-slate-200 p-0.5 shrink-0 overflow-hidden flex items-center justify-center">
                 <img src={logo} alt="MediUnity" className="w-full h-full object-contain" />
               </div>
-              <span className="text-[11px] font-extrabold text-slate-300 font-serif tracking-tight">MediUnity Console</span>
+              <span className="text-[11px] font-extrabold text-slate-800 font-serif tracking-tight">MediUnity Console</span>
             </div>
-            <div className="text-[10px] font-bold text-slate-500 uppercase tracking-widest px-2 mb-2 font-mono">
+            <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-2 mb-2 font-mono">
               Doctor Navigation
             </div>
             <nav className="space-y-1">
@@ -504,11 +504,11 @@ export default function DashboardPage() {
                     }}
                     className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition cursor-pointer ${
                       isActive
-                        ? "bg-[#1D3B5E] text-[#38BDF8] border border-sky-500/30 font-bold shadow-md shadow-sky-500/10"
-                        : "text-slate-400 hover:bg-[#1F2937] hover:text-slate-200"
+                        ? "bg-sky-50 text-sky-700 border border-sky-200 font-bold shadow-xs"
+                        : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
                     }`}
                   >
-                    <Icon className={`w-4 h-4 ${isActive ? "text-[#38BDF8]" : "text-slate-400"}`} />
+                    <Icon className={`w-4 h-4 ${isActive ? "text-sky-600" : "text-slate-400"}`} />
                     <span>{item.name}</span>
                   </button>
                 );
@@ -517,8 +517,8 @@ export default function DashboardPage() {
           </div>
 
           {/* Quick Doctor Profile Card at bottom of sidebar */}
-          <div className="bg-[#151D2A] border border-[#232E42] p-3 rounded-xl flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-sky-500/20 border border-sky-500/30 flex items-center justify-center text-sky-400 font-bold text-xs shrink-0 overflow-hidden">
+          <div className="bg-slate-50 border border-slate-200 p-3 rounded-xl flex items-center gap-3">
+            <div className="w-8 h-8 rounded-lg bg-sky-100 border border-sky-200 flex items-center justify-center text-sky-700 font-bold text-xs shrink-0 overflow-hidden">
               {doctorInfo?.imageUrl ? (
                 <img src={doctorInfo.imageUrl} alt="doc" className="w-full h-full object-cover" />
               ) : (
@@ -526,8 +526,8 @@ export default function DashboardPage() {
               )}
             </div>
             <div className="min-w-0 flex-1">
-              <div className="text-xs font-bold text-slate-200 truncate">{doctorInfo?.name || "Dr. User"}</div>
-              <div className="text-[10px] text-emerald-400 font-mono flex items-center gap-1">
+              <div className="text-xs font-bold text-slate-800 truncate">{doctorInfo?.name || "Dr. User"}</div>
+              <div className="text-[10px] text-emerald-600 font-mono flex items-center gap-1">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping"></span> Active
               </div>
             </div>
@@ -544,27 +544,27 @@ export default function DashboardPage() {
           />
 
           {/* TOP DOCTOR PROFILE HEADER DECK */}
-          <div className="bg-[#151D2A] border border-[#232E42] p-6 rounded-2xl flex flex-col md:flex-row justify-between items-start md:items-center gap-4 shadow-lg">
+          <div className="bg-white border border-slate-200 p-6 rounded-2xl flex flex-col md:flex-row justify-between items-start md:items-center gap-4 shadow-sm">
             <div className="flex items-center gap-4">
-              <div className="w-16 h-16 rounded-2xl overflow-hidden bg-[#1E293B] border border-sky-500/30 flex items-center justify-center shrink-0 shadow-inner">
+              <div className="w-16 h-16 rounded-2xl overflow-hidden bg-sky-50 border border-sky-200 flex items-center justify-center shrink-0 shadow-inner">
                 {doctorInfo?.imageUrl ? (
                   <img src={doctorInfo.imageUrl} alt="doctor" className="w-full h-full object-cover" />
                 ) : (
-                  <span className="text-2xl font-bold text-sky-400 uppercase">{doctorInfo?.name?.[0] || "D"}</span>
+                  <span className="text-2xl font-bold text-sky-600 uppercase">{doctorInfo?.name?.[0] || "D"}</span>
                 )}
               </div>
               <div>
                 <div className="flex items-center gap-2">
-                  <h1 className="text-lg sm:text-xl font-bold text-white font-serif">
+                  <h1 className="text-lg sm:text-xl font-bold text-slate-900 font-serif">
                     {doctorInfo?.name || "Doctor Profile"}
                   </h1>
                   {doctorInfo?.isVerified && (
-                    <span className="flex items-center gap-1 px-2.5 py-0.5 bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 rounded-full text-[9px] font-extrabold uppercase font-mono tracking-wider">
-                      <ShieldCheck className="w-3 h-3" /> VERIFIED
+                    <span className="flex items-center gap-1 px-2.5 py-0.5 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-full text-[9px] font-extrabold uppercase font-mono tracking-wider">
+                      <ShieldCheck className="w-3 h-3 text-emerald-600" /> VERIFIED
                     </span>
                   )}
                 </div>
-                <p className="text-slate-400 text-xs mt-0.5 font-medium flex items-center gap-1">
+                <p className="text-slate-500 text-xs mt-0.5 font-medium flex items-center gap-1">
                   {doctorInfo?.specialization || "General Practitioner"} &bull; BMDC: {doctorInfo?.bmdcNumber || "No registration"}
                 </p>
               </div>
@@ -578,13 +578,13 @@ export default function DashboardPage() {
                   if (dashTab === "posts") fetchDoctorPosts();
                   else if (dashTab === "forum") fetchQnaPosts();
                 }}
-                className="px-4 py-2 bg-[#1E293B] hover:bg-[#2A364F] border border-[#26334D] text-slate-200 rounded-xl font-bold text-xs uppercase tracking-wider flex items-center gap-1.5 transition cursor-pointer"
+                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-700 rounded-xl font-bold text-xs uppercase tracking-wider flex items-center gap-1.5 transition cursor-pointer"
               >
                 <RefreshCw className="w-3.5 h-3.5" /> Refresh Info
               </button>
               <Link
                 to={`/doctor/${doctorId}/profile/edit`}
-                className="px-4 py-2 bg-sky-600 hover:bg-sky-500 text-white rounded-xl font-bold text-xs uppercase tracking-wider transition shadow-md cursor-pointer"
+                className="px-4 py-2 bg-sky-600 hover:bg-sky-500 text-white rounded-xl font-bold text-xs uppercase tracking-wider transition shadow-sm cursor-pointer"
               >
                 Edit Profile
               </Link>
@@ -595,18 +595,18 @@ export default function DashboardPage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             
             {/* Card 1: Total Patients */}
-            <div className="bg-[#151D2A] border border-[#232E42] p-5 rounded-2xl space-y-3 shadow-lg relative overflow-hidden">
+            <div className="bg-white border border-slate-200 p-5 rounded-2xl space-y-3 shadow-sm relative overflow-hidden">
               <div className="flex justify-between items-start">
-                <div className="flex items-center gap-2 text-slate-400 text-xs font-semibold">
-                  <div className="p-2 rounded-xl bg-sky-500/10 text-sky-400">
+                <div className="flex items-center gap-2 text-slate-500 text-xs font-semibold">
+                  <div className="p-2 rounded-xl bg-sky-50 text-sky-600">
                     <Users className="w-4 h-4" />
                   </div>
                   <span>Total Patients</span>
                 </div>
               </div>
               <div className="flex items-baseline justify-between">
-                <div className="text-2xl font-bold text-white font-serif">{totalUniquePatients}</div>
-                <div className="text-xs font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-md border border-emerald-500/20">
+                <div className="text-2xl font-bold text-slate-900 font-serif">{totalUniquePatients}</div>
+                <div className="text-xs font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
                   Real-time
                 </div>
               </div>
@@ -614,18 +614,18 @@ export default function DashboardPage() {
             </div>
 
             {/* Card 2: Total Appointments */}
-            <div className="bg-[#151D2A] border border-[#232E42] p-5 rounded-2xl space-y-3 shadow-lg relative overflow-hidden">
+            <div className="bg-white border border-slate-200 p-5 rounded-2xl space-y-3 shadow-sm relative overflow-hidden">
               <div className="flex justify-between items-start">
-                <div className="flex items-center gap-2 text-slate-400 text-xs font-semibold">
-                  <div className="p-2 rounded-xl bg-emerald-500/10 text-emerald-400">
+                <div className="flex items-center gap-2 text-slate-500 text-xs font-semibold">
+                  <div className="p-2 rounded-xl bg-emerald-50 text-emerald-600">
                     <UserCheck className="w-4 h-4" />
                   </div>
                   <span>Total Appointments</span>
                 </div>
               </div>
               <div className="flex items-baseline justify-between">
-                <div className="text-2xl font-bold text-white font-serif">{appointments.length}</div>
-                <div className="text-xs font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-md border border-emerald-500/20">
+                <div className="text-2xl font-bold text-slate-900 font-serif">{appointments.length}</div>
+                <div className="text-xs font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
                   Real-time
                 </div>
               </div>
@@ -633,18 +633,18 @@ export default function DashboardPage() {
             </div>
 
             {/* Card 3: Published Advice / Articles */}
-            <div className="bg-[#151D2A] border border-[#232E42] p-5 rounded-2xl space-y-3 shadow-lg relative overflow-hidden">
+            <div className="bg-white border border-slate-200 p-5 rounded-2xl space-y-3 shadow-sm relative overflow-hidden">
               <div className="flex justify-between items-start">
-                <div className="flex items-center gap-2 text-slate-400 text-xs font-semibold">
-                  <div className="p-2 rounded-xl bg-sky-500/10 text-sky-400">
+                <div className="flex items-center gap-2 text-slate-500 text-xs font-semibold">
+                  <div className="p-2 rounded-xl bg-sky-50 text-sky-600">
                     <BookOpen className="w-4 h-4" />
                   </div>
                   <span>Published Advice</span>
                 </div>
               </div>
               <div className="flex items-baseline justify-between">
-                <div className="text-2xl font-bold text-white font-serif">{doctorPosts.length}</div>
-                <div className="text-xs font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-md border border-emerald-500/20">
+                <div className="text-2xl font-bold text-slate-900 font-serif">{doctorPosts.length}</div>
+                <div className="text-xs font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
                   Real-time
                 </div>
               </div>
@@ -652,18 +652,18 @@ export default function DashboardPage() {
             </div>
 
             {/* Card 4: Monthly Revenue */}
-            <div className="bg-[#151D2A] border border-[#232E42] p-5 rounded-2xl space-y-3 shadow-lg relative overflow-hidden">
+            <div className="bg-white border border-slate-200 p-5 rounded-2xl space-y-3 shadow-sm relative overflow-hidden">
               <div className="flex justify-between items-start">
-                <div className="flex items-center gap-2 text-slate-400 text-xs font-semibold">
-                  <div className="p-2 rounded-xl bg-emerald-500/10 text-emerald-400">
+                <div className="flex items-center gap-2 text-slate-500 text-xs font-semibold">
+                  <div className="p-2 rounded-xl bg-emerald-50 text-emerald-600">
                     <DollarSign className="w-4 h-4" />
                   </div>
                   <span>Monthly Revenue</span>
                 </div>
               </div>
               <div className="flex items-baseline justify-between">
-                <div className="text-2xl font-bold text-white font-serif">৳{totalRevenue.toLocaleString()}</div>
-                <div className="text-xs font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-md border border-emerald-500/20">
+                <div className="text-2xl font-bold text-slate-900 font-serif">৳{totalRevenue.toLocaleString()}</div>
+                <div className="text-xs font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
                   Real-time
                 </div>
               </div>
@@ -674,21 +674,21 @@ export default function DashboardPage() {
 
           {/* LICENSE AUTO VERIFIER SCANNER CARD */}
           {doctorInfo && (
-            <div className="bg-[#151D2A] border border-[#232E42] rounded-2xl p-5 shadow-lg">
+            <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
               {(doctorInfo.verificationStatus === "Unverified" || doctorInfo.verificationStatus === "Rejected") && (
-                <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-4 flex items-start justify-between gap-4">
+                <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-start justify-between gap-4">
                   <div className="flex items-start gap-3">
-                    <AlertTriangle className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
+                    <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
                     <div>
-                      <h3 className="text-sm font-bold text-amber-300 font-serif">Licensing Verification Required</h3>
-                      <p className="text-xs text-slate-300 mt-1">
+                      <h3 className="text-sm font-bold text-amber-900 font-serif">Licensing Verification Required</h3>
+                      <p className="text-xs text-amber-800 mt-1">
                         Your BMDC credentials must be verified before patients can discover your profile. Upload your registry certificate to activate your account.
                       </p>
                     </div>
                   </div>
                   <Link
                     to={`/doctor/${doctorId}/profile/edit`}
-                    className="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-black font-bold text-xs uppercase tracking-wider rounded-xl shrink-0 transition"
+                    className="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs uppercase tracking-wider rounded-xl shrink-0 transition"
                   >
                     Upload Certificate
                   </Link>
@@ -699,10 +699,10 @@ export default function DashboardPage() {
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <ShieldCheck className="w-5 h-5 text-emerald-400" />
-                      <h3 className="text-sm font-bold text-white font-serif">Auto Registry Verifier</h3>
+                      <ShieldCheck className="w-5 h-5 text-emerald-600" />
+                      <h3 className="text-sm font-bold text-slate-900 font-serif">Auto Registry Verifier</h3>
                     </div>
-                    <span className="text-xs text-slate-400">Run automated certificate check against BMDC registrar.</span>
+                    <span className="text-xs text-slate-500">Run automated certificate check against BMDC registrar.</span>
                   </div>
 
                   {!verifying ? (
@@ -713,19 +713,19 @@ export default function DashboardPage() {
                       ⚡ Start Auto Scan
                     </button>
                   ) : (
-                    <div className="p-4 bg-[#1E293B] border border-[#26334D] rounded-xl space-y-3 font-mono">
-                      <div className="flex justify-between text-xs font-bold text-slate-300">
+                    <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-3 font-mono">
+                      <div className="flex justify-between text-xs font-bold text-slate-700">
                         <span>OCR Scanning:</span>
-                        <span className="text-emerald-400 animate-pulse">Running Scan...</span>
+                        <span className="text-emerald-600 animate-pulse">Running Scan...</span>
                       </div>
-                      <div className="w-full bg-slate-800 h-2 rounded-full overflow-hidden">
+                      <div className="w-full bg-slate-200 h-2 rounded-full overflow-hidden">
                         <div className="bg-emerald-500 h-full transition-all duration-500" style={{ width: `${(verificationStep / 4) * 100}%` }} />
                       </div>
-                      <div className="space-y-1 text-xs text-slate-400">
-                        <div className={verificationStep >= 1 ? "text-emerald-400" : ""}>{verificationStep >= 1 ? "✓" : "○"} Analyze certificate image metadata</div>
-                        <div className={verificationStep >= 2 ? "text-emerald-400" : ""}>{verificationStep >= 2 ? "✓" : "○"} Extract BMDC reg code using OCR</div>
-                        <div className={verificationStep >= 3 ? "text-emerald-400" : ""}>{verificationStep >= 3 ? "✓" : "○"} Query registry database match</div>
-                        <div className={verificationStep >= 4 ? "text-emerald-400" : ""}>{verificationStep >= 4 ? "✓" : "○"} Verified successfully</div>
+                      <div className="space-y-1 text-xs text-slate-600">
+                        <div className={verificationStep >= 1 ? "text-emerald-600 font-bold" : ""}>{verificationStep >= 1 ? "✓" : "○"} Analyze certificate image metadata</div>
+                        <div className={verificationStep >= 2 ? "text-emerald-600 font-bold" : ""}>{verificationStep >= 2 ? "✓" : "○"} Extract BMDC reg code using OCR</div>
+                        <div className={verificationStep >= 3 ? "text-emerald-600 font-bold" : ""}>{verificationStep >= 3 ? "✓" : "○"} Query registry database match</div>
+                        <div className={verificationStep >= 4 ? "text-emerald-600 font-bold" : ""}>{verificationStep >= 4 ? "✓" : "○"} Verified successfully</div>
                       </div>
                     </div>
                   )}
@@ -735,13 +735,13 @@ export default function DashboardPage() {
           )}
 
           {/* TAB NAVIGATION BUTTONS */}
-          <div className="flex gap-2 bg-[#151D2A] border border-[#232E42] p-1.5 rounded-xl overflow-x-auto">
+          <div className="flex gap-2 bg-white border border-slate-200 p-1.5 rounded-xl overflow-x-auto shadow-sm">
             <button
               onClick={() => setDashTab("posts")}
               className={`flex items-center gap-2 px-5 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition cursor-pointer whitespace-nowrap ${
                 dashTab === "posts"
-                  ? "bg-[#1D3B5E] text-[#38BDF8] border border-sky-500/30"
-                  : "text-slate-400 hover:text-white hover:bg-[#1E293B]"
+                  ? "bg-sky-50 text-sky-700 border border-sky-200 shadow-xs"
+                  : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
               }`}
             >
               <FileText className="w-4 h-4" /> My Articles & Feed
@@ -750,8 +750,8 @@ export default function DashboardPage() {
               onClick={() => setDashTab("forum")}
               className={`flex items-center gap-2 px-5 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition cursor-pointer whitespace-nowrap ${
                 dashTab === "forum"
-                  ? "bg-[#1D3B5E] text-[#38BDF8] border border-sky-500/30"
-                  : "text-slate-400 hover:text-white hover:bg-[#1E293B]"
+                  ? "bg-sky-50 text-sky-700 border border-sky-200 shadow-xs"
+                  : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
               }`}
             >
               <HelpCircle className="w-4 h-4" /> Patient Q&A Forum
@@ -760,8 +760,8 @@ export default function DashboardPage() {
               onClick={() => setDashTab("schedule")}
               className={`flex items-center gap-2 px-5 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition cursor-pointer whitespace-nowrap ${
                 dashTab === "schedule"
-                  ? "bg-[#1D3B5E] text-[#38BDF8] border border-sky-500/30"
-                  : "text-slate-400 hover:text-white hover:bg-[#1E293B]"
+                  ? "bg-sky-50 text-sky-700 border border-sky-200 shadow-xs"
+                  : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
               }`}
             >
               <Calendar className="w-4 h-4" /> Full Availability
@@ -770,8 +770,8 @@ export default function DashboardPage() {
               onClick={() => setDashTab("analytics")}
               className={`flex items-center gap-2 px-5 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition cursor-pointer whitespace-nowrap ${
                 dashTab === "analytics"
-                  ? "bg-[#1D3B5E] text-[#38BDF8] border border-sky-500/30"
-                  : "text-slate-400 hover:text-white hover:bg-[#1E293B]"
+                  ? "bg-sky-50 text-sky-700 border border-sky-200 shadow-xs"
+                  : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
               }`}
             >
               <PieChart className="w-4 h-4" /> Analytics & Revenue
@@ -784,26 +784,26 @@ export default function DashboardPage() {
           {dashTab === "posts" && (
             <div className="space-y-6">
               {/* Form Card */}
-              <div className="bg-[#151D2A] border border-[#232E42] p-6 rounded-2xl space-y-4 shadow-lg">
-                <h3 className="text-sm font-bold text-sky-400 uppercase tracking-wide font-serif flex items-center gap-2">
+              <div className="bg-white border border-slate-200 p-6 rounded-2xl space-y-4 shadow-sm">
+                <h3 className="text-sm font-bold text-sky-700 uppercase tracking-wide font-serif flex items-center gap-2">
                   <BookOpen className="w-4 h-4" /> Share Professional Health Advice
                 </h3>
                 <form onSubmit={handleCreatePost} className="space-y-4">
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     <div className="sm:col-span-2">
-                      <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1 font-mono">Article Title</label>
+                      <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1 font-mono">Article Title</label>
                       <input
                         type="text"
-                        className="w-full bg-[#1E293B] border border-[#26334D] rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none focus:border-sky-500"
+                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 text-xs text-slate-800 focus:bg-white focus:outline-none focus:border-sky-500"
                         placeholder="e.g., Tips for Managing High Blood Pressure"
                         value={newPostForm.title}
                         onChange={(e) => setNewPostForm({ ...newPostForm, title: e.target.value })}
                       />
                     </div>
                     <div>
-                      <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1 font-mono">Category</label>
+                      <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1 font-mono">Category</label>
                       <select
-                        className="w-full bg-[#1E293B] border border-[#26334D] rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none focus:border-sky-500"
+                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 text-xs text-slate-800 focus:bg-white focus:outline-none focus:border-sky-500"
                         value={newPostForm.category}
                         onChange={(e) => setNewPostForm({ ...newPostForm, category: e.target.value })}
                       >
@@ -832,10 +832,10 @@ export default function DashboardPage() {
                   </div>
 
                   <div>
-                    <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1 font-mono">Article Body & Guidelines</label>
+                    <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1 font-mono">Article Body & Guidelines</label>
                     <textarea
                       rows={4}
-                      className="w-full bg-[#1E293B] border border-[#26334D] rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none focus:border-sky-500"
+                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 text-xs text-slate-800 focus:bg-white focus:outline-none focus:border-sky-500"
                       placeholder="Provide medical explanations or advice for patients..."
                       value={newPostForm.content}
                       onChange={(e) => setNewPostForm({ ...newPostForm, content: e.target.value })}
@@ -854,24 +854,24 @@ export default function DashboardPage() {
 
               {/* Published Feed */}
               <div className="space-y-4">
-                <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider font-mono">My Published Articles</h3>
-                {loadingPosts && <div className="text-center py-6 text-slate-400 text-xs font-mono">Loading feed...</div>}
+                <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider font-mono">My Published Articles</h3>
+                {loadingPosts && <div className="text-center py-6 text-slate-500 text-xs font-mono">Loading feed...</div>}
                 {!loadingPosts && doctorPosts.length === 0 && (
-                  <div className="p-8 text-center bg-[#151D2A] border border-[#232E42] rounded-2xl text-slate-400 text-xs italic">
+                  <div className="p-8 text-center bg-white border border-slate-200 rounded-2xl text-slate-500 text-xs italic shadow-sm">
                     No social health articles written yet. Use the editor above to share advice!
                   </div>
                 )}
                 {!loadingPosts && doctorPosts.map((post) => (
-                  <div key={post._id} className="bg-[#151D2A] border border-[#232E42] rounded-2xl p-5 space-y-3 shadow-md relative">
+                  <div key={post._id} className="bg-white border border-slate-200 rounded-2xl p-5 space-y-3 shadow-sm relative">
                     <div className="flex justify-between items-center text-[11px]">
-                      <span className="px-3 py-1 bg-sky-500/20 text-sky-300 border border-sky-500/30 rounded-full font-bold uppercase font-mono">
+                      <span className="px-3 py-1 bg-sky-50 text-sky-700 border border-sky-200 rounded-full font-bold uppercase font-mono">
                         {getCategoryEmoji(post.category)} {post.category}
                       </span>
                       <div className="flex items-center gap-3">
-                        <span className="text-slate-400">{new Date(post.createdAt).toLocaleDateString()}</span>
+                        <span className="text-slate-500">{new Date(post.createdAt).toLocaleDateString()}</span>
                         <button
                           onClick={() => handleDeletePost(post._id)}
-                          className="p-1.5 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 rounded-lg transition cursor-pointer"
+                          className="p-1.5 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-lg transition cursor-pointer"
                           title="Delete"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
@@ -879,10 +879,10 @@ export default function DashboardPage() {
                       </div>
                     </div>
                     <div>
-                      <h4 className="font-bold text-white text-base font-serif">{post.title}</h4>
-                      <p className="text-xs text-slate-300 mt-2 leading-relaxed whitespace-pre-line">{post.content}</p>
+                      <h4 className="font-bold text-slate-900 text-base font-serif">{post.title}</h4>
+                      <p className="text-xs text-slate-700 mt-2 leading-relaxed whitespace-pre-line">{post.content}</p>
                     </div>
-                    <div className="flex items-center gap-4 text-[11px] font-bold text-slate-400 pt-3 border-t border-[#232E42]">
+                    <div className="flex items-center gap-4 text-[11px] font-bold text-slate-500 pt-3 border-t border-slate-100">
                       <span>👍 {post.likes?.length || 0} Likes</span>
                       <span>💬 {post.comments?.length || 0} Comments</span>
                     </div>
@@ -895,50 +895,50 @@ export default function DashboardPage() {
           {/* TAB 2: PATIENT Q&A FORUM */}
           {dashTab === "forum" && (
             <div className="space-y-6">
-              <div className="bg-[#151D2A] border border-[#232E42] p-5 rounded-2xl flex items-center justify-between">
+              <div className="bg-white border border-slate-200 p-5 rounded-2xl flex items-center justify-between shadow-sm">
                 <div>
-                  <h3 className="text-sm font-bold text-white font-serif">Community Forum Queries</h3>
-                  <p className="text-xs text-slate-400 mt-0.5">Answer health questions submitted by patients to grow your reputation.</p>
+                  <h3 className="text-sm font-bold text-slate-900 font-serif">Community Forum Queries</h3>
+                  <p className="text-xs text-slate-500 mt-0.5">Answer health questions submitted by patients to grow your reputation.</p>
                 </div>
-                <Link to="/forum" className="text-xs font-bold text-sky-400 hover:underline flex items-center gap-1 uppercase tracking-wider font-mono">
+                <Link to="/forum" className="text-xs font-bold text-sky-600 hover:underline flex items-center gap-1 uppercase tracking-wider font-mono">
                   Go to Forum <ChevronRight className="w-4 h-4" />
                 </Link>
               </div>
 
-              {loadingQna && <div className="text-center py-6 text-slate-400 text-xs font-mono">Loading queries...</div>}
+              {loadingQna && <div className="text-center py-6 text-slate-500 text-xs font-mono">Loading queries...</div>}
               {!loadingQna && qnaPosts.length === 0 && (
-                <div className="p-8 text-center bg-[#151D2A] border border-[#232E42] rounded-2xl text-slate-400 text-xs italic">
+                <div className="p-8 text-center bg-white border border-slate-200 rounded-2xl text-slate-500 text-xs italic shadow-sm">
                   No active patient queries on the forum. Check back later!
                 </div>
               )}
 
               {!loadingQna && qnaPosts.map((post) => (
-                <div key={post._id} className="bg-[#151D2A] border border-[#232E42] rounded-2xl p-5 space-y-4">
+                <div key={post._id} className="bg-white border border-slate-200 rounded-2xl p-5 space-y-4 shadow-sm">
                   <div className="flex justify-between items-center text-[11px]">
-                    <span className="px-3 py-1 bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 rounded-full font-bold uppercase font-mono">
+                    <span className="px-3 py-1 bg-indigo-50 text-indigo-700 border border-indigo-200 rounded-full font-bold uppercase font-mono">
                       {getCategoryEmoji(post.category)} {post.category}
                     </span>
-                    <span className="text-slate-400">Asked {new Date(post.createdAt).toLocaleDateString()}</span>
+                    <span className="text-slate-500">Asked {new Date(post.createdAt).toLocaleDateString()}</span>
                   </div>
                   <div>
-                    <h4 className="font-bold text-white text-sm font-serif">{post.title}</h4>
-                    <p className="text-xs text-slate-300 mt-1 leading-relaxed">{post.content}</p>
+                    <h4 className="font-bold text-slate-900 text-sm font-serif">{post.title}</h4>
+                    <p className="text-xs text-slate-700 mt-1 leading-relaxed">{post.content}</p>
                   </div>
 
-                  <div className="bg-[#1E293B]/60 border border-[#26334D] rounded-xl p-4 space-y-3">
-                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest font-mono block">Previous Responses</span>
+                  <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-3">
+                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest font-mono block">Previous Responses</span>
                     {(post.comments || []).length === 0 ? (
-                      <p className="text-xs text-slate-400 italic">No answers yet. Advise this patient below.</p>
+                      <p className="text-xs text-slate-500 italic">No answers yet. Advise this patient below.</p>
                     ) : (
                       post.comments.map((comm) => (
-                        <div key={comm._id} className="border-b border-[#26334D] pb-2 last:pb-0 last:border-0">
+                        <div key={comm._id} className="border-b border-slate-200 pb-2 last:pb-0 last:border-0">
                           <div className="flex justify-between text-[11px] font-bold mb-0.5">
-                            <span className={comm.authorRole === "doctor" ? "text-sky-400" : "text-slate-300"}>
+                            <span className={comm.authorRole === "doctor" ? "text-sky-700 font-bold" : "text-slate-700"}>
                               {comm.authorName} {comm.authorRole === "doctor" && "(Verified Doctor)"}
                             </span>
-                            <span className="text-slate-500 font-normal">{new Date(comm.createdAt).toLocaleDateString()}</span>
+                            <span className="text-slate-400 font-normal">{new Date(comm.createdAt).toLocaleDateString()}</span>
                           </div>
-                          <p className="text-xs text-slate-300">{comm.content}</p>
+                          <p className="text-xs text-slate-700">{comm.content}</p>
                         </div>
                       ))
                     )}
@@ -947,7 +947,7 @@ export default function DashboardPage() {
                   <div className="flex gap-2">
                     <input
                       type="text"
-                      className="flex-1 bg-[#1E293B] border border-[#26334D] rounded-xl px-4 py-2 text-xs text-white focus:outline-none focus:border-sky-500"
+                      className="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 text-xs text-slate-800 focus:bg-white focus:outline-none focus:border-sky-500"
                       placeholder="Provide professional advice..."
                       value={answerTexts[post._id] || ""}
                       onChange={(e) => setAnswerTexts({ ...answerTexts, [post._id]: e.target.value })}
@@ -968,10 +968,10 @@ export default function DashboardPage() {
           {/* TAB 3: FULL AVAILABILITY SCHEDULE */}
           {dashTab === "schedule" && (
             <div className="space-y-6">
-              <div className="bg-[#151D2A] border border-[#232E42] p-5 rounded-2xl flex items-center justify-between">
+              <div className="bg-white border border-slate-200 p-5 rounded-2xl flex items-center justify-between shadow-sm">
                 <div>
-                  <h3 className="text-sm font-bold text-white font-serif">Availability & Schedule Overview</h3>
-                  <p className="text-xs text-slate-400 mt-0.5">Daily templates, active overrides, and vacation blackout dates.</p>
+                  <h3 className="text-sm font-bold text-slate-900 font-serif">Availability & Schedule Overview</h3>
+                  <p className="text-xs text-slate-500 mt-0.5">Daily templates, active overrides, and vacation blackout dates.</p>
                 </div>
                 <Link
                   to={`/doctor/${doctorId}/schedule`}
@@ -981,17 +981,17 @@ export default function DashboardPage() {
                 </Link>
               </div>
 
-              <div className="bg-[#151D2A] border border-[#232E42] rounded-2xl p-5 space-y-6">
+              <div className="bg-white border border-slate-200 rounded-2xl p-5 space-y-6 shadow-sm">
                 <div>
-                  <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest font-mono flex items-center gap-2 mb-3">
-                    <Clock className="w-4 h-4 text-sky-400" /> Daily Template Slots
+                  <h4 className="text-xs font-bold text-slate-500 uppercase tracking-widest font-mono flex items-center gap-2 mb-3">
+                    <Clock className="w-4 h-4 text-sky-600" /> Daily Template Slots
                   </h4>
                   {!doctorInfo?.recurringSlots || doctorInfo.recurringSlots.length === 0 ? (
-                    <p className="text-xs text-slate-400 italic">No recurring template slots configured.</p>
+                    <p className="text-xs text-slate-500 italic">No recurring template slots configured.</p>
                   ) : (
                     <div className="flex flex-wrap gap-2">
                       {doctorInfo.recurringSlots.map((slot, idx) => (
-                        <span key={idx} className="px-3 py-1 bg-sky-500/20 text-sky-300 border border-sky-500/30 text-xs font-bold rounded-full font-mono">
+                        <span key={idx} className="px-3 py-1 bg-sky-50 text-sky-700 border border-sky-200 text-xs font-bold rounded-full font-mono">
                           {slot}
                         </span>
                       ))}
@@ -999,12 +999,12 @@ export default function DashboardPage() {
                   )}
                 </div>
 
-                <div className="pt-4 border-t border-[#232E42]">
-                  <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest font-mono flex items-center gap-2 mb-3">
-                    <Calendar className="w-4 h-4 text-emerald-400" /> Scheduled Availability Calendar
+                <div className="pt-4 border-t border-slate-100">
+                  <h4 className="text-xs font-bold text-slate-500 uppercase tracking-widest font-mono flex items-center gap-2 mb-3">
+                    <Calendar className="w-4 h-4 text-emerald-600" /> Scheduled Availability Calendar
                   </h4>
                   {!doctorInfo?.schedule || Object.keys(doctorInfo.schedule).length === 0 ? (
-                    <p className="text-xs text-slate-400 italic">No active dates configured.</p>
+                    <p className="text-xs text-slate-500 italic">No active dates configured.</p>
                   ) : (
                     <div className="space-y-2.5 max-h-96 overflow-y-auto pr-1">
                       {Object.entries(doctorInfo.schedule)
@@ -1013,23 +1013,23 @@ export default function DashboardPage() {
                           const limit = doctorInfo.maxPatientsPerDay?.[date];
                           const hospital = doctorInfo.slotHospitals?.[date];
                           return (
-                            <div key={date} className="p-3 bg-[#1E293B]/60 border border-[#26334D] rounded-xl flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
+                            <div key={date} className="p-3 bg-slate-50 border border-slate-200 rounded-xl flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
                               <div>
-                                <div className="font-bold text-xs text-white">
+                                <div className="font-bold text-xs text-slate-900">
                                   {new Date(date).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })}
                                 </div>
-                                <div className="text-[10px] text-slate-400 font-mono">{date}</div>
+                                <div className="text-[10px] text-slate-500 font-mono">{date}</div>
                               </div>
                               <div className="flex flex-wrap gap-1.5 max-w-sm">
                                 {slots.map((s) => (
-                                  <span key={s} className="px-2 py-0.5 bg-[#0B0F17] border border-[#232E42] text-[10px] font-bold rounded text-slate-200 font-mono">
+                                  <span key={s} className="px-2 py-0.5 bg-white border border-slate-200 text-[10px] font-bold rounded text-slate-700 font-mono shadow-xs">
                                     {s}
                                   </span>
                                 ))}
                               </div>
-                              <div className="text-right text-[10px] font-bold text-slate-400 font-mono uppercase">
-                                {limit !== undefined && <div>Limit: <span className="text-sky-400">{limit} pts</span></div>}
-                                {hospital?.name && <div>Loc: <span className="text-emerald-400">{hospital.name}</span></div>}
+                              <div className="text-right text-[10px] font-bold text-slate-500 font-mono uppercase">
+                                {limit !== undefined && <div>Limit: <span className="text-sky-600">{limit} pts</span></div>}
+                                {hospital?.name && <div>Loc: <span className="text-emerald-600">{hospital.name}</span></div>}
                               </div>
                             </div>
                           );
@@ -1050,14 +1050,14 @@ export default function DashboardPage() {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             
             {/* LEFT 2 COLS: UPCOMING PATIENT APPOINTMENTS QUEUE */}
-            <div className="lg:col-span-2 bg-[#151D2A] border border-[#232E42] rounded-2xl p-5 space-y-4 shadow-lg">
-              <div className="flex justify-between items-center pb-2 border-b border-[#1F2937]">
-                <h3 className="text-sm font-bold text-white font-serif flex items-center gap-2">
-                  <Calendar className="w-4 h-4 text-sky-400" /> Upcoming Patient Appointments
+            <div className="lg:col-span-2 bg-white border border-slate-200 rounded-2xl p-5 space-y-4 shadow-sm">
+              <div className="flex justify-between items-center pb-2 border-b border-slate-100">
+                <h3 className="text-sm font-bold text-slate-900 font-serif flex items-center gap-2">
+                  <Calendar className="w-4 h-4 text-sky-600" /> Upcoming Patient Appointments
                 </h3>
                 <button
                   onClick={fetchDoctorAppointments}
-                  className="p-1.5 rounded-lg bg-[#1F2937] hover:bg-[#374151] text-slate-300 text-xs flex items-center gap-1 cursor-pointer transition font-mono"
+                  className="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs flex items-center gap-1 cursor-pointer transition font-mono"
                 >
                   <RefreshCw className="w-3.5 h-3.5" /> Refresh
                 </button>
@@ -1066,7 +1066,7 @@ export default function DashboardPage() {
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-xs font-sans">
                   <thead>
-                    <tr className="border-b border-[#232E42] text-slate-400 font-semibold">
+                    <tr className="border-b border-slate-200 text-slate-500 font-semibold">
                       <th className="pb-3 pt-1 font-mono uppercase text-[10px]">Patient Name</th>
                       <th className="pb-3 pt-1 font-mono uppercase text-[10px]">Type</th>
                       <th className="pb-3 pt-1 font-mono uppercase text-[10px]">Date & Time</th>
@@ -1074,20 +1074,20 @@ export default function DashboardPage() {
                       <th className="pb-3 pt-1 font-mono uppercase text-[10px] text-right">Actions</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-[#1F2937]">
+                  <tbody className="divide-y divide-slate-100">
                     {appointments.length > 0 ? (
                       appointments.slice(0, 6).map((appt) => (
-                        <tr key={appt._id} className="hover:bg-[#1E293B]/40 transition">
-                          <td className="py-3 font-semibold text-slate-200">{appt.patientName || appt.userName || appt.patient || "Patient User"}</td>
-                          <td className="py-3 text-slate-400">{appt.serviceName || appt.speciality || "Consultation"}</td>
-                          <td className="py-3 text-slate-400 font-mono">
+                        <tr key={appt._id} className="hover:bg-slate-50 transition">
+                          <td className="py-3 font-semibold text-slate-800">{appt.patientName || appt.userName || appt.patient || "Patient User"}</td>
+                          <td className="py-3 text-slate-600">{appt.serviceName || appt.speciality || "Consultation"}</td>
+                          <td className="py-3 text-slate-600 font-mono">
                             {appt.date || "Today"} {appt.time ? `(${appt.time})` : ""}
                           </td>
                           <td className="py-3">
                             <span className={`px-2.5 py-1 rounded-md text-[10px] font-bold font-mono ${
-                              appt.status === "Approved" || appt.status === "Confirmed" ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30" :
-                              appt.status === "Cancelled" || appt.status === "Rejected" || appt.status === "Canceled" ? "bg-rose-500/20 text-rose-400 border border-rose-500/30" :
-                              "bg-amber-500/20 text-amber-400 border border-amber-500/30"
+                              appt.status === "Approved" || appt.status === "Confirmed" ? "bg-emerald-50 text-emerald-700 border border-emerald-200" :
+                              appt.status === "Cancelled" || appt.status === "Rejected" || appt.status === "Canceled" ? "bg-rose-50 text-rose-700 border border-rose-200" :
+                              "bg-amber-50 text-amber-700 border border-amber-200"
                             }`}>
                               {appt.status || "Pending"}
                             </span>
@@ -1096,7 +1096,7 @@ export default function DashboardPage() {
                             <div className="flex items-center justify-end gap-1.5">
                               <button
                                 onClick={() => setPrescriptionAppt(appt)}
-                                className="px-2.5 py-1 bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-300 border border-indigo-500/30 font-bold text-[10px] rounded-lg transition cursor-pointer flex items-center gap-1"
+                                className="px-2.5 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 font-bold text-[10px] rounded-lg transition cursor-pointer flex items-center gap-1"
                                 title="Write Prescription"
                               >
                                 <FileText className="w-3 h-3" /> Write Rx
@@ -1109,7 +1109,7 @@ export default function DashboardPage() {
                               </button>
                               <button
                                 onClick={() => handleUpdateStatus(appt._id, "Cancelled")}
-                                className="px-2.5 py-1 border border-rose-500/50 hover:bg-rose-500/20 text-rose-400 font-bold text-[10px] rounded-lg transition cursor-pointer"
+                                className="px-2.5 py-1 border border-rose-200 hover:bg-rose-50 text-rose-600 font-bold text-[10px] rounded-lg transition cursor-pointer"
                               >
                                 Reject
                               </button>
@@ -1119,7 +1119,7 @@ export default function DashboardPage() {
                       ))
                     ) : (
                       <tr>
-                        <td colSpan={5} className="py-8 text-center text-slate-400 italic text-xs">
+                        <td colSpan={5} className="py-8 text-center text-slate-500 italic text-xs">
                           No upcoming appointments booked yet.
                         </td>
                       </tr>
@@ -1130,76 +1130,76 @@ export default function DashboardPage() {
             </div>
 
             {/* RIGHT 1 COL: QUICK CLINICAL ACTIONS */}
-            <div className="lg:col-span-1 bg-[#151D2A] border border-[#232E42] rounded-2xl p-5 space-y-4 shadow-lg">
-              <div className="flex justify-between items-center pb-2 border-b border-[#1F2937]">
-                <h3 className="text-sm font-bold text-white font-serif flex items-center gap-2">
-                  <Zap className="w-4 h-4 text-amber-400" /> Quick Clinical Actions
+            <div className="lg:col-span-1 bg-white border border-slate-200 rounded-2xl p-5 space-y-4 shadow-sm">
+              <div className="flex justify-between items-center pb-2 border-b border-slate-100">
+                <h3 className="text-sm font-bold text-slate-900 font-serif flex items-center gap-2">
+                  <Zap className="w-4 h-4 text-amber-600" /> Quick Clinical Actions
                 </h3>
               </div>
 
               <div className="space-y-3">
                 <button
                   onClick={() => navigate(`/doctor/${doctorId}/appointments`)}
-                  className="w-full p-3 bg-[#1E293B]/60 hover:bg-[#1E293B] border border-[#26334D] rounded-xl flex items-center justify-between transition cursor-pointer group"
+                  className="w-full p-3 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl flex items-center justify-between transition cursor-pointer group"
                 >
                   <div className="flex items-center gap-3">
-                    <div className="p-2 rounded-lg bg-sky-500/10 text-sky-400 group-hover:bg-sky-500/20">
+                    <div className="p-2 rounded-lg bg-sky-100 text-sky-700 group-hover:bg-sky-200">
                       <Calendar className="w-4 h-4" />
                     </div>
                     <div className="text-left">
-                      <div className="text-xs font-bold text-white">Appointments List</div>
-                      <div className="text-[10px] text-slate-400">View & manage all patient bookings</div>
+                      <div className="text-xs font-bold text-slate-900">Appointments List</div>
+                      <div className="text-[10px] text-slate-500">View & manage all patient bookings</div>
                     </div>
                   </div>
-                  <ChevronRight className="w-4 h-4 text-slate-500 group-hover:text-sky-400 transition" />
+                  <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-sky-600 transition" />
                 </button>
 
                 <button
                   onClick={() => navigate(`/doctor/${doctorId}/schedule`)}
-                  className="w-full p-3 bg-[#1E293B]/60 hover:bg-[#1E293B] border border-[#26334D] rounded-xl flex items-center justify-between transition cursor-pointer group"
+                  className="w-full p-3 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl flex items-center justify-between transition cursor-pointer group"
                 >
                   <div className="flex items-center gap-3">
-                    <div className="p-2 rounded-lg bg-emerald-500/10 text-emerald-400 group-hover:bg-emerald-500/20">
+                    <div className="p-2 rounded-lg bg-emerald-100 text-emerald-700 group-hover:bg-emerald-200">
                       <Clock className="w-4 h-4" />
                     </div>
                     <div className="text-left">
-                      <div className="text-xs font-bold text-white">Schedule Manager</div>
-                      <div className="text-[10px] text-slate-400">Set availability & slot limits</div>
+                      <div className="text-xs font-bold text-slate-900">Schedule Manager</div>
+                      <div className="text-[10px] text-slate-500">Set availability & slot limits</div>
                     </div>
                   </div>
-                  <ChevronRight className="w-4 h-4 text-slate-500 group-hover:text-emerald-400 transition" />
+                  <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-emerald-600 transition" />
                 </button>
 
                 <button
                   onClick={() => setDashTab("posts")}
-                  className="w-full p-3 bg-[#1E293B]/60 hover:bg-[#1E293B] border border-[#26334D] rounded-xl flex items-center justify-between transition cursor-pointer group"
+                  className="w-full p-3 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl flex items-center justify-between transition cursor-pointer group"
                 >
                   <div className="flex items-center gap-3">
-                    <div className="p-2 rounded-lg bg-indigo-500/10 text-indigo-400 group-hover:bg-indigo-500/20">
+                    <div className="p-2 rounded-lg bg-indigo-100 text-indigo-700 group-hover:bg-indigo-200">
                       <FileText className="w-4 h-4" />
                     </div>
                     <div className="text-left">
-                      <div className="text-xs font-bold text-white">Publish Advice Article</div>
-                      <div className="text-[10px] text-slate-400">Share health guides with patients</div>
+                      <div className="text-xs font-bold text-slate-900">Publish Advice Article</div>
+                      <div className="text-[10px] text-slate-500">Share health guides with patients</div>
                     </div>
                   </div>
-                  <ChevronRight className="w-4 h-4 text-slate-500 group-hover:text-indigo-400 transition" />
+                  <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-indigo-600 transition" />
                 </button>
 
                 <button
                   onClick={() => navigate(`/doctor/${doctorId}/profile/edit`)}
-                  className="w-full p-3 bg-[#1E293B]/60 hover:bg-[#1E293B] border border-[#26334D] rounded-xl flex items-center justify-between transition cursor-pointer group"
+                  className="w-full p-3 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl flex items-center justify-between transition cursor-pointer group"
                 >
                   <div className="flex items-center gap-3">
-                    <div className="p-2 rounded-lg bg-amber-500/10 text-amber-400 group-hover:bg-amber-500/20">
+                    <div className="p-2 rounded-lg bg-amber-100 text-amber-700 group-hover:bg-amber-200">
                       <Settings className="w-4 h-4" />
                     </div>
                     <div className="text-left">
-                      <div className="text-xs font-bold text-white">Profile & Chamber Settings</div>
-                      <div className="text-[10px] text-slate-400">Update fees, photo & BMDC info</div>
+                      <div className="text-xs font-bold text-slate-900">Profile & Chamber Settings</div>
+                      <div className="text-[10px] text-slate-500">Update fees, photo & BMDC info</div>
                     </div>
                   </div>
-                  <ChevronRight className="w-4 h-4 text-slate-500 group-hover:text-amber-400 transition" />
+                  <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-amber-600 transition" />
                 </button>
               </div>
             </div>
@@ -1207,33 +1207,33 @@ export default function DashboardPage() {
           </div>
 
           {/* BOTTOM WIDE SECTION: RECENT CLINICAL ACTIVITY */}
-          <div className="bg-[#151D2A] border border-[#232E42] rounded-2xl p-5 space-y-4 shadow-lg">
-            <div className="flex justify-between items-center pb-2 border-b border-[#1F2937]">
-              <h3 className="text-sm font-bold text-white font-serif flex items-center gap-2">
-                <Activity className="w-4 h-4 text-sky-400" /> Recent Published Health Advice & Activity
+          <div className="bg-white border border-slate-200 rounded-2xl p-5 space-y-4 shadow-sm">
+            <div className="flex justify-between items-center pb-2 border-b border-slate-100">
+              <h3 className="text-sm font-bold text-slate-900 font-serif flex items-center gap-2">
+                <Activity className="w-4 h-4 text-sky-600" /> Recent Published Health Advice & Activity
               </h3>
             </div>
 
             <div className="space-y-3">
               {doctorPosts.length > 0 ? (
                 doctorPosts.slice(0, 3).map((post) => (
-                  <div key={post._id} className="p-3.5 bg-[#1E293B]/50 border border-[#26334D] rounded-xl flex items-center justify-between text-xs">
+                  <div key={post._id} className="p-3.5 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between text-xs">
                     <div className="flex items-center gap-3">
-                      <div className="p-2 bg-sky-500/10 text-sky-400 rounded-lg">
+                      <div className="p-2 bg-sky-100 text-sky-700 rounded-lg">
                         <FileText className="w-4 h-4" />
                       </div>
                       <div>
-                        <div className="font-bold text-white">{post.title}</div>
-                        <div className="text-[10px] text-slate-400 mt-0.5">Category: {post.category} &bull; Published: {new Date(post.createdAt).toLocaleDateString()}</div>
+                        <div className="font-bold text-slate-900">{post.title}</div>
+                        <div className="text-[10px] text-slate-500 mt-0.5">Category: {post.category} &bull; Published: {new Date(post.createdAt).toLocaleDateString()}</div>
                       </div>
                     </div>
-                    <div className="text-right text-slate-400 font-mono text-[11px]">
+                    <div className="text-right text-slate-500 font-mono text-[11px]">
                       {post.likes?.length || 0} Likes &bull; {post.comments?.length || 0} Comments
                     </div>
                   </div>
                 ))
               ) : (
-                <div className="py-6 text-center text-slate-400 italic text-xs">
+                <div className="py-6 text-center text-slate-500 italic text-xs">
                   No recent articles published yet.
                 </div>
               )}

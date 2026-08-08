@@ -10,19 +10,19 @@
   --font-mono: 'Space Grotesk', sans-serif;
 }
 
-/* ── Doctor Portal Theme (Dark Sleek Admin/Doctor Dashboard Aesthetic) ── */
+/* ── Doctor Portal Theme (Light Modern Clinical Dashboard Aesthetic) ── */
 :root, .theme-doctor {
-  --med-bg-main: #0B0F17;
-  --med-card-bg: #151D2A;
-  --med-card-border: #232E42;
-  --med-accent-blue: #38BDF8;
-  --med-accent-green: #10B981;
-  --med-nav-active: #1D3B5E;
+  --med-bg-main: #F8FAFC;
+  --med-card-bg: #FFFFFF;
+  --med-card-border: #E2E8F0;
+  --med-accent-blue: #0284C7;
+  --med-accent-green: #059669;
+  --med-nav-active: #E0F2FE;
 }
 
 body.theme-doctor, html.theme-doctor, .theme-doctor {
-  background-color: #0B0F17 !important;
-  color: #F8FAFC !important;
+  background-color: #F8FAFC !important;
+  color: #0F172A !important;
 }
 
 /* Remove unwanted legacy transparent/glowing forced hacks */
@@ -30,30 +30,31 @@ body.theme-doctor, html.theme-doctor, .theme-doctor {
 .theme-doctor .glass-panel,
 .theme-doctor article,
 .theme-doctor .stat-card {
-  background-color: #151D2A !important;
-  border: 1px solid #232E42 !important;
+  background-color: #FFFFFF !important;
+  border: 1px solid #E2E8F0 !important;
   border-radius: 1rem !important;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05) !important;
 }
 
 /* Doctor Navbar & Card Panels */
 .doctor-dashboard-panel {
-  background-color: #151D2A;
-  border: 1px solid #232E42;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+  background-color: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
 }
 
 .doctor-nav-item-active {
-  background-color: #1D3B5E;
-  color: #38BDF8;
+  background-color: #E0F2FE;
+  color: #0369A1;
   font-weight: 700;
 }
 
 .doctor-nav-item-inactive {
-  color: #94A3B8;
+  color: #475569;
 }
 .doctor-nav-item-inactive:hover {
-  background-color: #1E293B;
-  color: #F8FAFC;
+  background-color: #F1F5F9;
+  color: #0F172A;
 }
 
 /* Apply Plus Jakarta Sans universally */

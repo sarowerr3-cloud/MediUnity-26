@@ -17,7 +17,7 @@ import AdminHeader from "../components/AdminHeader";
 import { useAdminAuth } from "../context/AdminAuthContext";
 
 const AdminDashboard = () => {
-  const { API_BASE_URL } = useAdminAuth();
+  const { API_BASE_URL, adminToken } = useAdminAuth();
   const [stats, setStats] = useState(null);
   const [pendingPartners, setPendingPartners] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -27,20 +27,33 @@ const AdminDashboard = () => {
     try {
       setLoading(true);
       setError("");
-      const [statsRes, partnersRes] = await Promise.all([
-        axios.get(`${API_BASE_URL}/api/admin/dashboard-stats`),
-        axios.get(`${API_BASE_URL}/api/admin/partner-verifications`),
+
+      const token = adminToken || localStorage.getItem("adminToken");
+      const config = token ? { headers: { Authorization: `Bearer ${token}` } } : {};
+
+      const [statsResult, partnersResult] = await Promise.allSettled([
+        axios.get(`${API_BASE_URL}/api/admin/dashboard-stats`, config),
+        axios.get(`${API_BASE_URL}/api/admin/partner-verifications`, config),
       ]);
 
-      if (statsRes.data.success) {
-        setStats(statsRes.data.stats);
+      let loadedStats = null;
+      if (statsResult.status === "fulfilled" && statsResult.value.data?.success) {
+        loadedStats = statsResult.value.data.stats;
+        setStats(loadedStats);
+      } else {
+        const statsErrMsg = statsResult.reason?.response?.data?.message || statsResult.reason?.message || "Failed to load dashboard telemetry";
+        console.error("Dashboard stats error:", statsErrMsg);
+        setError(statsErrMsg);
       }
-      if (partnersRes.data.success) {
-        setPendingPartners(partnersRes.data.data);
+
+      if (partnersResult.status === "fulfilled" && partnersResult.value.data?.success) {
+        setPendingPartners(partnersResult.value.data.data);
+      } else {
+        setPendingPartners({ hospitals: [], diagnostics: [], pharmacies: [] });
       }
     } catch (err) {
       console.error("Error loading admin dashboard:", err);
-      setError("Failed to fetch administrative statistics.");
+      setError(err?.response?.data?.message || err.message || "Failed to fetch administrative statistics.");
     } finally {
       setLoading(false);
     }

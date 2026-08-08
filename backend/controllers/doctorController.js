@@ -982,14 +982,24 @@ export async function uploadCertificate(req, res) {
 export async function approveDoctorVerification(req, res) {
   try {
     const { id } = req.params;
-    const { status } = req.body || {}; // "Verified" or "Rejected"
+    const { isVerified, verificationStatus, status } = req.body || {};
 
-    const newStatus = status === "Rejected" ? "Rejected" : "Verified";
-    const isVerified = newStatus === "Verified";
+    let targetStatus;
+    if (verificationStatus) {
+      targetStatus = verificationStatus;
+    } else if (status) {
+      targetStatus = status === "Rejected" ? "Rejected" : "Verified";
+    } else if (isVerified !== undefined) {
+      targetStatus = isVerified ? "Verified" : "Unverified";
+    } else {
+      targetStatus = "Verified";
+    }
+
+    const verifiedBool = targetStatus === "Verified";
 
     const doc = await Doctor.findByIdAndUpdate(
       id,
-      { verificationStatus: newStatus, isVerified },
+      { isVerified: verifiedBool, verificationStatus: targetStatus },
       { new: true }
     );
 
@@ -997,7 +1007,12 @@ export async function approveDoctorVerification(req, res) {
 
     const out = normalizeDocForClient(doc.toObject());
     delete out.password;
-    return res.json({ success: true, data: out });
+    return res.json({
+      success: true,
+      message: "Doctor verification status updated",
+      doctor: out,
+      data: out
+    });
   } catch (err) {
     console.error("approveDoctorVerification error:", err);
     return res.status(500).json({ success: false, message: "Server error" });
@@ -1537,4 +1552,3 @@ export async function getDoctorAnalytics(req, res) {
     return res.status(500).json({ success: false, message: "Server error" });
   }
 }
-

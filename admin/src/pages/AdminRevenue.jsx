@@ -5,14 +5,16 @@ import AdminHeader from "../components/AdminHeader";
 import { useAdminAuth } from "../context/AdminAuthContext";
 
 const AdminRevenue = () => {
-  const { API_BASE_URL } = useAdminAuth();
+  const { API_BASE_URL, adminToken } = useAdminAuth();
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
 
   const fetchRevenueData = async () => {
     try {
       setLoading(true);
-      const res = await axios.get(`${API_BASE_URL}/api/admin/dashboard-stats`);
+      const token = adminToken || localStorage.getItem("adminToken");
+      const config = token ? { headers: { Authorization: `Bearer ${token}` } } : {};
+      const res = await axios.get(`${API_BASE_URL}/api/admin/dashboard-stats`, config);
       if (res.data.success) {
         setStats(res.data.stats);
       }

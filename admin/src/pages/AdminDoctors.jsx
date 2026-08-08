@@ -5,18 +5,29 @@ import AdminHeader from "../components/AdminHeader";
 import { useAdminAuth } from "../context/AdminAuthContext";
 
 const AdminDoctors = () => {
-  const { API_BASE_URL } = useAdminAuth();
+  const { API_BASE_URL, adminToken } = useAdminAuth();
   const [doctors, setDoctors] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [message, setMessage] = useState("");
 
+  const getHeadersConfig = () => {
+    const token = adminToken || localStorage.getItem("adminToken");
+    return token ? { headers: { Authorization: `Bearer ${token}` } } : {};
+  };
+
   const fetchDoctors = async () => {
     try {
       setLoading(true);
-      const res = await axios.get(`${API_BASE_URL}/api/doctor/list`);
+      const config = getHeadersConfig();
+      let res;
+      try {
+        res = await axios.get(`${API_BASE_URL}/api/doctor`, config);
+      } catch {
+        res = await axios.get(`${API_BASE_URL}/api/doctor/list`, config);
+      }
       if (res.data.success) {
-        setDoctors(res.data.doctors || []);
+        setDoctors(res.data.doctors || res.data.data || []);
       }
     } catch (err) {
       console.error("Failed to fetch doctors:", err);
@@ -31,7 +42,13 @@ const AdminDoctors = () => {
 
   const handleToggleVerify = async (docId, currentStatus) => {
     try {
-      const res = await axios.put(`${API_BASE_URL}/api/doctor/${docId}`, { isVerified: !currentStatus });
+      const config = getHeadersConfig();
+      let res;
+      try {
+        res = await axios.post(`${API_BASE_URL}/api/doctor/${docId}/approve-verification`, { isVerified: !currentStatus }, config);
+      } catch {
+        res = await axios.put(`${API_BASE_URL}/api/doctor/${docId}/verify`, { isVerified: !currentStatus }, config);
+      }
       if (res.data.success) {
         setMessage(`Doctor status updated successfully.`);
         fetchDoctors();
@@ -45,7 +62,8 @@ const AdminDoctors = () => {
   const handleDeleteDoctor = async (docId) => {
     if (!window.confirm("Are you sure you want to delete this doctor profile?")) return;
     try {
-      const res = await axios.delete(`${API_BASE_URL}/api/doctor/${docId}`);
+      const config = getHeadersConfig();
+      const res = await axios.delete(`${API_BASE_URL}/api/doctor/${docId}`, config);
       if (res.data.success) {
         setMessage("Doctor account deleted.");
         fetchDoctors();
@@ -60,7 +78,7 @@ const AdminDoctors = () => {
     const query = search.toLowerCase();
     return (
       doc.name?.toLowerCase().includes(query) ||
-      doc.speciality?.toLowerCase().includes(query) ||
+      (doc.specialization || doc.speciality)?.toLowerCase().includes(query) ||
       doc.email?.toLowerCase().includes(query)
     );
   });
@@ -116,10 +134,10 @@ const AdminDoctors = () => {
               </thead>
               <tbody className="divide-y divide-slate-800/60">
                 {filteredDoctors.map((doc) => (
-                  <tr key={doc._id} className="hover:bg-slate-900/40 transition">
+                  <tr key={doc._id || doc.id} className="hover:bg-slate-900/40 transition">
                     <td className="p-4 flex items-center gap-3">
                       <img
-                        src={doc.image || "https://via.placeholder.com/150"}
+                        src={doc.imageUrl || doc.image || "https://images.unsplash.com/photo-1622253692010-333f2da6031d?w=400&auto=format&fit=crop&q=80"}
                         alt={doc.name}
                         className="w-9 h-9 rounded-full object-cover border border-slate-700"
                       />
@@ -128,8 +146,8 @@ const AdminDoctors = () => {
                         <p className="text-[11px] text-slate-400">{doc.email}</p>
                       </div>
                     </td>
-                    <td className="p-4 font-semibold text-emerald-400">{doc.speciality || "General Physician"}</td>
-                    <td className="p-4 text-slate-300">{doc.degree || "MBBS"} • {doc.experience || "N/A"}</td>
+                    <td className="p-4 font-semibold text-emerald-400">{doc.specialization || doc.speciality || "General Physician"}</td>
+                    <td className="p-4 text-slate-300">{doc.qualifications || doc.degree || "MBBS"} • {doc.experience || "N/A"}</td>
                     <td className="p-4">
                       {doc.isVerified ? (
                         <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-950/60 text-emerald-400 text-[10px] font-bold border border-emerald-800/40">

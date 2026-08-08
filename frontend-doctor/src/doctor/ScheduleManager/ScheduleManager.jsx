@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import Navbar from "../Navbar/Navbar";
 import {
-  Calendar as CalendarIcon, Clock, Trash, UserCheck, MapPin, CheckCircle, AlertCircle, Check, X, Plus, Save, RefreshCw, Sliders, Settings, Sparkles, MessageSquare, ArrowRight, User
+  Calendar as CalendarIcon, Clock, Trash, UserCheck, MapPin, CheckCircle, AlertCircle, Check, X, Plus, Save, RefreshCw, Sliders, Settings, Sparkles, MessageSquare, ArrowRight, User, ArrowLeft
 } from "lucide-react";
 
 /* ----------------- helpers ----------------- */
@@ -124,6 +124,7 @@ const QuickPresetGenerator = ({ onGenerate, buttonText = "Generate slots" }) => 
 
 /* ---------------- Main Component ---------------- */
 export default function ScheduleManager() {
+  const navigate = useNavigate();
   const { id } = useParams();
   const [doc, setDoc] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -633,6 +634,12 @@ export default function ScheduleManager() {
     <div className="min-h-screen theme-doctor bg-[var(--med-lightest)] text-black dark:text-white bg-grid-pattern relative pt-28 pb-28 font-sans">
       <Navbar />
       <div className="max-w-6xl mx-auto px-4 pt-2">
+        <button
+          onClick={() => navigate(-1)}
+          className="mb-4 px-3.5 py-1.5 bg-white border border-slate-300 hover:bg-slate-100 text-slate-800 rounded-full font-bold text-xs flex items-center gap-1.5 transition shadow-xs cursor-pointer"
+        >
+          <ArrowLeft className="w-4 h-4 text-blue-700" /> Back
+        </button>
         
         {/* Toast alerts */}
         <div className="fixed bottom-6 right-6 z-50 flex flex-col gap-2 pointer-events-none">

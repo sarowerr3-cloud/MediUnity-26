@@ -15,7 +15,8 @@ import {
   MessageSquare,
   Plus,
   Building2,
-  ClipboardList
+  ClipboardList,
+  ArrowLeft
 } from "lucide-react";
 import { useAuth, useUser } from "../../context/AuthContext";
 import { useTranslation } from "react-i18next";
@@ -987,6 +988,12 @@ export default function AppointmentPage() {
     <div className={appointmentPageStyles.pageContainer}>
       <Toaster position="top-right" />
       <div className={appointmentPageStyles.maxWidthContainer}>
+        <button
+          onClick={() => navigate(-1)}
+          className="mb-4 px-3.5 py-1.5 bg-white border border-slate-300 hover:bg-slate-100 text-slate-800 rounded-full font-bold text-xs flex items-center gap-1.5 transition shadow-xs cursor-pointer"
+        >
+          <ArrowLeft className="w-4 h-4 text-blue-700" /> {isBn ? "ফিরে যান" : "Back"}
+        </button>
 
         {/* Portal Sub-navigation Toggle */}
         <div className="flex flex-wrap gap-2 mb-8 bg-white p-1.5 rounded-2xl border border-slate-200 w-max max-w-full shadow-sm shrink-0">

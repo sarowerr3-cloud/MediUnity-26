@@ -61,7 +61,7 @@ export async function authMiddleware(req, res, next) {
         role: isSystemAdmin ? "admin" : payload.role,
         verified: true,
         bmdcVerified: true,
-        adminRole: payload.adminRole || (payload.role === "super-admin" ? "super_admin" : payload.role),
+        adminRole: payload.adminRole || payload.role,
         claims: payload,
       };
       req.user = userData;

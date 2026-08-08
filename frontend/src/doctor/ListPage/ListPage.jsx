@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { Search, X, Phone, Calendar, MessageSquare, Activity, RefreshCw, FileText, Users } from "lucide-react";
-import { useParams } from "react-router-dom";
+import { Search, X, Phone, Calendar, MessageSquare, Activity, RefreshCw, FileText, Users, ArrowLeft } from "lucide-react";
+import { useParams, useNavigate } from "react-router-dom";
 import { listPageStyles } from "../../assets/dummyStyles";
 import ChatModal from "../../components/Chat/ChatModal";
 import IntakeSummaryModal from "../../components/IntakeSummary/IntakeSummaryModal";
@@ -322,6 +322,7 @@ function RescheduleButton({ appointment, onReschedule }) {
 
 /* ================= Main Component ================= */
 export default function ListPage() {
+  const navigate = useNavigate();
   const [appointments, setAppointments] = useState([]);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
@@ -759,6 +760,12 @@ export default function ListPage() {
       <div className={listPageStyles.contentWrapper}>
         <div className={listPageStyles.headerContainer}>
           <div>
+            <button
+              onClick={() => navigate(-1)}
+              className="mb-3 px-3.5 py-1.5 bg-white border border-slate-300 hover:bg-slate-100 text-slate-800 rounded-full font-bold text-xs flex items-center gap-1.5 transition shadow-xs cursor-pointer"
+            >
+              <ArrowLeft className="w-4 h-4 text-blue-700" /> Back
+            </button>
             <h1 className={listPageStyles.headerTitle}>All Appointments</h1>
             <p className={listPageStyles.headerSubtitle}>
               Latest at top — search by patient name

@@ -1107,88 +1107,88 @@ export const navbarStylesDr = {
 // ListPage styles
 export const listPageStyles = {
   // Main container
-  pageContainer: "min-h-screen pt-20 md:pt-25 lg:pt-25 font-sans p-4 sm:p-6 theme-doctor bg-[var(--med-lightest)] text-black dark:text-white relative overflow-hidden",
+  pageContainer: "min-h-screen pt-20 md:pt-25 lg:pt-25 font-sans p-4 sm:p-6 theme-doctor bg-slate-50 text-slate-900 relative overflow-hidden",
   
   // Content wrapper
   contentWrapper: "max-w-7xl mx-auto",
   
   // Header section
   headerContainer: "mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4",
-  headerTitle: "text-xl sm:text-2xl pt-5 md:pt-0 lg:pt-0 xl:pt-0 font-bold text-blue-900 dark:text-white font-serif",
-  headerSubtitle: "text-xs sm:text-sm text-black dark:text-slate-300 font-semibold",
+  headerTitle: "text-2xl sm:text-3xl pt-5 md:pt-0 lg:pt-0 xl:pt-0 font-extrabold text-blue-950 font-serif",
+  headerSubtitle: "text-xs sm:text-sm text-slate-700 font-bold mt-0.5",
   
   // Search and filter section
   searchFilterContainer: "flex flex-col pt-10 md:pt-0 sm:flex-row items-stretch sm:items-center gap-3 w-full sm:w-auto",
   searchContainer: "relative w-full sm:w-auto",
-  searchIconContainer: "absolute inset-y-0 left-3 flex items-center pointer-events-none text-blue-900 dark:text-emerald-400",
+  searchIconContainer: "absolute inset-y-0 left-3 flex items-center pointer-events-none text-blue-700",
   searchIcon: "w-4 h-4",
-  searchInput: "pl-10 pr-10 w-full sm:w-64 md:w-80 lg:w-96 py-2.5 rounded-full border border-slate-300 dark:border-emerald-500/20 bg-white dark:bg-slate-800/50 text-black dark:text-white placeholder-slate-500 focus:border-blue-900 focus:ring-1 focus:ring-blue-900 outline-none font-semibold text-xs",
-  clearSearchButton: "absolute right-2 top-1/2 -translate-y-1/2 text-black hover:text-blue-900 p-1 rounded-full",
+  searchInput: "pl-10 pr-10 w-full sm:w-64 md:w-80 lg:w-96 py-2.5 rounded-full border border-slate-300 bg-white text-slate-900 placeholder-slate-500 focus:border-blue-700 focus:ring-2 focus:ring-blue-700/20 outline-none font-bold text-xs shadow-xs",
+  clearSearchButton: "absolute right-2 top-1/2 -translate-y-1/2 text-slate-500 hover:text-blue-900 p-1 rounded-full",
   clearSearchIcon: "w-4 h-4",
-  statusFilter: "text-xs font-bold px-4 py-2.5 rounded-full border border-slate-300 dark:border-emerald-500/20 bg-white dark:bg-slate-800/50 text-black dark:text-white w-full sm:w-auto outline-none cursor-pointer",
+  statusFilter: "text-xs font-bold px-4 py-2.5 rounded-full border border-slate-300 bg-white text-slate-900 w-full sm:w-auto outline-none cursor-pointer shadow-xs",
   
   // Loading and error states
-  loadingContainer: "text-center py-8 text-black font-bold",
-  errorContainer: "text-center py-8 text-red-600 font-bold",
+  loadingContainer: "text-center py-8 text-slate-900 font-bold",
+  errorContainer: "text-center py-8 text-rose-700 font-bold",
   
   // Appointments grid
   appointmentsGrid: "grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 items-start",
   
   // Appointment card
-  appointmentCard: "rounded-3xl p-5 glass-panel shadow-sm hover-lift flex flex-col justify-between self-start border border-slate-300 dark:border-slate-700",
+  appointmentCard: "rounded-3xl p-5 bg-white shadow-sm hover:shadow-md flex flex-col justify-between self-start border border-slate-200 transition-all",
   
   // Card header
   cardHeader: "flex flex-col sm:flex-row items-start sm:items-center gap-3",
-  cardAvatar: "w-12 h-12 sm:w-14 sm:h-14 rounded-full overflow-hidden bg-slate-100 dark:bg-slate-800/50 border-2 border-emerald-500/40 flex items-center justify-center shadow-sm",
+  cardAvatar: "w-12 h-12 sm:w-14 sm:h-14 rounded-full overflow-hidden bg-slate-100 border-2 border-emerald-500 flex items-center justify-center shadow-xs shrink-0",
   cardAvatarImage: "w-full h-full object-cover",
-  cardAvatarFallback: "text-blue-900 dark:text-emerald-300 font-bold",
+  cardAvatarFallback: "text-blue-950 font-extrabold",
   cardContent: "flex-1 min-w-0",
-  cardPatientName: "text-base font-bold text-blue-900 dark:text-white truncate",
-  cardPatientInfo: "text-xs text-black dark:text-slate-300 mt-1 font-semibold",
-  cardDoctorInfo: "mt-2 text-xs text-black dark:text-slate-300 truncate font-semibold",
-  cardDoctorName: "font-bold text-blue-900 dark:text-emerald-50",
-  cardSpeciality: "text-xs text-blue-900 dark:text-emerald-300 font-bold truncate",
+  cardPatientName: "text-base font-extrabold text-blue-950 truncate",
+  cardPatientInfo: "text-xs text-slate-700 mt-0.5 font-bold",
+  cardDoctorInfo: "mt-1 text-xs text-slate-800 truncate font-semibold",
+  cardDoctorName: "font-extrabold text-blue-900",
+  cardSpeciality: "text-xs text-emerald-800 font-bold truncate mt-0.5",
   
   // Date and time section
-  dateTimeSection: "mt-4 flex flex-col items-start gap-2",
-  dateTimeContainer: "text-sm text-black dark:text-emerald-50 font-bold flex items-center gap-2 w-full",
-  calendarIcon: "w-4 h-4 text-blue-900 dark:text-emerald-400",
-  dateText: "whitespace-nowrap truncate",
-  feeText: "text-xs text-blue-900 dark:text-emerald-200 font-bold",
+  dateTimeSection: "mt-4 flex flex-col items-start gap-1.5",
+  dateTimeContainer: "text-sm text-slate-900 font-extrabold flex items-center gap-2 w-full",
+  calendarIcon: "w-4 h-4 text-blue-700 shrink-0",
+  dateText: "whitespace-nowrap truncate font-extrabold text-slate-900",
+  feeText: "text-xs text-emerald-800 font-extrabold",
   
   // Contact and status section
   contactStatusSection: "mt-3 flex flex-col items-start gap-2",
-  phoneContainer: "text-xs text-black dark:text-emerald-200/80 flex items-center gap-2 font-semibold",
-  phoneIcon: "w-4 h-4 text-blue-900 dark:text-emerald-400",
-  phoneNumber: "truncate",
+  phoneContainer: "text-xs text-emerald-800 flex items-center gap-2 font-bold",
+  phoneIcon: "w-4 h-4 text-emerald-700 shrink-0",
+  phoneNumber: "truncate font-bold text-emerald-800",
   statusContainer: "flex items-center gap-2 w-full mt-2 justify-start",
   
   // Status badge
-  statusBadgeBase: "px-3 py-1 rounded-full text-xs font-bold",
-  statusBadgeComplete: "bg-slate-100 text-black border border-slate-300",
-  statusBadgeCancelled: "bg-red-50 text-red-700 border border-red-200",
-  statusBadgeConfirmed: "bg-emerald-50 text-emerald-800 border border-emerald-300",
-  statusBadgeRescheduled: "bg-purple-50 text-purple-800 border border-purple-200",
-  statusBadgePending: "bg-amber-50 text-amber-800 border border-amber-300 animate-pulse",
+  statusBadgeBase: "px-3 py-1 rounded-full text-xs font-bold shadow-xs",
+  statusBadgeComplete: "bg-slate-100 text-slate-800 border border-slate-300 font-bold",
+  statusBadgeCancelled: "bg-rose-50 text-rose-800 border border-rose-200 font-bold",
+  statusBadgeConfirmed: "bg-emerald-50 text-emerald-900 border border-emerald-300 font-bold",
+  statusBadgeRescheduled: "bg-purple-50 text-purple-900 border border-purple-200 font-bold",
+  statusBadgePending: "bg-amber-50 text-amber-900 border border-amber-300 animate-pulse font-bold",
   
   // Status select
-  statusSelect: "text-xs font-bold px-3 py-1 rounded-full border focus:outline-none transition cursor-pointer",
-  statusSelectEnabled: "bg-white text-black border-slate-300 hover:shadow-sm",
-  statusSelectDisabled: "bg-slate-100 text-black/50 cursor-not-allowed border-slate-200",
+  statusSelect: "text-xs font-bold px-3 py-1 rounded-full border focus:outline-none transition cursor-pointer shadow-xs",
+  statusSelectEnabled: "bg-white text-slate-900 border-slate-300 hover:bg-slate-50",
+  statusSelectDisabled: "bg-slate-100 text-slate-400 cursor-not-allowed border-slate-200",
   
   // Reschedule button container
   rescheduleContainer: "mt-4",
-  rescheduleButton: "text-xs font-bold px-3 py-1.5 rounded-full border transition cursor-pointer",
-  rescheduleButtonEnabled: "bg-white text-blue-900 border-slate-300 hover:bg-slate-50",
-  rescheduleButtonDisabled: "bg-slate-100 text-black/40 border-slate-200 cursor-not-allowed",
+  rescheduleButton: "text-xs font-bold px-3 py-1.5 rounded-full border transition cursor-pointer shadow-xs",
+  rescheduleButtonEnabled: "bg-white text-blue-900 border-slate-300 hover:bg-blue-50",
+  rescheduleButtonDisabled: "bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed",
   
   // Reschedule form
   rescheduleForm: "flex flex-col md:flex-col items-end gap-2 w-full",
-  dateInput: "text-xs font-bold px-3 py-2 rounded-full border border-slate-300 bg-white text-black w-full md:w-40",
-  timeInput: "text-xs font-bold px-3 py-2 rounded-full border border-slate-300 bg-white text-black w-full md:w-36",
+  dateInput: "text-xs font-bold px-3 py-2 rounded-full border border-slate-300 bg-white text-slate-900 w-full md:w-40 shadow-xs",
+  timeInput: "text-xs font-bold px-3 py-2 rounded-full border border-slate-300 bg-white text-slate-900 w-full md:w-36 shadow-xs",
   rescheduleButtons: "flex gap-2",
-  saveButton: "text-xs px-3.5 py-1.5 rounded-full bg-blue-800 text-white font-bold hover:bg-blue-900 transition shadow-sm cursor-pointer",
-  cancelButton: "text-xs px-3.5 py-1.5 rounded-full border border-slate-300 bg-white text-black hover:bg-slate-50 transition font-bold cursor-pointer"
+  saveButton: "text-xs px-3.5 py-1.5 rounded-full bg-blue-800 text-white font-bold hover:bg-blue-900 transition shadow-xs cursor-pointer",
+  cancelButton: "text-xs px-3.5 py-1.5 rounded-full border border-slate-300 bg-white text-slate-800 hover:bg-slate-50 transition font-bold cursor-pointer"
 };
 
 export const editProfilePageStyles = {

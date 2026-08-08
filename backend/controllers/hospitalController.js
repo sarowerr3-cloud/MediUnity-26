@@ -48,6 +48,7 @@ export async function signupHospital(req, res) {
     const hospital = await Hospital.create({
       name,
       email: emailLC,
+      emailHash,
       password: hashedPassword,
       licenseNumber,
       emergencyContact,

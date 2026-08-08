@@ -39,6 +39,15 @@ const pharmacySchema = new mongoose.Schema({
   reviewsCount: { type: Number, default: 0 }
 }, { timestamps: true });
 
+pharmacySchema.pre("validate", function() {
+  if (this.email && (!this.emailHash || this.isModified("email"))) {
+    const rawEmail = this.email.includes(":") ? decryptField(this.email) : this.email;
+    if (rawEmail) {
+      this.emailHash = hashField(rawEmail);
+    }
+  }
+});
+
 pharmacySchema.pre("save", async function() {
   if (this.isModified("email") && this.email && !this.email.includes(":")) {
     this.emailHash = hashField(this.email);

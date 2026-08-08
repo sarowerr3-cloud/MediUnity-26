@@ -13,6 +13,7 @@ import {
   List as ListIcon,
   MapPin,
   Stethoscope,
+  ArrowLeft
 } from "lucide-react";
 import { doctorsPageStyles } from "../../assets/dummyStyles";
 import DoctorTrustBadge from "../DoctorTrustBadge/DoctorTrustBadge";
@@ -372,6 +373,12 @@ const DoctorsPage = ({ apiBase }) => {
       <div className={doctorsPageStyles.wrapper}>
         {/* Header */}
         <div className={doctorsPageStyles.headerContainer}>
+          <button
+            onClick={() => navigate(-1)}
+            className="mb-4 mx-auto px-3.5 py-1.5 bg-white border border-slate-300 hover:bg-slate-100 text-slate-800 rounded-full font-bold text-xs flex items-center gap-1.5 transition shadow-xs cursor-pointer"
+          >
+            <ArrowLeft className="w-4 h-4 text-blue-700" /> {t("common.back", "Back")}
+          </button>
           <h1 className={doctorsPageStyles.headerTitle}>{t("doctors.title", "Our Medical Experts")}</h1>
           <p className={doctorsPageStyles.headerSubtitle}>
             {t("doctors.subtitle", "Find your ideal doctor by name or specialization")}

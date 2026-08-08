@@ -39,6 +39,8 @@ const isDoctor = [authMiddleware, requireRole("doctor"), populateReqDoctor];
 
 doctorRouter.post("/:id/follow", toggleFollowDoctor);
 doctorRouter.get("/", getDoctors);
+doctorRouter.get("/list", getDoctors);
+doctorRouter.put("/:id/verify", adminAuth, approveDoctorVerification);
 
 // Auth routes
 doctorRouter.post("/login", authLimiter, doctorLogin);

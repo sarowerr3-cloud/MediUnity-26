@@ -1,3 +1,4 @@
+import { toValidObjectId } from "./appointmentController.js";
 import Appointment from "../models/Appointment.js";
 import Doctor from "../models/Doctor.js";
 import PatientProfile from "../models/PatientProfile.js";
@@ -145,7 +146,7 @@ export const getDoctorReminders = async (req, res) => {
 
     // Fetch appointments for this doctor today & future
     const appointments = await Appointment.find({
-      doctorId: doctorId,
+      doctorId: toValidObjectId(doctorId),
       status: { $nin: ["Canceled", "Completed"] },
       date: { $gte: todayStr }
     })

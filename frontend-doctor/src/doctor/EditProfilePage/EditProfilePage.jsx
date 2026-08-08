@@ -23,6 +23,7 @@ import {
   Copy,
   UserCheck,
   Camera,
+  ArrowLeft
 } from "lucide-react";
 import { editProfilePageStyles, iconSize } from "../../assets/dummyStyles";
 
@@ -582,6 +583,12 @@ export default function EditProfilePage({ apiBase }) {
   return (
     <div className={styles.pageContainer}>
       <div className={styles.maxWidthContainer}>
+        <button
+          onClick={() => navigate(-1)}
+          className="mb-4 px-3.5 py-1.5 bg-white border border-slate-300 hover:bg-slate-100 text-slate-800 rounded-full font-bold text-xs flex items-center gap-1.5 transition shadow-xs cursor-pointer"
+        >
+          <ArrowLeft className="w-4 h-4 text-blue-700" /> Back
+        </button>
         {/* Toasts */}
         <div className={styles.toastContainer}>
           {toasts.map((t) => (

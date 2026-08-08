@@ -47,6 +47,15 @@ const hospitalSchema = new mongoose.Schema({
   reviewsCount: { type: Number, default: 0 }
 }, { timestamps: true });
 
+hospitalSchema.pre("validate", function() {
+  if (this.email && (!this.emailHash || this.isModified("email"))) {
+    const rawEmail = this.email.includes(":") ? decryptField(this.email) : this.email;
+    if (rawEmail) {
+      this.emailHash = hashField(rawEmail);
+    }
+  }
+});
+
 hospitalSchema.pre("save", async function() {
   if (this.isModified("email") && this.email && !this.email.includes(":")) {
     this.emailHash = hashField(this.email);

@@ -51,7 +51,7 @@ export default function DoctorAppointmentReminders({ doctorId, onOpenRxModal }) 
   return (
     <div className="w-full my-4 font-sans animate-fadeIn">
       {/* Prominent Doctor Command Center Live Reminder Banner */}
-      <div className="relative overflow-hidden rounded-3xl p-5 bg-gradient-to-r from-slate-900 via-sky-950 to-indigo-950 border border-sky-500/30 text-white shadow-xl">
+      <div className="relative overflow-hidden rounded-3xl p-5 bg-gradient-to-r from-sky-600 via-sky-700 to-indigo-700 border border-sky-500 text-white shadow-md">
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-5 relative z-10">
           
           {/* Left: Next Patient Telemetry */}

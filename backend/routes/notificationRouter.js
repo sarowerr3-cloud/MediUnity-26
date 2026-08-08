@@ -4,6 +4,7 @@ import admin from "firebase-admin";
 import Notification from "../models/Notification.js";
 import { addClient, removeClient } from "../utils/sse.js";
 import { authMiddleware, requireRole as requireUserRole, populateReqDoctor } from "../middlewares/authMiddleware.js";
+import { getGooglePublicKeys } from "../middlewares/firebaseAuth.js";
 import { createAndSendNotification } from "../utils/notificationHelper.js";
 
 const notificationRouter = express.Router();
@@ -24,7 +25,7 @@ notificationRouter.get("/stream", async (req, res) => {
 
   try {
     const payload = jwt.verify(token, JWT_SECRET);
-    userId = payload.id;
+    userId = payload.id || payload.uid;
     role = payload.role;
   } catch (err) {
     try {
@@ -32,7 +33,30 @@ notificationRouter.get("/stream", async (req, res) => {
       userId = decoded.uid;
       role = decoded.role || "patient";
     } catch (e) {
-      return res.status(401).json({ success: false, message: "Invalid or expired token" });
+      try {
+        const decodedHeader = jwt.decode(token, { complete: true });
+        if (decodedHeader?.header?.kid) {
+          const kid = decodedHeader.header.kid;
+          const publicKeys = await getGooglePublicKeys();
+          const cert = publicKeys[kid];
+          if (cert) {
+            const FIREBASE_PROJECT_ID = process.env.FIREBASE_PROJECT_ID || "medicare-cumilla";
+            const payload = jwt.verify(token, cert, {
+              algorithms: ["RS256"],
+              audience: FIREBASE_PROJECT_ID,
+              issuer: `https://securetoken.google.com/${FIREBASE_PROJECT_ID}`
+            });
+            userId = payload.uid || payload.sub;
+            role = payload.role || "patient";
+          }
+        }
+      } catch (e2) {
+        // Fall through
+      }
+
+      if (!userId) {
+        return res.status(401).json({ success: false, message: "Invalid or expired token" });
+      }
     }
   }
 

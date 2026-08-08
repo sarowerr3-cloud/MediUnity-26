@@ -44,6 +44,7 @@ export async function signupPharmacy(req, res) {
     const pharmacy = await Pharmacy.create({
       name,
       email: emailLC,
+      emailHash,
       password: hashedPassword,
       licenseNumber,
       phone,

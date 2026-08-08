@@ -5,7 +5,7 @@ import AdminHeader from "../components/AdminHeader";
 import { useAdminAuth } from "../context/AdminAuthContext";
 
 const AdminAuditLogs = () => {
-  const { API_BASE_URL } = useAdminAuth();
+  const { API_BASE_URL, adminToken } = useAdminAuth();
   const [logs, setLogs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -13,7 +13,9 @@ const AdminAuditLogs = () => {
   const fetchAuditLogs = async () => {
     try {
       setLoading(true);
-      const res = await axios.get(`${API_BASE_URL}/api/admin/audit-logs`);
+      const token = adminToken || localStorage.getItem("adminToken");
+      const config = token ? { headers: { Authorization: `Bearer ${token}` } } : {};
+      const res = await axios.get(`${API_BASE_URL}/api/admin/audit-logs`, config);
       if (res.data.success) {
         setLogs(res.data.logs || []);
       }

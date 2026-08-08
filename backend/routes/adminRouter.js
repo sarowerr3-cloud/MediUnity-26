@@ -175,6 +175,12 @@ adminRouter.post("/login", async (req, res) => {
   }
 });
 
+const isSuperAdminRole = (role) => {
+  if (!role) return false;
+  const normalized = String(role).toLowerCase().replace("-", "_");
+  return normalized === "super_admin" || normalized === "admin";
+};
+
 /* ───────────────────────────────
    GET /api/admin/audit-logs
    Returns paginated audit logs.
@@ -183,7 +189,7 @@ adminRouter.post("/login", async (req, res) => {
 adminRouter.get("/audit-logs", adminAuth, async (req, res) => {
   try {
     // Only super-admin can view audit logs
-    if (req.admin.role !== "super-admin") {
+    if (!isSuperAdminRole(req.admin?.role)) {
       return res.status(403).json({
         success: false,
         message: "Access denied: Super Admin only",
@@ -265,7 +271,7 @@ adminRouter.get("/me", adminAuth, async (req, res) => {
 ─────────────────────────────── */
 adminRouter.get("/dashboard-stats", adminAuth, async (req, res) => {
   try {
-    if (req.admin.role !== "super-admin") {
+    if (!isSuperAdminRole(req.admin?.role)) {
       return res.status(403).json({
         success: false,
         message: "Access denied: Super Admin only",

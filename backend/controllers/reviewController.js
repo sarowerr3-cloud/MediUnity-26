@@ -6,6 +6,7 @@ import DiagnosticCenter from "../models/DiagnosticCenter.js";
 import Pharmacy from "../models/Pharmacy.js";
 import mongoose from "mongoose";
 import Appointment from "../models/Appointment.js";
+import { toValidObjectId } from "./appointmentController.js";
 import HospitalTestBooking from "../models/HospitalTestBooking.js";
 import DiagnosticTestBooking from "../models/DiagnosticTestBooking.js";
 import PharmacyOrder from "../models/PharmacyOrder.js";
@@ -62,7 +63,7 @@ export async function submitReview(req, res) {
     if (targetType === "Doctor") {
       serviceCount = await Appointment.countDocuments({
         owner: clerkUserId,
-        doctorId: targetId,
+        doctorId: toValidObjectId(targetId),
         status: "Completed"
       });
     } else if (targetType === "Hospital") {

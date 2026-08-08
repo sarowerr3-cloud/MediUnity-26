@@ -44,6 +44,7 @@ export async function signupDiagnostic(req, res) {
     const center = await DiagnosticCenter.create({
       name,
       email: emailLC,
+      emailHash,
       password: hashedPassword,
       licenseNumber,
       contactPhone,

@@ -2,7 +2,7 @@ import React, { useEffect, useState, useCallback, useMemo } from "react";
 import axios from "axios";
 import toast, { Toaster } from "react-hot-toast";
 import { Building2, CalendarDays, Clock, FileText, ArrowLeft, Phone, Search, Star, MapPin } from "lucide-react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth, useUser } from "../../context/AuthContext";
 import Navbar from "../../components/Navbar/Navbar";
 import Footer from "../../components/Footer/Footer";
@@ -17,6 +17,7 @@ const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:4000";
 const API = axios.create({ baseURL: API_BASE });
 
 export default function HospitalsPage() {
+  const navigate = useNavigate();
   const { t, i18n } = useTranslation();
   const isBn = i18n.language === "bn";
   const { isSignedIn, getToken } = useAuth();
@@ -213,6 +214,12 @@ export default function HospitalsPage() {
       <Toaster position="top-right" />
 
       <main className="flex-grow max-w-7xl w-full mx-auto px-4 py-24">
+        <button
+          onClick={() => navigate(-1)}
+          className="mb-6 px-3.5 py-1.5 bg-white border border-slate-300 hover:bg-slate-100 text-slate-800 rounded-full font-bold text-xs flex items-center gap-1.5 transition shadow-xs cursor-pointer"
+        >
+          <ArrowLeft className="w-4 h-4 text-blue-700" /> {isBn ? "ফিরে যান" : "Back"}
+        </button>
         {selectedDetailHospital ? (
           /* SOLID DETAIL VIEW */
           <div className="space-y-8 animate-fadeIn">

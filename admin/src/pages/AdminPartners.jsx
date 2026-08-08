@@ -5,7 +5,7 @@ import AdminHeader from "../components/AdminHeader";
 import { useAdminAuth } from "../context/AdminAuthContext";
 
 const AdminPartners = () => {
-  const { API_BASE_URL } = useAdminAuth();
+  const { API_BASE_URL, adminToken } = useAdminAuth();
   const [partners, setPartners] = useState({ hospitals: [], diagnostics: [], pharmacies: [] });
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
@@ -13,7 +13,9 @@ const AdminPartners = () => {
   const fetchPartners = async () => {
     try {
       setLoading(true);
-      const res = await axios.get(`${API_BASE_URL}/api/admin/partner-verifications`);
+      const token = adminToken || localStorage.getItem("adminToken");
+      const config = token ? { headers: { Authorization: `Bearer ${token}` } } : {};
+      const res = await axios.get(`${API_BASE_URL}/api/admin/partner-verifications`, config);
       if (res.data.success) {
         setPartners(res.data.data || { hospitals: [], diagnostics: [], pharmacies: [] });
       }
